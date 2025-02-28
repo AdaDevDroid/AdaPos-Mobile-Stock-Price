@@ -46,52 +46,59 @@ export default function ReceiveGoods() {
     <div className="p-4 ms-1 mx-auto bg-white">
 
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
-        {/* หัวข้อ */}
-        <h1 className="text-2xl font-bold md:pb-0">รับสินค้าจากผู้จำหน่าย</h1>
 
-        {/* ค้นหา PO และปุ่ม 3 จุด */}
-        <div className="flex w-full md:w-auto md:ml-auto pt-2 relative">
-          <InputWithButton
-        type="text"
-        value={searchText}
-        onChange={setSearchText}
-        placeholder="ข้อความ...."
-        icon={<GrDocumentText />}
-        onClick={() => alert(`ข้อความ: ${searchText}`)}
-          />
+        <div className="flex flex-row w-full py-2">
+          {/* หัวข้อ */}
+          <h1 className="text-2xl font-bold md:pb-0">รับสินค้าจากผู้จำหน่าย</h1>
+
+          {/* ปุ่ม 3 จุด จอเล็ก */}
+          <button
+            className="md:hidden ml-2 p-2 rounded-md ml-auto text-gray-500 hover:text-gray-700 text-[18px]"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            <FaEllipsisV />
+          </button>
         </div>
-      </div>
-
-      {/* ปุ่ม 3 จุด */}
-      <div className="top-4 right-4 md:absolute">
-        <button
-          className="p-2 rounded-md text-gray-500 hover:text-gray-700 text-[18px]"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          <FaEllipsisV />
-        </button>
+        {/* ค้นหา PO และปุ่ม 3 จุด (สำหรับ desktop) */}
+        <div className="flex w-full md:w-80 md:ml-auto pt-2 relative">
+          <InputWithButton
+            type="text"
+            value={searchText}
+            onChange={setSearchText}
+            placeholder="ค้นหาใบ PO"
+            icon={<GrDocumentText />}
+            onClick={() => alert(`ข้อความ: ${searchText}`)}
+          />
+          {/* ปุ่ม 3 จุด */}
+          <button
+            className="hidden md:block ml-2 p-2 rounded-md text-gray-500 hover:text-gray-700 text-[18px]"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            <FaEllipsisV />
+          </button>
+        </div>
 
         {/* Dropdown Menu */}
         {isOpen && (
           <div className="absolute right-0 mt-12 bg-white border shadow-lg rounded-md w-auto text-[16px]">
-        <button
-          className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
-          onClick={() => alert(`ข้อความ: อัพโหลดผ่าน Web Services`)}
-        >
-          <FaFileAlt className="mr-2 text-gray-700" /> อัพโหลดผ่าน Web Services
-        </button>
-        <button
-          className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
-          onClick={() => alert(`ข้อความ: ส่งออกเป็น File Excel`)}
-        >
-          <FaDownload className="mr-2 text-gray-700" /> ส่งออกเป็น File Excel
-        </button>
-        <button
-          className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
-          onClick={() => alert(`ข้อความ: ประวัติการทำรายการ`)}
-        >
-          <FaHistory className="mr-2 text-gray-700" /> ประวัติการทำรายการ
-        </button>
+            <button
+              className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
+              onClick={() => alert(`ข้อความ: อัพโหลดผ่าน Web Services`)}
+            >
+              <FaFileAlt className="mr-2 text-gray-700" /> อัพโหลดผ่าน Web Services
+            </button>
+            <button
+              className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
+              onClick={() => alert(`ข้อความ: ส่งออกเป็น File Excel`)}
+            >
+              <FaDownload className="mr-2 text-gray-700" /> ส่งออกเป็น File Excel
+            </button>
+            <button
+              className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
+              onClick={() => alert(`ข้อความ: ประวัติการทำรายการ`)}
+            >
+              <FaHistory className="mr-2 text-gray-700" /> ประวัติการทำรายการ
+            </button>
           </div>
         )}
       </div>
@@ -137,8 +144,7 @@ export default function ReceiveGoods() {
       </div>
 
       {/* ตารางสินค้า */}
-      <table 
-      className="w-full border-collapse mt-4 rounded-lg overflow-hidden">
+      <table className="w-full border-collapse mt-4 rounded-lg overflow-hidden">
         <thead>
           <tr className="bg-gray-100 border text-m text-[14px]">
             <th className="p-2">ลำดับ</th>
@@ -156,9 +162,7 @@ export default function ReceiveGoods() {
               <td className="p-2">฿{product.cost.toFixed(2)}</td>
               <td className="p-2">{product.quantity}</td>
               <td className="p-2">
-                <button 
-                onClick={() => removeProduct(product.id)} 
-                className="text-red-500">
+                <button onClick={() => removeProduct(product.id)} className="text-red-500">
                   <FaTrash />
                 </button>
               </td>
@@ -167,8 +171,7 @@ export default function ReceiveGoods() {
         </tbody>
       </table>
 
-      <div 
-      className="flex flex-col md:flex-row items-start md:items-center mt-4 ">
+      <div className="flex flex-col md:flex-row items-start md:items-center mt-4 ">
         {/* จำนวนรายการ */}
         <p className="text-gray-500 text-[14px]">จำนวนรายการ: {products.length} รายการ</p>
 
