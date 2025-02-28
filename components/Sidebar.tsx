@@ -9,7 +9,7 @@ const menuItems = [
     { name: "รับสินค้าจากผู้จำหน่าย", icon: <FaBoxOpen />, path: "/receive" },
     { name: "รับโอนระหว่างสาขา", icon: <FaExchangeAlt />, path: "/transfer" },
     { name: "ตรวจนับสต็อก", icon: <FaClipboardCheck />, path: "/stock" },
-    { name: "ตรวจสอบราคา/โปรโมชั่น", icon: <FaTags />, path: "/price-check" },
+    { name: "ตรวจสอบราคา/โปรโมชั่น", icon: <FaTags />, path: "/scan" },
 ];
 
 export default function Sidebar() {
@@ -23,29 +23,40 @@ export default function Sidebar() {
     };
 
     return (
-        <div className={`h-screen text-white ${isOpen ? "w-64" : "w-15"} transition-all duration-300`}>
+        <div className={`h-screen bg-white shadow-md text-white whitespace-nowrap ${isOpen ? "w-100" : "w-15"} transition-all duration-300`}>
             {/* ปุ่มเปิด-ปิด */}
             <div className="flex p-4 bg-blue-600 justify-between items-center">
                 <span className={`text-l font-bold ${!isOpen && "hidden"}`}>AdaPos+ Stock & Price</span>
                 <button onClick={() => setIsOpen(!isOpen)} className="text-white">
-                    <FaBars size={24} />
+                    <FaBars
+                    className={`${isOpen ? "ms-4" : "ms-0"}`}
+                    size={24} />
                 </button>
             </div>
 
             {/* เมนู */}
             <nav className="mt-1">
-    {menuItems.map((item, index) => (
-        <div
-            key={index}
-            onClick={() => router.push(item.path)}
-            className="flex items-center gap-3 p-4 rounded-md cursor-pointer hover:bg-gray-100"
-        >
-            <span className="text-gray-700 hover:text-gray-800 text-[30px]">
-                {item.icon}
-            </span>
-            <span className={`${!isOpen && "hidden"} transition-all duration-200 text-gray-700`}>{item.name}</span>
-        </div>
-    ))}
+  {menuItems.map((item, index) => (
+    <div
+      key={index}
+      onClick={() => router.push(item.path)}
+      className={`flex items-center p-4 cursor-pointer hover:bg-gray-100 transition-all duration-200`}
+    >
+      {/* ไอคอน */}
+      <span className={`text-gray-700 hover:text-gray-800 transition-all duration-200
+        ${isOpen ? "text-[20px]" : "text-[30px]"}`}>
+        {item.icon}
+      </span>
+
+      {/* ชื่อเมนู */}
+      <span
+        className={`text-gray-700 transition-all duration-200 ps-2 whitespace-nowrap
+        ${!isOpen && "hidden"}`}
+      >
+        {item.name}
+      </span>
+    </div>
+  ))}
 </nav>
 
             {/* ปุ่มออกจากระบบ */}
