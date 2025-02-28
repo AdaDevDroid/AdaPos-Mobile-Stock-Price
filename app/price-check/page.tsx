@@ -29,7 +29,7 @@ export default function PriceCheckPage() {
         FDUsrPwdStart: user.FDUsrPwdStart ? new Date(user.FDUsrPwdStart).toISOString() : null,
         FDUsrPwdExpired: user.FDUsrPwdExpired ? new Date(user.FDUsrPwdExpired).toISOString() : null,
       }));
-      setUsers(data);
+      setUsers(formattedData);
     }
 
     fetchData();

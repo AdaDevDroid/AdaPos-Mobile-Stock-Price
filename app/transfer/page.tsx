@@ -47,13 +47,6 @@ export default function TransferPage() {
     setQuantity("");
   };
 
-  const handleGetTableData = () => {
-    console.log(tableData);
-    // คุณสามารถทำการประมวลผลข้อมูลในตารางได้ที่นี่
-  };
-
-
-
   return (
     <div className="flex flex-col min-h-screen bg-white p-4">
 

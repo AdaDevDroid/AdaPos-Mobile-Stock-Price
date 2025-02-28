@@ -8,7 +8,7 @@ const menuItems = [
   { name: "รับสินค้าจากผู้จำหน่าย", icon: <FaBoxOpen />, path: "/receive" },
   { name: "รับโอนระหว่างสาขา", icon: <FaExchangeAlt />, path: "/transfer" },
   { name: "ตรวจนับสต็อก", icon: <FaClipboardCheck />, path: "/stock" },
-  { name: "ตรวจสอบราคา/โปรโมชั่น", icon: <FaTags />, path: "/scan" },
+  { name: "ตรวจสอบราคา/โปรโมชั่น", icon: <FaTags />, path: "/price-check" },
 ];
 
 interface SidebarProps {

@@ -80,12 +80,12 @@ export default function ReceiveGoods() {
 
         {/* Dropdown Menu */}
         {isOpen && (
-          <div className="absolute right-0 mt-12 bg-white border shadow-lg rounded-md w-auto text-[16px]">
+          <div className="absolute right-4 top-6 mt-12 bg-white border shadow-lg rounded-md w-auto text-[16px]">
             <button
               className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
               onClick={() => alert(`ข้อความ: อัพโหลดผ่าน Web Services`)}
             >
-              <FaFileAlt className="mr-2 text-gray-700" /> อัพโหลดผ่าน Web Services
+              <FaFileAlt className="mr-2 text-gray-700" /> อัพโหลดผ่าน Web Services2
             </button>
             <button
               className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
@@ -126,7 +126,7 @@ export default function ReceiveGoods() {
         />
 
         <InputWithLabel
-          type="text"
+          type="number"
           label={"ต้นทุน"}
           value={cost}
           onChange={setCost}
