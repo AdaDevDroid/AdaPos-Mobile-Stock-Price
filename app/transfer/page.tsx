@@ -1,10 +1,32 @@
 "use client";
+import exportToExcel from "@/hooks/TransfersToExcel copy";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 
+
 export default function TransferPage() {
   // เช็ค user login
-  // useAuth();
+  useAuth();
+  const [docNo, setDocNo] = useState("");
+  interface TableRow {
+    id: number;
+    barcode: string;
+    cost: string;
+    quantity: string;
+  }
+
+  const handleExport = () => {
+    const formattedData = tableData.map(row => ({
+      tBarcode: row.barcode,
+      tCost: row.cost,
+      tQTY: row.quantity,
+    }));
+    exportToExcel(formattedData);
+  };
+  const [tableData, setTableData] = useState<TableRow[]>([]);
+  const [barcode, setBarcode] = useState("");
+  const [cost, setCost] = useState("");
+  const [quantity, setQuantity] = useState("");
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -12,8 +34,30 @@ export default function TransferPage() {
     setIsOpen(!isOpen);
   };
 
+  const handleAddRow = () => {
+    const newRow = {
+      id: tableData.length + 1,
+      barcode,
+      cost,
+      quantity,
+    };
+    setTableData([...tableData, newRow]);
+    setBarcode("");
+    setCost("");
+    setQuantity("");
+  };
+
+  const handleGetTableData = () => {
+    console.log(tableData);
+    // คุณสามารถทำการประมวลผลข้อมูลในตารางได้ที่นี่
+  };
+
+
+
   return (
     <div className="flex flex-col min-h-screen bg-white p-4">
+
+
       <header className="flex justify-between items-center w-full ">
         <div className="text-xl font-bold">
           รับโอนสินค้าระหว่างสาขา
@@ -88,6 +132,7 @@ export default function TransferPage() {
                   href="#"
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   role="menuitem"
+                  onClick={handleExport}
                 >
                   ส่งออกเป็น File Excel
                 </a>
@@ -103,6 +148,9 @@ export default function TransferPage() {
           )}
         </div>
       </header>
+
+
+      
       <div className="flex flex-col space-y-4 mt-4 ">
         <div className="flex flex-col ">
           <label className="mb-2 font-medium text-gray-700">เลขที่อ้างอิงใบจ่ายโอน</label>
@@ -110,6 +158,8 @@ export default function TransferPage() {
             type="text"
             className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
             placeholder="ระบุเลขที่อ้างอิงใบจ่ายโอน"
+            value={docNo}
+            onChange={(e) => setDocNo(e.target.value)}
           />
         </div>
         <div className="flex flex-col">
@@ -118,6 +168,8 @@ export default function TransferPage() {
             type="text"
             className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
             placeholder="สแกนบาร์โค้ดหรือระบุเลขบาร์โค้ด"
+            value={barcode}
+            onChange={(e) => setBarcode(e.target.value)}
           />
         </div>
         <div className="flex flex-col">
@@ -126,6 +178,8 @@ export default function TransferPage() {
             type="text"
             className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
             placeholder="ระบุต้นทุน (ถ้ามี)"
+            value={cost}
+            onChange={(e) => setCost(e.target.value)}
           />
         </div>
         
@@ -136,10 +190,13 @@ export default function TransferPage() {
                 type="text"
                 className="flex-grow px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
                 placeholder=""
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
               />
               <button
                 type="button"
                 className="ml-2 p-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-600"
+                onClick={handleAddRow}
               >
                 <svg
                   className="w-6 h-6"
@@ -181,10 +238,31 @@ export default function TransferPage() {
           </th>
         </tr>
           </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {tableData.map((row) => (
+              <tr key={row.id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  {row.id}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {row.barcode}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {row.cost}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {row.quantity}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <a href="#" className="text-indigo-600 hover:text-indigo-900">
+                    แก้ไข
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
         </table>
       </div>
-
-      
     </div>
   );
 }
