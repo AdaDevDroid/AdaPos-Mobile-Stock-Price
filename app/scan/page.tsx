@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect, SetStateAction } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FaCamera, FaPlus, FaRegCalendar } from "react-icons/fa";
 import { CiLogout } from "react-icons/ci";
 import { Html5QrcodeScanner } from "html5-qrcode";

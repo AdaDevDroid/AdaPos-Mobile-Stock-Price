@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
 import { parse } from "cookie";
-import { NextApiRequest, NextApiResponse } from 'next';
 import { C_CTDoConnectToDatabase } from '../../database/connect_db';
-
-const SECRET_KEY = process.env.SECRET_KEY as string;
 
 export async function GET(req: NextRequest) {
   // ✅ ดึง Cookie จาก Request
