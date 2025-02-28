@@ -12,6 +12,7 @@
     "cookie": "^1.0.2",
     "html5-qrcode": "^2.3.8",
     "jsonwebtoken": "^9.0.2",
+    "mssql": "^11.0.1",
     "next": "15.1.7",
     "next-pwa": "^5.6.0",
     "react": "^19.0.0",
@@ -21,6 +22,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/jsonwebtoken": "^9.0.9",
+    "@types/mssql": "^9.1.7",
     "@types/next-pwa": "^5.6.9",
     "@types/node": "^20",
     "@types/react": "^19",
