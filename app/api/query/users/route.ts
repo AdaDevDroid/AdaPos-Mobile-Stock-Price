@@ -33,8 +33,8 @@ export async function GET(req: NextRequest) {
           ON USRL.FTUsrCode = USR.FTUsrCode 
      LEFT JOIN TCNMUsrLogin USL 
           ON USL.FTUsrCode = USR.FTUsrCode  
-          AND USL.FTUsrStaActive != '2' 
-          AND USL.FTUsrLogType = '2'
+          AND USL.FTUsrStaActive = '1' 
+          AND USL.FTUsrLogType = '1'
      LEFT JOIN (
           SELECT 
                FTUsrCode, 
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
                FTUsrRmk, 
                FTUsrStaActive
           FROM TCNMUsrLogin 
-          WHERE FTUsrLogType = '2') AS USL2 ON USL2.FTUsrCode = USR.FTUsrCode
+          WHERE FTUsrLogType = '1') AS USL2 ON USL2.FTUsrCode = USR.FTUsrCode
      WHERE 
           USL.FDUsrPwdStart IS NOT NULL 
           AND USL.FDUsrPwdExpired IS NOT NULL 
