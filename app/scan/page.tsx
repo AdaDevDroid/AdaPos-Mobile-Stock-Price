@@ -1,11 +1,16 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
-import { FaCamera } from "react-icons/fa";
+import { useState, useRef, useEffect, SetStateAction } from "react";
+import { FaCamera, FaPlus, FaRegCalendar } from "react-icons/fa";
 import { CiLogout } from "react-icons/ci";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { useAuth } from "@/hooks/useAuth";
+import InputWithButton from "@/components/InputWithButton";
+import InputWithLabel from "@/components/InputWithLabel";
+import InputWithLabelAndButton from "@/components/InputWithLabelAndButton";
 
 export default function ScanPage() {
+  const [testNumber, setTestNumber] = useState(0);
+  const [testText, setTestText] = useState("");
   const [barcode, setBarcode] = useState("");
   const scannerRef = useRef<HTMLDivElement | null>(null);
 
@@ -14,7 +19,7 @@ export default function ScanPage() {
   // ✅ ขอ permission กล้องเมื่อเปิดหน้าเว็บ
   useEffect(() => {
     async function requestCameraPermission() {
-      
+
       try {
         await navigator.mediaDevices.getUserMedia({ video: true });
         console.log("✅ Camera permission granted");
@@ -89,11 +94,68 @@ export default function ScanPage() {
       </div>
 
       <button
-          onClick={handleLogout}
-          className="bg-red-500 text-white p-2 rounded-md flex items-center justify-center"
-        >
-          <CiLogout className="text-xl" />
-        </button>
+        onClick={handleLogout}
+        className="bg-red-500 text-white p-2 rounded-md flex items-center justify-center"
+      >
+        <CiLogout className="text-xl" />
+      </button>
+
+
+      {/*สอนใช้ Companent กลาง*/}
+
+      <div className="flex flex-col gap-4">
+
+        {/* Input + Button แบบ Number */}
+        <InputWithButton
+          type="number"
+          value={testNumber}
+          onChange={setTestNumber}
+          icon={<FaPlus />}
+          onClick={() => alert(`เพิ่มจำนวน: ${testNumber}`)}
+        />
+
+        {/* Input + Button แบบ Text */}
+        <InputWithButton
+          type="text"
+          value={testText}
+          onChange={setTestText}
+          icon={<FaPlus />}
+          onClick={() => alert(`ข้อความ: ${testText}`)}
+        />
+
+        {/* Input + label+icon */}
+        <InputWithLabel
+          type="text"
+          label={"เลขที่อ้างอิง"}
+          icon={<FaRegCalendar />}
+          value={testText}
+          onChange={setTestText}
+          placeholder="ระบุเลขที่อ้างอิงจาก Supplier"
+        />
+
+        {/* Input + label */}
+        <InputWithLabel
+          type="number"
+          label={"ต้นทุน"}
+          value={testNumber}
+          onChange={setTestNumber}
+          placeholder="ระบุต้นทุน (ถ้ามี)"
+        />
+
+        <InputWithLabelAndButton 
+        value={testText} 
+        onChange={setTestText} 
+        label={"testTT"} 
+        icon={<FaPlus />}
+        onClick={() => alert(`ข้อความ: ${testText}`)}        
+        />
+
+      </div>
+
+
+
+
+
     </div>
   );
 }
