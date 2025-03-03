@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { FaCamera, FaPlus, FaRegCalendar } from "react-icons/fa";
 import { CiLogout } from "react-icons/ci";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 import { useAuth } from "@/hooks/useAuth";
 import InputWithButton from "@/components/InputWithButton";
 import InputWithLabel from "@/components/InputWithLabel";
@@ -13,6 +13,9 @@ export default function ScanPage() {
   const [testText, setTestText] = useState("");
   const [barcode, setBarcode] = useState("");
   const scannerRef = useRef<HTMLDivElement | null>(null);
+
+  const [html5QrCode, setHtml5QrCode] = useState<Html5Qrcode | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
 
   // เช็ค user login
   useAuth();
@@ -30,26 +33,59 @@ export default function ScanPage() {
     requestCameraPermission();
   }, []);
 
+  // const startScanner = () => {
+  //   if (!scannerRef.current) return;
+
+  //   const html5QrCode = new Html5QrcodeScanner("reader", {
+  //     fps: 10,
+  //     qrbox: {
+  //       width: 200,  // กำหนดความกว้างของกรอบสแกน
+  //       height: 100,
+  //     }, // ขยายขนาดกรอบสแกน (สามารถเพิ่มขนาดได้ตามต้องการ)
+  //   }, false);
+
+  //   html5QrCode.render(
+  //     (decodedText) => {
+  //       setBarcode(decodedText);
+  //       html5QrCode.clear();
+  //     },
+  //     (error) => {
+  //       console.log(error);
+  //     }
+  //   );
+  // };
+
   const startScanner = () => {
-    if (!scannerRef.current) return;
+    if (isScanning && html5QrCode) {
+      // 🔴 หยุดสแกนเมื่อกดปุ่มอีกครั้ง
+      html5QrCode
+        .stop()
+        .then(() => {
+          console.log("📴 Scanner stopped");
+          setIsScanning(false);
+          setHtml5QrCode(null); // รีเซ็ต instance
+        })
+        .catch((err) => console.error("Error stopping scanner:", err));
+    } else {
+      // 🟢 เปิดกล้องเมื่อกดปุ่ม
+      if (!scannerRef.current) return;
+      const qrScanner = new Html5Qrcode("reader");
 
-    const html5QrCode = new Html5QrcodeScanner("reader", {
-      fps: 10,
-      qrbox: {
-        width: 200,  // กำหนดความกว้างของกรอบสแกน
-        height: 100,
-      }, // ขยายขนาดกรอบสแกน (สามารถเพิ่มขนาดได้ตามต้องการ)
-    }, false);
-
-    html5QrCode.render(
-      (decodedText) => {
-        setBarcode(decodedText);
-        html5QrCode.clear();
-      },
-      (error) => {
-        console.log(error);
-      }
-    );
+      qrScanner
+        .start(
+          { facingMode: "environment" }, // ใช้กล้องหลัง
+          { fps: 10, qrbox: { width: 300, height: 80 } },
+          (decodedText) => {
+            setBarcode(decodedText);
+          },
+          (error) => console.log(error)
+        )
+        .then(() => {
+          setHtml5QrCode(qrScanner); // บันทึก instance
+          setIsScanning(true);
+        })
+        .catch((err) => console.log("Error starting scanner:", err));
+    }
   };
 
   const handleLogout = async () => {
@@ -89,7 +125,7 @@ export default function ScanPage() {
       <div
         id="reader"
         ref={scannerRef}
-        className="mt-4 relative w-[500px] h-[200px]" // เพิ่มขนาดของ div ที่รับการแสดงกล้อง
+        className={`my-4 relative w-[50%] ${isScanning ? "h-[100%]" : "h-[0px]"} transition-opacity duration-300`}
       >
       </div>
 
@@ -142,12 +178,12 @@ export default function ScanPage() {
           placeholder="ระบุต้นทุน (ถ้ามี)"
         />
 
-        <InputWithLabelAndButton 
-        value={testText} 
-        onChange={setTestText} 
-        label={"testTT"} 
-        icon={<FaPlus />}
-        onClick={() => alert(`ข้อความ: ${testText}`)}        
+        <InputWithLabelAndButton
+          value={testText}
+          onChange={setTestText}
+          label={"testTT"}
+          icon={<FaPlus />}
+          onClick={() => alert(`ข้อความ: ${testText}`)}
         />
 
       </div>
