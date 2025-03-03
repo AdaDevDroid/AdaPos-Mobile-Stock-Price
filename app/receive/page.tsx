@@ -3,13 +3,12 @@
 import InputWithButton from "@/components/InputWithButton";
 import InputWithLabel from "@/components/InputWithLabel";
 import InputWithLabelAndButton from "@/components/InputWithLabelAndButton";
+import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { useAuth } from "@/hooks/useAuth";
-import { Html5Qrcode } from "html5-qrcode";
 import { useEffect, useRef, useState } from "react";
 import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory } from "react-icons/fa";
 import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
-
 
 interface Product {
   id: number;
@@ -27,99 +26,56 @@ export default function ReceiveGoods() {
   const [isOpen, setIsOpen] = useState(false);
   const [checked, setChecked] = useState(false);
   const [searchText, setSearchText] = useState<string>(""); // string
-  const [html5QrCode, setHtml5QrCode] = useState<Html5Qrcode | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const scannerRef = useRef<HTMLDivElement | null>(null);
   const [pendingBarcode, setPendingBarcode] = useState<string | null>(null);
+  const checkedRef = useRef(checked);
+  const costRef = useRef(cost);
 
-  // เช็ค user login
+  {/* เช็ค User*/}
   useAuth();
 
-  // ✅ ขอ permission กล้องเมื่อเปิดหน้าเว็บ
+  {/* ใช้ useEffect ในการเก็บค่า checked และ cost ไว้ */}
   useEffect(() => {
-    async function requestCameraPermission() {
+    checkedRef.current = checked;
+    costRef.current = cost;
+  }, [checked, cost]);
 
-      try {
-        await navigator.mediaDevices.getUserMedia({ video: true });
-        console.log("✅ Camera permission granted");
-      } catch (error) {
-        console.error("❌ Camera permission denied", error);
-      }
-    }
-    requestCameraPermission();
-  }, []);
-
-  useEffect(() => {
-    if (isScanning && html5QrCode) {
-      html5QrCode.stop().then(() => {
-        console.log("Scanner stopped due to checked state change");
-        setIsScanning(false);
-        setHtml5QrCode(null);
-      });
-    }
-  }, [checked]);
-
+  {/* ใช้ useEffect ในการเก็บค่า cost ไว้ */}
   useEffect(() => {
     if (pendingBarcode !== null) {
-      addProduct(pendingBarcode); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
+      addProduct(pendingBarcode, cost); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
       setPendingBarcode(null);
     }
   }, [cost]);
 
-  const startScanner = () => {
-    if (isScanning && html5QrCode) {
-      // 🔴 หยุดสแกนเมื่อกดปุ่มอีกครั้ง
-      html5QrCode
-        .stop()
-        .then(() => {
-          console.log("📴 Scanner stopped");
-          setIsScanning(false);
-          setHtml5QrCode(null); // รีเซ็ต instance
-        })
-        .catch((err) => console.error("Error stopping scanner:", err));
-    } else {
-      // 🟢 เปิดกล้องเมื่อกดปุ่ม
-      if (!scannerRef.current) return;
-      const qrScanner = new Html5Qrcode("reader");
-
-      qrScanner
-        .start(
-          { facingMode: "environment" }, // ใช้กล้องหลัง
-          { fps: 10, qrbox: { width: 300, height: 150 } },
-          (decodedText) => {
-            if (checked) {
-              setBarcode(decodedText);
-              alert(`เพิ่มข้อมูล: ${decodedText}`);
-              addProduct(decodedText);
-            } else {
-              setBarcode(decodedText);
-              alert(`ข้อความ: ${decodedText}`);
-            }
-          },
-          (error) => console.log(error)
-        )
-        .then(() => {
-          setHtml5QrCode(qrScanner); // บันทึก instance
-          setIsScanning(true);
-        })
-        .catch((err) => console.log("Error starting scanner:", err));
+  {/* สแกน BarCode */}
+  const { C_PRCxStartScanner, bScanning, oScannerRef } = CCameraScanner(
+    (ptDecodedText) => {
+      if (checkedRef.current) {
+        setBarcode(ptDecodedText);
+        alert(`เพิ่มข้อมูล: ${ptDecodedText}`);
+        addProduct(ptDecodedText, costRef.current);
+      } else {
+        setBarcode(ptDecodedText);
+        alert(`ข้อความ: ${ptDecodedText}`);
+      }
     }
-  };
-
-  const addProduct = (barcode: string) => {
+  );
+  
+  {/* เพิ่มสินค้า */}
+  const addProduct = (barcode: string, cost: string) => {
     if (!cost) {
       setCost("0");
-      setPendingBarcode(barcode); // รอให้ cost อัปเดตก่อน
+      setPendingBarcode(barcode);
       return;
     }
 
     if (!barcode || !quantity) return;
 
     setProducts((prevProducts) => {
-      const newId = Math.max(...prevProducts.map(p => p.id), 0) + 1; //หา ID สูงสุดแล้ว +1
+      const newId = Math.max(...prevProducts.map(p => p.id), 0) + 1;
 
       const newProduct = {
-        id: newId, // ใช้ ID ใหม่ที่ไม่ซ้ำ
+        id: newId,
         barcode,
         cost: parseFloat(cost),
         quantity: parseInt(quantity),
@@ -133,6 +89,7 @@ export default function ReceiveGoods() {
     setQuantity("1");
   };
 
+  {/* ลบสินค้า */}
   const removeProduct = (id: number) => {
     setProducts((prevProducts) =>
       prevProducts
@@ -143,13 +100,10 @@ export default function ReceiveGoods() {
 
   return (
     <div className="p-4 ms-1 mx-auto bg-white">
-
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
-
         <div className="flex flex-row w-full py-2">
           {/* หัวข้อ */}
           <h1 className="text-2xl font-bold md:pb-0">รับสินค้าจากผู้จำหน่าย</h1>
-
           {/* ปุ่ม 3 จุด จอเล็ก */}
           <button
             className="md:hidden ml-2 p-2 rounded-md ml-auto text-gray-500 hover:text-gray-700 text-[18px]"
@@ -176,7 +130,6 @@ export default function ReceiveGoods() {
             <FaEllipsisV />
           </button>
         </div>
-
         {/* Dropdown Menu */}
         {isOpen && (
           <div className="absolute right-4 top-6 mt-12 bg-white border shadow-lg rounded-md w-auto text-[16px]">
@@ -201,7 +154,6 @@ export default function ReceiveGoods() {
           </div>
         )}
       </div>
-
       {/* กรอกข้อมูล */}
       <div className="space-y-4 pt-4">
 
@@ -217,25 +169,24 @@ export default function ReceiveGoods() {
         {/* ตัวสแกน QR Code พร้อมกรอบ */}
         <div
           id="reader"
-          ref={scannerRef}
-          className={`my-4 relative flex items-center justify-center w-[50%] mx-auto ${isScanning ? "h-[50%]" : "h-[0px] pointer-events-none"
+          ref={oScannerRef}
+          className={`my-4 relative flex items-center justify-center w-[50%] mx-auto ${bScanning ? "h-[50%]" : "h-[0px] pointer-events-none"
             } transition-opacity duration-300`}
         >
         </div>
-
 
         <InputWithLabelAndButton
           type="text"
           label={"บาร์โค้ด"}
           value={barcode}
           onChange={setBarcode}
-          icon={isScanning ? <FiCameraOff /> : <FiCamera />}
+          icon={bScanning ? <FiCameraOff /> : <FiCamera />}
           placeholder="สแกนหรือป้อนบาร์โค้ด"
-          onClick={startScanner}
+          onClick={C_PRCxStartScanner}
         />
 
         <InputWithLabel
-          type="text"
+          type="number"
           label={"ต้นทุน"}
           value={cost}
           onChange={setCost}
@@ -248,7 +199,7 @@ export default function ReceiveGoods() {
           onChange={setQuantity}
           label={"จำนวนที่ได้รับ"}
           icon={<FaPlus />}
-          onClick={() => addProduct(barcode)}
+          onClick={() => addProduct(barcode, cost)}
         />
       </div>
 

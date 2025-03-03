@@ -27,9 +27,16 @@ export default function InputWithLabel<T extends string | number>({
         type={type}
         placeholder={placeholder}
         value={value}
-        onChange={(e) =>
-            onChange(type === "number" ? (Number(e.target.value) as T) : (e.target.value as T))
+        onChange={(e) => {
+          let value = e.target.value;
+
+          if (type === "number") {
+            value = value.replace(/^0+(?=\d)/, "");
+            onChange(value as T);
+          } else {
+            onChange(value as T);
           }
+        }}
         className="border w-full px-4 py-2 rounded-md"
       />
     </div>
