@@ -3,9 +3,12 @@
 import InputWithButton from "@/components/InputWithButton";
 import InputWithLabel from "@/components/InputWithLabel";
 import InputWithLabelAndButton from "@/components/InputWithLabelAndButton";
-import { useState } from "react";
-import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory, FaCamera } from "react-icons/fa";
+import { CCameraScanner } from "@/hooks/CCameraScanner";
+import { useAuth } from "@/hooks/useAuth";
+import { useEffect, useRef, useState } from "react";
+import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory } from "react-icons/fa";
 import { GrDocumentText } from "react-icons/gr";
+import { FiCamera, FiCameraOff } from "react-icons/fi";
 
 interface Product {
   id: number;
@@ -23,34 +26,84 @@ export default function ReceiveGoods() {
   const [isOpen, setIsOpen] = useState(false);
   const [checked, setChecked] = useState(false);
   const [searchText, setSearchText] = useState<string>(""); // string
+  const [pendingBarcode, setPendingBarcode] = useState<string | null>(null);
+  const checkedRef = useRef(checked);
+  const costRef = useRef(cost);
 
-  const addProduct = () => {
-    if (!barcode || !cost || !quantity) return;
-    const newProduct = {
-      id: products.length + 1,
-      barcode,
-      cost: parseFloat(cost),
-      quantity: parseInt(quantity),
-    };
-    setProducts([...products, newProduct]);
+  {/* เช็ค User*/}
+  useAuth();
+
+  {/* ใช้ useEffect ในการเก็บค่า checked และ cost ไว้ */}
+  useEffect(() => {
+    checkedRef.current = checked;
+    costRef.current = cost;
+  }, [checked, cost]);
+
+  {/* ใช้ useEffect ในการเก็บค่า cost ไว้ */}
+  useEffect(() => {
+    if (pendingBarcode !== null) {
+      addProduct(pendingBarcode, cost); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
+      setPendingBarcode(null);
+    }
+  }, [cost]);
+
+  {/* สแกน BarCode */}
+  const { C_PRCxStartScanner, bScanning, oScannerRef } = CCameraScanner(
+    (ptDecodedText) => {
+      if (checkedRef.current) {
+        setBarcode(ptDecodedText);
+        alert(`เพิ่มข้อมูล: ${ptDecodedText}`);
+        addProduct(ptDecodedText, costRef.current);
+      } else {
+        setBarcode(ptDecodedText);
+        alert(`ข้อความ: ${ptDecodedText}`);
+      }
+    }
+  );
+  
+  {/* เพิ่มสินค้า */}
+  const addProduct = (barcode: string, cost: string) => {
+    if (!cost) {
+      setCost("0");
+      setPendingBarcode(barcode);
+      return;
+    }
+
+    if (!barcode || !quantity) return;
+
+    setProducts((prevProducts) => {
+      const newId = Math.max(...prevProducts.map(p => p.id), 0) + 1;
+
+      const newProduct = {
+        id: newId,
+        barcode,
+        cost: parseFloat(cost),
+        quantity: parseInt(quantity),
+      };
+
+      return [...prevProducts, newProduct];
+    });
+
     setBarcode("");
     setCost("");
     setQuantity("1");
   };
 
+  {/* ลบสินค้า */}
   const removeProduct = (id: number) => {
-    setProducts(products.filter((product) => product.id !== id));
+    setProducts((prevProducts) =>
+      prevProducts
+        .filter((product) => product.id !== id)
+        .map((product, index) => ({ ...product, id: index + 1 })) //รีเซ็ต ID ใหม่
+    );
   };
 
   return (
     <div className="p-4 ms-1 mx-auto bg-white">
-
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
-
         <div className="flex flex-row w-full py-2">
           {/* หัวข้อ */}
           <h1 className="text-2xl font-bold md:pb-0">รับสินค้าจากผู้จำหน่าย</h1>
-
           {/* ปุ่ม 3 จุด จอเล็ก */}
           <button
             className="md:hidden ml-2 p-2 rounded-md ml-auto text-gray-500 hover:text-gray-700 text-[18px]"
@@ -77,7 +130,6 @@ export default function ReceiveGoods() {
             <FaEllipsisV />
           </button>
         </div>
-
         {/* Dropdown Menu */}
         {isOpen && (
           <div className="absolute right-4 top-6 mt-12 bg-white border shadow-lg rounded-md w-auto text-[16px]">
@@ -102,7 +154,6 @@ export default function ReceiveGoods() {
           </div>
         )}
       </div>
-
       {/* กรอกข้อมูล */}
       <div className="space-y-4 pt-4">
 
@@ -115,14 +166,23 @@ export default function ReceiveGoods() {
           placeholder="ระบุเลขที่อ้างอิงจาก Supplier"
         />
 
+        {/* ตัวสแกน QR Code พร้อมกรอบ */}
+        <div
+          id="reader"
+          ref={oScannerRef}
+          className={`my-4 relative flex items-center justify-center w-[50%] mx-auto ${bScanning ? "h-[50%]" : "h-[0px] pointer-events-none"
+            } transition-opacity duration-300`}
+        >
+        </div>
+
         <InputWithLabelAndButton
           type="text"
           label={"บาร์โค้ด"}
           value={barcode}
           onChange={setBarcode}
-          icon={<FaCamera />}
+          icon={bScanning ? <FiCameraOff /> : <FiCamera />}
           placeholder="สแกนหรือป้อนบาร์โค้ด"
-          onClick={() => alert(`เพิ่มจำนวน: เปิดกล้อง`)}
+          onClick={C_PRCxStartScanner}
         />
 
         <InputWithLabel
@@ -139,7 +199,7 @@ export default function ReceiveGoods() {
           onChange={setQuantity}
           label={"จำนวนที่ได้รับ"}
           icon={<FaPlus />}
-          onClick={addProduct}
+          onClick={() => addProduct(barcode, cost)}
         />
       </div>
 
@@ -190,3 +250,4 @@ export default function ReceiveGoods() {
     </div>
   );
 }
+

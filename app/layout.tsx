@@ -1,6 +1,6 @@
 "use client";
 import "./globals.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NetworkStatusProvider } from "@/hooks/NetworkStatusContext";
 import NetworkStatus from "@/components/NetworkStatus";
 import { usePathname } from "next/navigation";
@@ -9,10 +9,25 @@ import Sidebar from "@/components/Sidebar";
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname(); // ดึง URL ปัจจุบัน
   const hideSidebarPages = ["/login"]; // หน้าที่ไม่ต้องการให้แสดง Sidebar
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // สถานะการเปิด-ปิดของ Sidebar
+
+  // โหลดค่าจาก localStorage หรือใช้ค่าเริ่มต้น
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // ดึงค่าจาก localStorage ตอนเปิดหน้าใหม่
+  useEffect(() => {
+    const savedState = localStorage.getItem("isSidebarOpen");
+    if (savedState !== null) {
+      setIsSidebarOpen(savedState === "true");
+    }
+  }, []);
+
+  // บันทึกค่าไว้ใน localStorage เมื่อมีการเปลี่ยนค่า
+  useEffect(() => {
+    localStorage.setItem("isSidebarOpen", String(isSidebarOpen));
+  }, [isSidebarOpen]);
 
   const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
+    setIsSidebarOpen((prev) => !prev);
   };
 
   return (
