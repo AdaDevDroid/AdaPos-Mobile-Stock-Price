@@ -46,7 +46,7 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
               console.error("Error in scan callback:", error);
             }
           },
-          (error) => console.error("❌ Scanner Error:", error)
+          (error) => error
         )
         .then(() => {
           oHtml5QrCode.current = qrScanner;
