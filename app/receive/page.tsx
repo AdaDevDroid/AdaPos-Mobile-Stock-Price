@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory } from "react-icons/fa";
 import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
+import exportToExcel from '@/hooks/CTransfersToExcel';
 
 interface Product {
   id: number;
@@ -98,6 +99,18 @@ export default function ReceiveGoods() {
     );
   };
 
+  {/* export excel */}
+  const exportProduct = () => {
+    const formattedProducts = products.map(product => ({
+      tBarcode: product.barcode,
+      tCost: product.cost.toString(),
+      tQTY: product.quantity.toString()
+    }));
+    exportToExcel(formattedProducts);
+  };
+
+
+
   return (
     <div className="p-4 ms-1 mx-auto bg-white">
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
@@ -141,7 +154,7 @@ export default function ReceiveGoods() {
             </button>
             <button
               className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
-              onClick={() => alert(`ข้อความ: ส่งออกเป็น File Excel`)}
+              onClick={exportProduct}
             >
               <FaDownload className="mr-2 text-gray-700" /> ส่งออกเป็น File Excel
             </button>
