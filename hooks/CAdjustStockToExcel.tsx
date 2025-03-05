@@ -2,14 +2,15 @@ import * as XLSX from 'xlsx';
 
 
 interface oData {
-  tPdtCode: string;
+  // tPdtCode: string;
   tBarcode: string;
-  tStockCode: string;
+  // tStockCode: string;
   tQTY: string;
 }
 
 const exportToExcel = (data: oData[]) => {
-    const header1 = [["*Product Code Text[20]", "*Bar Code Text[25]", "Stock Control Code[50]", " * Qty  Decimal[18,4] "]];
+    // const header1 = [["*Product Code Text[20]", "*Bar Code Text[25]", "Stock Control Code[50]", " * Qty  Decimal[18,4] "]];
+    const header1 = [[ "*Bar Code Text[25]", " * Qty  Decimal[18,4] "]];
     const emptySheet = XLSX.utils.aoa_to_sheet([[]]);
 
   
