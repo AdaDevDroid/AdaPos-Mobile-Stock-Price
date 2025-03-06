@@ -2,7 +2,7 @@ import { History, Product, UserInfo } from "@/models/models"
 
 export const C_PRCxOpenIndexedDB = async () => {
   const DB_NAME = "AdaDB";
-  const DB_VERSION = 7;
+  const DB_VERSION = 8;
 
   return new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -33,7 +33,7 @@ export const C_PRCxOpenIndexedDB = async () => {
 
       // 🔹 สร้างตาราง TCNTHistoryReceive ถ้ายังไม่มี
       if (!db.objectStoreNames.contains("TCNTHistoryReceive")) {
-        const store = db.createObjectStore("TCNTHistoryReceive", { keyPath: "FTRefDoc", autoIncrement: true });
+        const store = db.createObjectStore("TCNTHistoryReceive", { autoIncrement: true });
         store.createIndex("FTDate", "FTDate", { unique: false });
         store.createIndex("FTRefDoc", "FTRefDoc", { unique: false });
         store.createIndex("FNStatus", "FNStatus", { unique: false });

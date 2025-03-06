@@ -57,6 +57,8 @@ export default function Receive() {
         setUserInfo(data);
         console.log("✅ ข้อมูลผู้ใช้ถูกตั้งค่า:", data);
       }
+
+      setRefSeq(crypto.randomUUID());
     };
 
     initDB();
@@ -205,7 +207,7 @@ export default function Receive() {
       return;
     }
 
-    if (!ptBarcode || !tQty || !tRefDoc) {
+    if (!ptBarcode || !tQty ) {
       alert("❌ กรุณากรอกข้อมูลให้ครบ");
       return;
     }
