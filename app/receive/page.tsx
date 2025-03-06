@@ -10,7 +10,7 @@ import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaH
 import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CTransfersToExcel';
-import { History, Product, UserInfo } from "./models"
+import { History, Product, UserInfo } from "@/models/models"
 import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryReceiveModal from "@/components/HistoryReceiveModal";
@@ -38,6 +38,7 @@ export default function Receive() {
   const checkedRef = useRef(bCheckAutoScan);
   const costRef = useRef(tCost);
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [tRefSeq, setRefSeq] = useState("");
 
   const [tHistoryDate, setHistoryDate] = useState("");
   const [tHistoryRefDoc, setHistoryRefDoc] = useState("");
@@ -56,6 +57,8 @@ export default function Receive() {
         setUserInfo(data);
         console.log("✅ ข้อมูลผู้ใช้ถูกตั้งค่า:", data);
       }
+
+      setRefSeq(crypto.randomUUID());
     };
 
     initDB();
@@ -78,7 +81,6 @@ export default function Receive() {
       setPendingBarcode(null);
     }
   }, [tCost]);
-
 
   {/* สแกน BarCode */ }
   const { C_PRCxStartScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning, oScannerRef } = CCameraScanner(
@@ -118,6 +120,7 @@ export default function Receive() {
           FTDate: item.FTDate,
           FTRefDoc: item.FTRefDoc,
           FNStatus: item.FNStatus,
+          FTRefSeq: item.FTRefSeq
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData); // ✅ ตรวจสอบข้อมูลที่ดึงมา
@@ -147,7 +150,8 @@ export default function Receive() {
           FTBarcode: item.FTBarcode,
           FCCost: item.FCCost,
           FNQuantity: item.FNQuantity,
-          FTRefDoc: item.FTRefDoc
+          FTRefDoc: item.FTRefDoc,
+          FTRefSeq: item.FTRefSeq
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData);
@@ -171,6 +175,7 @@ export default function Receive() {
       FTDate: currentDate,
       FTRefDoc: tRefDoc,
       FNStatus: 1,
+      FTRefSeq: tRefSeq
     };
 
     await C_INSxDataIndexedDB(oDb, "TCNTHistoryReceive", [historyData]);
@@ -187,6 +192,7 @@ export default function Receive() {
       FCCost: oProducts.FCCost,
       FNQuantity: oProducts.FNQuantity,
       FTRefDoc: oProducts.FTRefDoc,
+      FTRefSeq: oProducts.FTRefSeq
     }));
 
     await C_INSxDataIndexedDB(oDb, "TCNTProductReceive", productData);
@@ -201,7 +207,7 @@ export default function Receive() {
       return;
     }
 
-    if (!ptBarcode || !tQty || !tRefDoc) {
+    if (!ptBarcode || !tQty ) {
       alert("❌ กรุณากรอกข้อมูลให้ครบ");
       return;
     }
@@ -214,7 +220,8 @@ export default function Receive() {
         FTBarcode: ptBarcode,
         FCCost: parseFloat(tCost),
         FNQuantity: parseInt(tQty),
-        FTRefDoc: tRefDoc
+        FTRefDoc: tRefDoc,
+        FTRefSeq: tRefSeq
       };
 
       return [...prevProducts, newProduct];
@@ -272,6 +279,11 @@ export default function Receive() {
     }
     setIsLoading(true); // ✅ เริ่ม Loading
     try {
+      console.log("✅ หา RefSeq ใหม่");
+      const newRefSeq = crypto.randomUUID();
+      setRefSeq(newRefSeq);
+      console.log("✅ RefSeq = ",newRefSeq);
+
       console.log("✅ ข้อมูล History ถูกบันทึก");
       await C_INSxHistoryToIndexedDB();
 

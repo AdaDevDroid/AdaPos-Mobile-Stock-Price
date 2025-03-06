@@ -1,27 +1,8 @@
-interface UserInfo {
-  FTUsrName: string;
-  FTBchCode: string;
-  FTAgnCode: string;
-  FTMerCode: string;
-}
-
-interface Product {
-  FNId: number;
-  FTBarcode: string;
-  FCCost: number;
-  FNQuantity: number;
-  FTRefDoc: string;
-}
-
-interface History {
-  FTDate: string;
-  FTRefDoc: string;
-  FNStatus: number;
-}
+import { History, Product, UserInfo } from "@/models/models"
 
 export const C_PRCxOpenIndexedDB = async () => {
   const DB_NAME = "AdaDB";
-  const DB_VERSION = 5;
+  const DB_VERSION = 8;
 
   return new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -43,19 +24,20 @@ export const C_PRCxOpenIndexedDB = async () => {
       }
       //TsysConfig
       //limitdata, จุดทศนิยมแสดง, จุดทศนิยมบันทึก
-      // if (!db.objectStoreNames.contains("TsysConfig")) {
-      //   const store = db.createObjectStore("TsysConfig", { autoIncrement: true });
-      //   store.createIndex("FNLimitHistory", "FNLimitHistory", { unique: false });
-      //   store.createIndex("FTValue", "FTValue", { unique: false });
-      //   console.log("✅ สร้างตาราง 'TsysConfig' สำเร็จ");
-      // }
+      if (!db.objectStoreNames.contains("TsysConfig")) {
+        const store = db.createObjectStore("TsysConfig", { autoIncrement: true });
+        store.createIndex("FTSysCode", "FTSysCode", { unique: false });
+        store.createIndex("FTSysStaUsrValue", "FTSysStaUsrValue", { unique: false });
+        console.log("✅ สร้างตาราง 'TsysConfig' สำเร็จ");
+      }
 
       // 🔹 สร้างตาราง TCNTHistoryReceive ถ้ายังไม่มี
       if (!db.objectStoreNames.contains("TCNTHistoryReceive")) {
-        const store = db.createObjectStore("TCNTHistoryReceive", { keyPath: "FTRefDoc", autoIncrement: true });
+        const store = db.createObjectStore("TCNTHistoryReceive", { autoIncrement: true });
         store.createIndex("FTDate", "FTDate", { unique: false });
         store.createIndex("FTRefDoc", "FTRefDoc", { unique: false });
         store.createIndex("FNStatus", "FNStatus", { unique: false });
+        store.createIndex("FTRefSeq", "FTRefSeq", { unique: false });
         console.log("✅ สร้างตาราง 'TCNTHistoryReceive' สำเร็จ");
       }
 
@@ -67,6 +49,7 @@ export const C_PRCxOpenIndexedDB = async () => {
         store.createIndex("FCCost", "FCCost", { unique: false });
         store.createIndex("FNQuantity", "FNQuantity", { unique: false });
         store.createIndex("FTRefDoc", "FTRefDoc", { unique: false });
+        store.createIndex("FTRefSeq", "FTRefSeq", { unique: false });
         console.log("✅ สร้างตาราง 'TCNTProductReceive' สำเร็จ");
       }
     };
@@ -87,6 +70,7 @@ export const C_DELxLimitData = async (oDb: IDBDatabase, pnLimitData: number, ptH
 
   const deletedRefDocs = await C_DELxHistoryData(oDb!!, ptHistoryName, pnLimitData);
   if (deletedRefDocs.length > 0) {
+    console.log("รายการที่จะลบ", deletedRefDocs);
     await C_DELxProductsByRefDocs(oDb!!, deletedRefDocs, ptDataList);
   }
 }
@@ -202,7 +186,7 @@ const C_DELxHistoryData = async (oDb: IDBDatabase, ptTableName: string, pnLimitD
       request.onsuccess = (event) => {
         const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
         if (cursor && deleteCount > 0) {
-          const deletedRef = cursor.value.FTRefDoc;
+          const deletedRef = cursor.value.FTRefSeq;
           deletedRefDocs.push(deletedRef);
           cursor.delete();
           deleteCount--;
@@ -233,7 +217,7 @@ const C_DELxProductsByRefDocs = async (oDb: IDBDatabase, refDocs: string[], ptTa
     let deletedCount = 0;
 
     refDocs.forEach((refDoc) => {
-      const index = store.index("FTRefDoc");
+      const index = store.index("FTRefSeq");
       const request = index.openCursor(IDBKeyRange.only(refDoc));
 
       request.onsuccess = (event) => {
@@ -246,7 +230,7 @@ const C_DELxProductsByRefDocs = async (oDb: IDBDatabase, refDocs: string[], ptTa
       };
 
       request.onerror = () => {
-        console.error(`❌ ไม่สามารถลบข้อมูลจาก ${storeName} ที่ FTRefDoc = ${refDoc}`);
+        console.error(`❌ ไม่สามารถลบข้อมูลจาก ${storeName} ที่ FTRefSeq = ${refDoc}`);
       };
     });
 
@@ -262,7 +246,7 @@ const C_DELxProductsByRefDocs = async (oDb: IDBDatabase, refDocs: string[], ptTa
   });
 };
 
-const C_GETxCountFromdDB = async (oDB: IDBDatabase, storeName: string): Promise<number> => {
+export const C_GETxCountFromdDB = async (oDB: IDBDatabase, storeName: string): Promise<number> => {
   return new Promise((resolve) => {
 
     const transaction = oDB.transaction(storeName, "readonly");
