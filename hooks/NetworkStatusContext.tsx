@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 // ✅ สร้าง Context สำหรับเช็คอินเทอร์เน็ต
-const NetworkStatusContext = createContext<boolean>(true);
+const NetworkStatusContext = createContext<boolean>(false);
 
 // ✅ สร้าง Provider
 export const NetworkStatusProvider = ({ children }: { children: React.ReactNode }) => {

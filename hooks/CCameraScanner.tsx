@@ -46,7 +46,7 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
               console.error("Error in scan callback:", error);
             }
           },
-          (error) => console.error("❌ Scanner Error:", error)
+          (error) => error
         )
         .then(() => {
           oHtml5QrCode.current = qrScanner;
@@ -56,5 +56,20 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
     }
   };
 
-  return { C_PRCxStartScanner, bScanning, oScannerRef };
+  const C_PRCxPauseScanner = () => {
+    if (oHtml5QrCode.current) {
+      oHtml5QrCode.current.pause(true);
+      console.log("⏸ Scanner paused");
+    }
+  };
+
+  const C_PRCxResumeScanner = () => {
+    if (oHtml5QrCode.current) {
+      oHtml5QrCode.current.resume();
+      console.log("▶ Scanner resumed");
+    }
+  };
+
+
+  return { C_PRCxStartScanner,C_PRCxPauseScanner,C_PRCxResumeScanner, bScanning, oScannerRef };
 };
