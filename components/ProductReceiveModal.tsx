@@ -1,13 +1,5 @@
 import React from "react";
-
-interface Product {
-    FNId: number;
-    FTBarcode: string;
-    FCCost: number;
-    FNQuantity: number;
-    FTRefDoc: string;
-}
-
+import { Product } from "@/models/models"
 
 interface ProductModalProps {
     isOpen: boolean;

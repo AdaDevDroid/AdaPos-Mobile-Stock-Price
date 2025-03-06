@@ -1,10 +1,5 @@
 import React from "react";
-
-interface History {
-    FTDate: string;
-    FTRefDoc: string;
-    FNStatus: number;
-}
+import { History } from "@/models/models";
 
 interface HistoryModalProps {
     isOpen: boolean;
