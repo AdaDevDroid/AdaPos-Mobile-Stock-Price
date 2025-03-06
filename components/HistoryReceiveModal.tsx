@@ -9,12 +9,12 @@ interface History {
 interface HistoryModalProps {
     isOpen: boolean;
     onClose: () => void;
-    Data: History[];
+    oDataHistory: History[];
     onView: (history: History) => void;
     onRepeat: (history: History) => void;
 }
 
-const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, Data, onView, onRepeat }) => {
+const HistoryReceiveModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, oDataHistory, onView, onRepeat }) => {
     if (!isOpen) return null;
 
     return (
@@ -40,7 +40,7 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, Data, onVi
                             </tr>
                         </thead>
                         <tbody className="bg-white">
-                            {Data.map((data, index) => (
+                            {oDataHistory.map((data, index) => (
                                 <tr key={index} className="border text-center text-gray-500 text-[14px]">
                                     <td className="p-2">{data.FTDate}</td>
                                     <td className="p-2">{data.FTRefDoc}</td>
@@ -65,9 +65,12 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, Data, onVi
                         </tbody>
                     </table>
                 </div>
+
+                
+
             </div>
         </div>
     );
 };
 
-export default HistoryModal;
+export default HistoryReceiveModal;

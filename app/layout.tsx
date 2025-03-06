@@ -2,6 +2,7 @@
 import "./globals.css";
 import { useState } from "react";
 import { NetworkStatusProvider } from "@/hooks/NetworkStatusContext";
+import NetworkStatus from "@/components/NetworkStatus";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {children}
             </main>
           </div>
+          <NetworkStatus />
         </NetworkStatusProvider>
       </body>
     </html>

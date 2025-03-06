@@ -12,3 +12,10 @@ export interface History {
     FTRefDoc: string;
     FNStatus: number;
 }
+
+export interface UserInfo {
+    FTUsrName: string;
+    FTBchCode: string;
+    FTAgnCode: string;
+    FTMerCode: string;
+  }
