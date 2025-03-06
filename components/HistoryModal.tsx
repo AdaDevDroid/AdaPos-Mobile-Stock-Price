@@ -1,21 +1,20 @@
 import React from "react";
 
 interface History {
-    id: number;
-    date: string;
-    refDoc: string;
-    status: number;
+    FTDate: string;
+    FTRefDoc: string;
+    FNStatus: number;
 }
 
 interface HistoryModalProps {
     isOpen: boolean;
     onClose: () => void;
-    historyList: History[];
+    Data: History[];
     onView: (history: History) => void;
     onRepeat: (history: History) => void;
 }
 
-const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, historyList, onView, onRepeat }) => {
+const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, Data, onView, onRepeat }) => {
     if (!isOpen) return null;
 
     return (
@@ -41,23 +40,23 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, historyLis
                             </tr>
                         </thead>
                         <tbody className="bg-white">
-                            {historyList.map((history, index) => (
+                            {Data.map((data, index) => (
                                 <tr key={index} className="border text-center text-gray-500 text-[14px]">
-                                    <td className="p-2">{history.date}</td>
-                                    <td className="p-2">{history.refDoc}</td>
+                                    <td className="p-2">{data.FTDate}</td>
+                                    <td className="p-2">{data.FTRefDoc}</td>
                                     <td className="p-2">
-                                        {history.status === 1 ? (
+                                        {data.FNStatus === 1 ? (
                                             <span className="bg-green-100 text-green-600 px-2 py-1 rounded-lg">บันทึกแล้ว</span>
                                         ) : (
                                             <span className="bg-red-100 text-red-600 px-2 py-1 rounded-lg">ยกเลิก</span>
                                         )}
                                     </td>
                                     <td className="p-2">
-                                        <button onClick={() => onView(history)} className="text-blue-500 hover:underline">
+                                        <button onClick={() => onView(data)} className="text-blue-500 hover:underline">
                                             ดูข้อมูล
                                         </button>{" "}
                                         |{" "}
-                                        <button onClick={() => onRepeat(history)} className="text-blue-500 hover:underline">
+                                        <button onClick={() => onRepeat(data)} className="text-blue-500 hover:underline">
                                             ทำซ้ำ
                                         </button>
                                     </td>

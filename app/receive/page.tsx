@@ -11,44 +11,11 @@ import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaH
 import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CTransfersToExcel';
+import { History, Product } from "./models"
+import { C_PRCxOpenIndexedDB, C_DELxLimitData } from "@/hooks/CIndexedDB";
+import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 
-interface Product {
-  id: number;
-  barcode: string;
-  cost: number;
-  quantity: number;
-  refDoc: string;
-}
-
-interface History {
-  id: number;
-  date: string;
-  refDoc: string;
-  status: number;
-}
-
-const mockHistoryData: History[] = [
-  {
-    id: 1,
-    date: "2025-03-01",
-    refDoc: "PO123456",
-    status: 1
-  },
-  {
-    id: 2,
-    date: "2025-03-02",
-    refDoc: "PO123457",
-    status: 0
-  },
-  {
-    id: 3,
-    date: "2025-03-03",
-    refDoc: "PO123458",
-    status: 1
-  },
-];
-
-export default function ReceiveGoods() {
+export default function Receive() {
   const [refDoc, setRefDoc] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [barcode, setBarcode] = useState("");
@@ -61,39 +28,64 @@ export default function ReceiveGoods() {
   const checkedRef = useRef(checked);
   const costRef = useRef(cost);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [historyList, setHistoryList] = useState<History[]>(mockHistoryData);
+  const [historyList, setHistoryList] = useState<History[]>([]);
+  const [oDb, setDB] = useState<IDBDatabase | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const limitData = 3;
+  const isNetworkOnline = useNetworkStatus();
 
-  const DB_NAME = "AdaDB";
-  const DB_VERSION = 4; // อัปเดตเวอร์ชันหากมีการเปลี่ยนแปลงโครงสร้าง
+  // 🔹 เปิดฐานข้อมูลเมื่อ Component โหลด
+  useEffect(() => {
+    const initDB = async () => {
+      const database = await C_PRCxOpenIndexedDB();
+      setDB(database);
+    };
+    initDB();
+  }, []);
+  // 🔹 ดึงข้อมูลเมื่อ oDb ถูกเซ็ตค่า
+  useEffect(() => {
+    if (oDb) {
+      C_PRCxFetchHistoryList();
+    }
+  }, [oDb]);
 
-  // 📌 ฟังก์ชันเปิดฐานข้อมูล (เปิดเพียงครั้งเดียว)
-  const openDatabase = async (): Promise<IDBDatabase> => {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
+  // 🔹 ฟังก์ชันดึงข้อมูลจาก IndexedDB
+  const C_PRCxFetchHistoryList = async () => {
+    if (!oDb) {
+      console.error("❌ Database is not initialized");
+      return;
+    }
 
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
+    const transaction = oDb.transaction("TCNTHistoryReceive", "readonly");
+    const store = transaction.objectStore("TCNTHistoryReceive");
+    const request = store.getAll();
 
-        // ✅ ตรวจสอบและสร้าง object stores
-        if (!db.objectStoreNames.contains("reciveHistory")) {
-          db.createObjectStore("reciveHistory", { autoIncrement: true });
-          console.log("✅ สร้างตาราง 'reciveHistory'");
-        }
-        if (!db.objectStoreNames.contains("reciveProduct")) {
-          db.createObjectStore("reciveProduct", { autoIncrement: true });
-          console.log("✅ สร้างตาราง 'reciveProduct'");
-        }
-      };
+    request.onsuccess = () => {
+      if (request.result) {
+        const mappedData: History[] = request.result.map((item: History) => ({
+          FTDate: item.FTDate,
+          FTRefDoc: item.FTRefDoc,
+          FNStatus: item.FNStatus,
+        }));
 
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+        console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData); // ✅ ตรวจสอบข้อมูลที่ดึงมา
+        setHistoryList(mappedData);
+      }
+    };
+
+    request.onerror = () => {
+      console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
+    };
   };
 
-  const saveToIndexedDB = async (storeName: string, data: any[]) => {
+  const saveToIndexedDB = async (storeName: string, data: (History | Product)[]) => {
     try {
-      const db = await openDatabase();
-      const transaction = db.transaction(storeName, "readwrite");
+
+      if (!oDb) {
+        console.error("❌ Database is not initialized");
+        return;
+      }
+      const transaction = oDb.transaction(storeName, "readwrite");
       const store = transaction.objectStore(storeName);
 
       data.forEach((item) => {
@@ -102,7 +94,6 @@ export default function ReceiveGoods() {
       });
 
       transaction.oncomplete = () => {
-        alert(`✅ ข้อความ: บันทึกข้อมูลสำเร็จ`);
         console.log(`✅ บันทึกข้อมูลสำเร็จใน '${storeName}'`);
         setRefDoc("");
       };
@@ -113,6 +104,38 @@ export default function ReceiveGoods() {
     } catch (error) {
       console.error("❌ ข้อผิดพลาดในการใช้งาน IndexedDB", error);
     }
+  };
+
+  // 📌 ฟังก์ชันบันทึกประวัติ
+  const saveHistoryToIndexedDB = async () => {
+    if (!oDb) {
+      console.error("❌ Database is not initialized");
+      return;
+    }
+    const currentDate = new Date().toLocaleDateString("th-TH");
+
+    const historyData: History = {
+      FTDate: currentDate,
+      FTRefDoc: refDoc,
+      FNStatus: 1,
+    };
+
+    await saveToIndexedDB("TCNTHistoryReceive", [historyData]);
+  };
+
+  // 📌 ฟังก์ชันบันทึกสินค้า
+  const saveProductToIndexedDB = async () => {
+
+    const productData = products.map((product) => ({
+      FNId: product.FNId,
+      FTBarcode: product.FTBarcode,
+      FCCost: product.FCCost,
+      FNQuantity: product.FNQuantity,
+      FTRefDoc: product.FTRefDoc,
+    }));
+
+    await saveToIndexedDB("TCNTProductReceive", productData);
+    setProducts([]);
   };
 
   {/* เช็ค User*/ }
@@ -133,16 +156,23 @@ export default function ReceiveGoods() {
   }, [cost]);
 
   {/* สแกน BarCode */ }
-  const { C_PRCxStartScanner, bScanning, oScannerRef } = CCameraScanner(
+  const { C_PRCxStartScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning, oScannerRef } = CCameraScanner(
     (ptDecodedText) => {
+      C_PRCxPauseScanner();
       if (checkedRef.current) {
-        setBarcode(ptDecodedText);
-        alert(`เพิ่มข้อมูล: ${ptDecodedText}`);
-        addProduct(ptDecodedText, costRef.current);
+        const bConfirmed = window.confirm(`เพิ่มข้อมูล: ${ptDecodedText} ?`);
+        if (bConfirmed) {
+          setBarcode(ptDecodedText);
+          addProduct(ptDecodedText, costRef.current);
+        }
       } else {
         setBarcode(ptDecodedText);
         alert(`ข้อความ: ${ptDecodedText}`);
       }
+      // ✅ รอ 500ms ก่อนเปิดกล้องใหม่
+      setTimeout(() => {
+        C_PRCxResumeScanner();
+      }, 500);
     }
   );
 
@@ -154,17 +184,20 @@ export default function ReceiveGoods() {
       return;
     }
 
-    if (!barcode || !quantity) return;
+    if (!barcode || !quantity || !refDoc){
+      alert("❌ กรุณากรอกข้อมูลให้ครบ");
+      return;
+    } 
 
     setProducts((prevProducts) => {
-      const newId = Math.max(...prevProducts.map(p => p.id), 0) + 1;
+      const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
 
       const newProduct = {
-        id: newId,
-        barcode,
-        cost: parseFloat(cost),
-        quantity: parseInt(quantity),
-        refDoc
+        FNId: newId,
+        FTBarcode: barcode,
+        FCCost: parseFloat(cost),
+        FNQuantity: parseInt(quantity),
+        FTRefDoc: refDoc
       };
 
       return [...prevProducts, newProduct];
@@ -179,22 +212,20 @@ export default function ReceiveGoods() {
   const removeProduct = (id: number) => {
     setProducts((prevProducts) =>
       prevProducts
-        .filter((product) => product.id !== id)
+        .filter((product) => product.FNId !== id)
         .map((product, index) => ({ ...product, id: index + 1 })) //รีเซ็ต ID ใหม่
     );
   };
 
-  {/* export excel */}
+  {/* export excel */ }
   const exportProduct = () => {
     const formattedProducts = products.map(product => ({
-      tBarcode: product.barcode,
-      tCost: product.cost.toString(),
-      tQTY: product.quantity.toString()
+      tBarcode: product.FTBarcode,
+      tCost: product.FCCost.toString(),
+      tQTY: product.FNQuantity.toString()
     }));
     exportToExcel(formattedProducts);
   };
-
-
 
   // ปิด dropdown
   const handleClickOutside = () => {
@@ -204,77 +235,46 @@ export default function ReceiveGoods() {
   };
 
   const handleView = (history: History) => {
-    alert(`ดูข้อมูลของ Receive: ${history.refDoc}`);
+    alert(`ดูข้อมูลของ Receive: ${history.FTRefDoc}`);
   };
 
   const handleRepeat = (history: History) => {
-    alert(`ทำซ้ำใบอ้างอิง Receive: ${history.refDoc}`);
+    alert(`ทำซ้ำใบอ้างอิง Receive: ${history.FTRefDoc}`);
   };
 
-  function C_PRCxSaveDB() {
+  async function C_PRCxSaveDB() {
+    if (!isNetworkOnline){
+      alert("❌ ข้อความ: Internet Offline");
+      return;
+    }
     if (!products || products.length === 0) {
       alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
       return;
     }
-    saveHistoryToIndexedDB();
-    saveProductToIndexedDB();
+    setIsLoading(true); // ✅ เริ่ม Loading
+    try {
+      console.log("✅ ข้อมูล History ถูกบันทึก");
+      await saveHistoryToIndexedDB();
+
+      console.log("✅ ข้อมูล Product ถูกบันทึก");
+      await saveProductToIndexedDB();
+
+      console.log("✅ เข้าลบข้อมูล History, Data ที่เกิน limit");
+      if (!oDb) {
+        console.error("❌ Database is not initialized");
+        return;
+      }
+      await C_DELxLimitData(oDb, limitData, "TCNTHistoryReceive", "TCNTProductReceive");
+
+      console.log("✅ โหลดข้อมูล List ใหม่");
+      await C_PRCxFetchHistoryList();
+    } catch (error) {
+      console.error("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
+    } finally {
+      setIsLoading(false); // ✅ จบ Loading
+      alert("✅ บันทึกข้อมูลสำเร็จ");
+    }
   }
-
-  const saveHistoryToIndexedDB = async () => {
-    const db = await openDatabase();
-    if (!db) return;
-  
-    const currentDate = new Date().toLocaleDateString("th-TH");
-    const lastId = await getLastIdFromIndexedDB(db, "reciveHistory");
-    const newId = lastId + 1; // ถ้าไม่มีข้อมูล ให้เริ่มจาก 1
-  
-    const historyData: History = {
-      id: newId,
-      date: currentDate,
-      refDoc: refDoc,
-      status: 1,
-    };
-  
-    await saveToIndexedDB("reciveHistory", [historyData]);
-  };
-
-  // 📌 ฟังก์ชันบันทึกสินค้า
-  const saveProductToIndexedDB = async () => {
-    alert("✅ ข้อความ: อัพโหลดผ่าน Web Services");
-
-    const productData = products.map((product) => ({
-      id: product.id,
-      barcode: product.barcode,
-      cost: product.cost,
-      quantity: product.quantity,
-      refdoc: product.refDoc,
-    }));
-
-    await saveToIndexedDB("reciveProduct", productData);
-    setProducts([]);
-  };
-
-  const getLastIdFromIndexedDB = async (db: IDBDatabase, storeName: string): Promise<number> => {
-    return new Promise((resolve) => {
-      const transaction = db.transaction(storeName, "readonly");
-      const store = transaction.objectStore(storeName);
-      const request = store.openCursor(null, "prev"); // เปิด cursor ดูค่า id ล่าสุด
-  
-      request.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-        if (cursor) {
-          resolve(cursor.value.id); // คืนค่า id ล่าสุด
-        } else {
-          resolve(0); // ถ้าไม่มีข้อมูลเลย ให้ return 0
-        }
-      };
-  
-      request.onerror = () => {
-        console.error("❌ ไม่สามารถดึง id ล่าสุดจาก IndexedDB ได้");
-        resolve(0);
-      };
-    });
-  };
 
   return (
     <div className="p-4 ms-1 mx-auto bg-white" onClick={handleClickOutside}>
@@ -396,11 +396,11 @@ export default function ReceiveGoods() {
           {products.map((product, index) => (
             <tr key={index} className="border text-center text-gray-500 text-[14px]">
               <td className="p-2">{index + 1}</td>
-              <td className="p-2">{product.barcode}</td>
-              <td className="p-2">฿{product.cost.toFixed(2)}</td>
-              <td className="p-2">{product.quantity}</td>
+              <td className="p-2">{product.FTBarcode}</td>
+              <td className="p-2">฿{product.FCCost.toFixed(2)}</td>
+              <td className="p-2">{product.FNQuantity}</td>
               <td className="p-2">
-                <button onClick={() => removeProduct(product.id)} className="text-red-500">
+                <button onClick={() => removeProduct(product.FNId)} className="text-red-500">
                   <FaTrash />
                 </button>
               </td>
@@ -410,7 +410,7 @@ export default function ReceiveGoods() {
       </table>
 
       <div className="flex flex-col md:flex-row items-start md:items-center mt-4 ">
-        
+
         {/* จำนวนรายการ */}
         <p className="text-gray-500 text-[14px]">จำนวนรายการ: {products.length} รายการ</p>
 
@@ -431,9 +431,15 @@ export default function ReceiveGoods() {
       <HistoryModal
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
-        historyList={historyList}
+        Data={historyList}
         onView={handleView}
         onRepeat={handleRepeat} />
+
+      {isLoading && (
+        <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+        </div>
+      )}
 
     </div>
   );
