@@ -14,7 +14,6 @@ import exportToExcel from '@/hooks/CAdjustStockToExcel';
 interface Product {
   id: number;
   barcode: string;
-  cost: number;
   quantity: number;
 }
 
@@ -22,31 +21,19 @@ export default function ReceiveGoods() {
   const [refDoc, setRefDoc] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [barcode, setBarcode] = useState("");
-  const [cost, setCost] = useState("");
+
   const [quantity, setQuantity] = useState("1");
   const [isOpen, setIsOpen] = useState(false);
   const [checked, setChecked] = useState(false);
   const [searchText, setSearchText] = useState<string>(""); // string
-  const [pendingBarcode, setPendingBarcode] = useState<string | null>(null);
+
   const checkedRef = useRef(checked);
-  const costRef = useRef(cost);
+
 
   {/* เช็ค User*/}
   useAuth();
 
-  {/* ใช้ useEffect ในการเก็บค่า checked และ cost ไว้ */}
-  useEffect(() => {
-    checkedRef.current = checked;
-    costRef.current = cost;
-  }, [checked, cost]);
 
-  {/* ใช้ useEffect ในการเก็บค่า cost ไว้ */}
-  useEffect(() => {
-    if (pendingBarcode !== null) {
-      addProduct(pendingBarcode, cost); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
-      setPendingBarcode(null);
-    }
-  }, [cost]);
 
   {/* สแกน BarCode */}
   const { C_PRCxStartScanner, bScanning, oScannerRef } = CCameraScanner(
@@ -54,7 +41,7 @@ export default function ReceiveGoods() {
       if (checkedRef.current) {
         setBarcode(ptDecodedText);
         alert(`เพิ่มข้อมูล: ${ptDecodedText}`);
-        addProduct(ptDecodedText, costRef.current);
+        addProduct(ptDecodedText);
       } else {
         setBarcode(ptDecodedText);
         alert(`ข้อความ: ${ptDecodedText}`);
@@ -63,30 +50,24 @@ export default function ReceiveGoods() {
   );
   
   {/* เพิ่มสินค้า */}
-  const addProduct = (barcode: string, cost: string) => {
-    if (!cost) {
-      setCost("0");
-      setPendingBarcode(barcode);
-      return;
-    }
-
+  const addProduct = (barcode: string) => {
+ 
     if (!barcode || !quantity) return;
 
     setProducts((prevProducts) => {
       const newId = Math.max(...prevProducts.map(p => p.id), 0) + 1;
 
-      const newProduct = {
-        id: newId,
-        barcode,
-        cost: parseFloat(cost),
-        quantity: parseInt(quantity),
-      };
+    const newProduct = {
+      id: newId,
+      barcode,
+      quantity: parseInt(quantity),
+    };
 
       return [...prevProducts, newProduct];
     });
 
     setBarcode("");
-    setCost("");
+
     setQuantity("1");
   };
 
@@ -202,7 +183,7 @@ export default function ReceiveGoods() {
           onChange={setQuantity}
           label={"จำนวนที่นับได้"}
           icon={<FaPlus />}
-          onClick={() => addProduct(barcode, cost)}
+          onClick={() => addProduct(barcode)}
         />
       </div>
 
