@@ -10,14 +10,13 @@ import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaH
 import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CTransfersToExcel';
-<<<<<<< HEAD
-=======
+
 import { History, Product, UserInfo } from "@/models/models"
 import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryReceiveModal from "@/components/HistoryReceiveModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
->>>>>>> 5f06cd68a6447d1acc8ebbcc56519227929b6ef5
+
 
 export default function Receive() {
   const [tRefDoc, setRefDoc] = useState("");
@@ -243,28 +242,17 @@ export default function Receive() {
     );
   };
 
-<<<<<<< HEAD
-  {/* export excel */}
-  const exportProduct = () => {
-    const formattedProducts = products.map(product => ({
-      tBarcode: product.barcode,
-      tCost: product.cost.toString(),
-      tQTY: product.quantity.toString()
-=======
+
   {/* export excel */ }
   const exportProduct = () => {
     const formattedProducts = oProducts.map(oProducts => ({
       tBarcode: oProducts.FTBarcode,
       tCost: oProducts.FCCost.toString(),
       tQTY: oProducts.FNQuantity.toString()
->>>>>>> 5f06cd68a6447d1acc8ebbcc56519227929b6ef5
     }));
     exportToExcel(formattedProducts);
   };
 
-<<<<<<< HEAD
-
-=======
   {/* ปิด Dropdown เมื่อคลิกข้างนอก */ }
   const C_SETxCloseDropdown = () => {
     if (bDropdownOpen) {
@@ -323,7 +311,7 @@ export default function Receive() {
       alert("✅ บันทึกข้อมูลสำเร็จ");
     }
   }
->>>>>>> 5f06cd68a6447d1acc8ebbcc56519227929b6ef5
+
 
   return (
     <div className="p-4 ms-1 mx-auto bg-white" onClick={C_SETxCloseDropdown}>
