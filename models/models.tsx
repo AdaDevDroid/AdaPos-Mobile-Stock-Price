@@ -20,3 +20,8 @@ export interface UserInfo {
     FTAgnCode: string;
     FTMerCode: string;
   }
+
+  export interface SysConfig {
+    FTSysCode: string;
+    FTSysStaUsrValue: string;
+  }

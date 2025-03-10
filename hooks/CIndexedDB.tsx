@@ -1,4 +1,4 @@
-import { History, Product, UserInfo } from "@/models/models"
+import { History, Product, UserInfo, SysConfig } from "@/models/models"
 
 export const C_PRCxOpenIndexedDB = async () => {
   const DB_NAME = "AdaDB";
@@ -121,15 +121,66 @@ export const C_INSxUserToDB = async (oDb: IDBDatabase, userData: UserInfo): Prom
     const transaction = oDb.transaction("TCNTUserTmp", "readwrite");
     const store = transaction.objectStore("TCNTUserTmp");
 
-    const request = store.add(userData);
+    // ลบข้อมูลทั้งหมดในตาราง TCNTUserTmp
+    const clearRequest = store.clear();
 
-    request.onsuccess = () => {
-      console.log("✅ เพิ่มข้อมูลผู้ใช้สำเร็จ:", userData);
-      resolve(true);
+    clearRequest.onsuccess = () => {
+      console.log("✅ ลบข้อมูลในตาราง 'TCNTUserTmp' สำเร็จ");
+
+      // เพิ่มข้อมูลผู้ใช้ใหม่
+      const addRequest = store.add(userData);
+
+      addRequest.onsuccess = () => {
+        console.log("✅ เพิ่มข้อมูลผู้ใช้สำเร็จ:", userData);
+        resolve(true);
+      };
+
+      addRequest.onerror = (event) => {
+        console.error("❌ ไม่สามารถเพิ่มข้อมูลผู้ใช้ได้", event);
+        reject(false);
+      };
     };
 
-    request.onerror = (event) => {
-      console.error("❌ ไม่สามารถเพิ่มข้อมูลผู้ใช้ได้", event);
+    clearRequest.onerror = (event) => {
+      console.error("❌ ไม่สามารถลบข้อมูลในตาราง 'TCNTUserTmp' ได้", event);
+      reject(false);
+    };
+  });
+};
+
+export const C_INSxSysConfigToDB = async (oDb: IDBDatabase, oSysConfig: SysConfig): Promise<boolean> => {
+  return new Promise((resolve, reject) => {
+    if (!oDb) {
+      console.error("❌ Database is not initialized");
+      reject(false);
+      return;
+    }
+
+    const transaction = oDb.transaction("TsysConfig", "readwrite");
+    const store = transaction.objectStore("TsysConfig");
+
+    // ลบข้อมูลทั้งหมดในตาราง TCNTUserTmp
+    const clearRequest = store.clear();
+
+    clearRequest.onsuccess = () => {
+      console.log("✅ ลบข้อมูลในตาราง 'TsysConfig' สำเร็จ");
+
+      // เพิ่มข้อมูลผู้ใช้ใหม่
+      const addRequest = store.add(oSysConfig);
+
+      addRequest.onsuccess = () => {
+        console.log("✅ เพิ่มข้อมูลผู้ใช้สำเร็จ:", oSysConfig);
+        resolve(true);
+      };
+
+      addRequest.onerror = (event) => {
+        console.error("❌ ไม่สามารถเพิ่มข้อมูลผู้ใช้ได้", event);
+        reject(false);
+      };
+    };
+
+    clearRequest.onerror = (event) => {
+      console.error("❌ ไม่สามารถลบข้อมูลในตาราง 'TsysConfig' ได้", event);
       reject(false);
     };
   });

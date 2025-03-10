@@ -23,30 +23,30 @@ export async function POST(req: Request) {
   
   // 🛑 ตรวจสอบ Username/Password
   const oPool = await C_CTDoConnectToDatabase();
-    const aResult = await oPool.request().query(`
-      SELECT DISTINCT
-        USRLI.FTUsrCode,
-        FTUsrLogin,
-		    FTUsrLoginPwd,
-	      USRL.FTUsrName,
-		    USRG.FTBchCode,
-        USRL.FTAgnCode,
-	      USRG.FTMerCode
-      FROM TCNMUsrLogin USRLI WITH (NOLOCK)
-      INNER JOIN TCNMUser_L USRL
-        ON USRL.FTUsrCode = USRLI.FTUsrCode
-	      AND USRL.FTAgnCode = USRLI.FTAgnCode
-      INNER JOIN TCNTUsrGroup USRG
-        ON USRG.FTUsrCode = USRLI.FTUsrCode
-	      AND USRL.FTAgnCode = USRLI.FTAgnCode
-      WHERE
-        FTUsrStaActive = '1'
-        AND FTUsrLogType = '1'
-        AND FTUsrLogin = '${username}'
-        AND USRL.FNLngID = 1
-        AND GETDATE() BETWEEN FDUsrPwdStart AND FDUsrPwdExpired
-      ORDER BY FTUsrCode ASC;
-     `);
+  const aResult = await oPool.request().query(`
+    SELECT DISTINCT
+      USRLI.FTUsrCode,
+      FTUsrLogin,
+      FTUsrLoginPwd,
+      USRL.FTUsrName,
+      USRG.FTBchCode,
+      USRL.FTAgnCode,
+      USRG.FTMerCode
+    FROM TCNMUsrLogin USRLI WITH (NOLOCK)
+    INNER JOIN TCNMUser_L USRL
+      ON USRL.FTUsrCode = USRLI.FTUsrCode
+      AND USRL.FTAgnCode = USRLI.FTAgnCode
+    INNER JOIN TCNTUsrGroup USRG
+      ON USRG.FTUsrCode = USRLI.FTUsrCode
+      AND USRL.FTAgnCode = USRLI.FTAgnCode
+    WHERE
+      FTUsrStaActive = '1'
+      AND FTUsrLogType = '1'
+      AND FTUsrLogin = '${username}'
+      AND USRL.FNLngID = 1
+      AND GETDATE() BETWEEN FDUsrPwdStart AND FDUsrPwdExpired
+    ORDER BY FTUsrCode ASC;
+  `);
 
   const aData = aResult.recordset;
   const oUserData = aData.map((user: User) => ({...user,}));
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
   });
 
   console.log("process login 2.5");
-  return new NextResponse(JSON.stringify({ message: "Login Success" }), {
+  return new NextResponse(JSON.stringify({ message: "Login Success", user: oUser }), {
     status: 200,
     headers: { "Set-Cookie": cookie },
   });
