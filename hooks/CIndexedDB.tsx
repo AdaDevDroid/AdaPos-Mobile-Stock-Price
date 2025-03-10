@@ -1,10 +1,8 @@
 import { History, Product, UserInfo } from "@/models/models"
-import { History, Product, UserInfo } from "@/models/models"
 
 export const C_PRCxOpenIndexedDB = async () => {
   const DB_NAME = "AdaDB";
   const DB_VERSION = 9;
-  const DB_VERSION = 8;
 
   return new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
