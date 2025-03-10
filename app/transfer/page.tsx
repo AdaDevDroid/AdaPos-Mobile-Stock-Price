@@ -196,13 +196,7 @@ export default function ReceiveGoods() {
           onClick={C_PRCxStartScanner}
         />
 
-        <InputWithLabel
-          type="number"
-          label={"ต้นทุน"}
-          value={cost}
-          onChange={setCost}
-          placeholder="ระบุต้นทุน (ถ้ามี)"
-        />
+    
 
         <InputWithLabelAndButton
           type="number"
@@ -220,7 +214,6 @@ export default function ReceiveGoods() {
           <tr className="bg-gray-100 border text-m text-[14px]">
             <th className="p-2">ลำดับ</th>
             <th className="p-2">บาร์โค้ด</th>
-            <th className="p-2">ต้นทุน</th>
             <th className="p-2">จำนวน</th>
             <th className="p-2">จัดการ</th>
           </tr>
@@ -230,7 +223,6 @@ export default function ReceiveGoods() {
             <tr key={product.id} className="border text-center text-gray-500 text-[14px]">
               <td className="p-2">{product.id}</td>
               <td className="p-2">{product.barcode}</td>
-              <td className="p-2">฿{product.cost.toFixed(2)}</td>
               <td className="p-2">{product.quantity}</td>
               <td className="p-2">
                 <button onClick={() => removeProduct(product.id)} className="text-red-500">

@@ -10,11 +10,13 @@ import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaH
 import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CTransfersToExcel';
+
 import { History, Product, UserInfo } from "@/models/models"
 import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryReceiveModal from "@/components/HistoryReceiveModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
+
 
 export default function Receive() {
   const [tRefDoc, setRefDoc] = useState("");
@@ -240,6 +242,7 @@ export default function Receive() {
     );
   };
 
+
   {/* export excel */ }
   const exportProduct = () => {
     const formattedProducts = oProducts.map(oProducts => ({
@@ -308,6 +311,7 @@ export default function Receive() {
       alert("✅ บันทึกข้อมูลสำเร็จ");
     }
   }
+
 
   return (
     <div className="p-4 ms-1 mx-auto bg-white" onClick={C_SETxCloseDropdown}>
