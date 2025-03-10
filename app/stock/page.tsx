@@ -159,7 +159,12 @@ export default function ReceiveGoods() {
             FCCost: item.FCCost, // Add this line
             FNQuantity: item.FNQuantity,
             FTRefDoc: item.FTRefDoc,
-            FTRefSeq: item.FTRefSeq
+            FTRefSeq: item.FTRefSeq,
+            FTXthDocKey: item.FTXthDocKey,
+            FTBchCode: item.FTBchCode,
+            FTAgnCode: item.FTAgnCode,
+            FTUsrName: item.FTUsrName,
+            FDCreateOn: item.FDCreateOn
           }));
   
           console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData);
@@ -200,7 +205,12 @@ export default function ReceiveGoods() {
         FCCost: oProducts.FCCost, // Add this line
         FNQuantity: oProducts.FNQuantity,
         FTRefDoc: oProducts.FTRefDoc,
-        FTRefSeq: oProducts.FTRefSeq
+        FTRefSeq: oProducts.FTRefSeq,
+        FTXthDocKey: "",
+        FTBchCode: "",
+        FTAgnCode: "",
+        FTUsrName: oUserInfo?.FTUsrName || "",
+        FDCreateOn: new Date().toLocaleDateString("th-TH")
       }));
   
       await C_INSxDataIndexedDB(oDb, "TCNTProductStock", productData);
@@ -225,7 +235,12 @@ export default function ReceiveGoods() {
         FNQuantity: Number(quantity),
         FTRefDoc: tRefDoc,
         FTRefSeq: tRefSeq,
-        FCCost: 0
+        FCCost: 0,
+        FTXthDocKey: "",
+        FTBchCode: "",
+        FTAgnCode: "",
+        FTUsrName: oUserInfo?.FTUsrName || "",
+        FDCreateOn: new Date().toLocaleDateString("th-TH")
       };
  
 

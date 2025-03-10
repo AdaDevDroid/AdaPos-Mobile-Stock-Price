@@ -15,6 +15,7 @@ import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexed
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryReceiveModal from "@/components/HistoryReceiveModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
+import { C_SETxFormattedDate } from "@/hooks/CSP";
 
 
 export default function Receive() {
@@ -49,17 +50,25 @@ export default function Receive() {
   {/* เปิด IndexedDB */ }
   useEffect(() => {
     const initDB = async () => {
-      const database = await C_PRCxOpenIndexedDB();
-      setDB(database);
+      setIsLoading(true); // ✅ เริ่ม Loading
 
-      // ✅ ดึงข้อมูลผู้ใช้หลังจาก oDb ถูกตั้งค่า
-      const data = await C_GETxUserData(database);
-      if (data) {
-        setUserInfo(data);
-        console.log("✅ ข้อมูลผู้ใช้ถูกตั้งค่า:", data);
+      try {
+        const database = await C_PRCxOpenIndexedDB();
+        setDB(database);
+
+        // ✅ ดึงข้อมูลผู้ใช้หลังจาก oDb ถูกตั้งค่า
+        const data = await C_GETxUserData(database);
+        if (data) {
+          setUserInfo(data);
+          console.log("✅ ข้อมูลผู้ใช้ถูกตั้งค่า:", data);
+        }
+
+        setRefSeq(crypto.randomUUID());
+      } catch (error) {
+        console.error("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
+      } finally {
+        setIsLoading(false); // ✅ จบ Loading
       }
-
-      setRefSeq(crypto.randomUUID());
     };
 
     initDB();
@@ -76,10 +85,13 @@ export default function Receive() {
     checkedRef.current = bCheckAutoScan;
     costRef.current = tCost;
   }, [bCheckAutoScan, tCost]);
+
   useEffect(() => {
     if (oPendingBarcode !== null) {
+      setIsLoading(true);
       C_ADDxProduct(oPendingBarcode, tCost); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
       setPendingBarcode(null);
+      setIsLoading(true);
     }
   }, [tCost]);
 
@@ -152,7 +164,12 @@ export default function Receive() {
           FCCost: item.FCCost,
           FNQuantity: item.FNQuantity,
           FTRefDoc: item.FTRefDoc,
-          FTRefSeq: item.FTRefSeq
+          FTRefSeq: item.FTRefSeq,
+          FTXthDocKey: item.FTXthDocKey,
+          FTBchCode: item.FTBchCode,
+          FTAgnCode: item.FTAgnCode,
+          FTUsrName: item.FTUsrName,
+          FDCreateOn: item.FDCreateOn
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData);
@@ -193,7 +210,12 @@ export default function Receive() {
       FCCost: oProducts.FCCost,
       FNQuantity: oProducts.FNQuantity,
       FTRefDoc: oProducts.FTRefDoc,
-      FTRefSeq: oProducts.FTRefSeq
+      FTRefSeq: oProducts.FTRefSeq,
+      FTXthDocKey: "TCNTPdtTwiHD",
+      FTBchCode: oUserInfo?.FTBchCode || "",
+      FTAgnCode: oUserInfo?.FTAgnCode || "",
+      FTUsrName: oUserInfo?.FTUsrName || "",
+      FDCreateOn: C_SETxFormattedDate()
     }));
 
     await C_INSxDataIndexedDB(oDb, "TCNTProductReceive", productData);
@@ -208,7 +230,7 @@ export default function Receive() {
       return;
     }
 
-    if (!ptBarcode || !tQty ) {
+    if (!ptBarcode || !tQty) {
       alert("❌ กรุณากรอกข้อมูลให้ครบ");
       return;
     }
@@ -222,7 +244,12 @@ export default function Receive() {
         FCCost: parseFloat(tCost),
         FNQuantity: parseInt(tQty),
         FTRefDoc: tRefDoc,
-        FTRefSeq: tRefSeq
+        FTRefSeq: tRefSeq,
+        FTXthDocKey: "TCNTPdtTwiHD",
+        FTBchCode: oUserInfo?.FTBchCode || "",
+        FTAgnCode: oUserInfo?.FTAgnCode || "",
+        FTUsrName: oUserInfo?.FTUsrName || "",
+        FDCreateOn: C_SETxFormattedDate()
       };
 
       return [...prevProducts, newProduct];
@@ -259,7 +286,7 @@ export default function Receive() {
     }
   };
   const C_SETxViewHistoryProduct = (history: History) => {
-    const oFiltered = productHistoryList?.filter((product) => product.FTRefDoc === history.FTRefDoc);
+    const oFiltered = productHistoryList?.filter((product) => product.FTRefSeq === history.FTRefSeq);
     setHistoryDate(history.FTDate);
     setHistoryRefDoc(history.FTRefDoc);
     setFilteredProduct(oFiltered || []);
@@ -271,20 +298,11 @@ export default function Receive() {
 
   {/* Upload */ }
   async function C_PRCxSaveDB() {
-    if (!isNetworkOnline) {
-      alert("❌ ข้อความ: Internet Offline");
-      return;
-    }
-    if (!oProducts || oProducts.length === 0) {
-      alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
-      return;
-    }
-    setIsLoading(true); // ✅ เริ่ม Loading
     try {
       console.log("✅ หา RefSeq ใหม่");
       const newRefSeq = crypto.randomUUID();
       setRefSeq(newRefSeq);
-      console.log("✅ RefSeq = ",newRefSeq);
+      console.log("✅ RefSeq = ", newRefSeq);
 
       console.log("✅ ข้อมูล History ถูกบันทึก");
       await C_INSxHistoryToIndexedDB();
@@ -306,9 +324,50 @@ export default function Receive() {
       console.error("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
     } finally {
       setRefDoc("");
-      setIsLoading(false); // ✅ จบ Loading
       alert("✅ บันทึกข้อมูลสำเร็จ");
     }
+  }
+
+  async function C_PRCxUploadeWebServices() {
+    setIsLoading(true);
+    if (!isNetworkOnline) {
+      setIsLoading(false);
+      alert("❌ ข้อความ: Internet Offline");
+      return;
+    }
+    if (!oProducts || oProducts.length === 0) {
+      setIsLoading(false);
+      alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
+      return;
+    }
+
+    //  Upload ผ่าน Web Services
+
+    // Save Data to IndexedDB
+    C_PRCxSaveDB();
+
+    setIsLoading(false);
+  }
+
+  async function C_PRCxExportExcel() {
+    setIsLoading(true);
+    if (!isNetworkOnline) {
+      setIsLoading(false);
+      alert("❌ ข้อความ: Internet Offline");
+      return;
+    }
+    if (!oProducts || oProducts.length === 0) {
+      setIsLoading(false);
+      alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
+      return;
+    }
+
+    // ส่งออกเป็น Excel
+    exportProduct();
+    // Save Data to IndexedDB
+    C_PRCxSaveDB();
+
+    setIsLoading(false);
   }
 
 
@@ -349,13 +408,13 @@ export default function Receive() {
           <div className="absolute right-4 top-6 mt-12 bg-white border shadow-lg rounded-md w-auto text-[16px]">
             <button
               className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
-              onClick={C_PRCxSaveDB}
+              onClick={C_PRCxUploadeWebServices}
             >
               <FaFileAlt className="mr-2 text-gray-700" /> อัพโหลดผ่าน Web Services
             </button>
             <button
               className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
-              onClick={exportProduct}
+              onClick={C_PRCxExportExcel}
             >
               <FaDownload className="mr-2 text-gray-700" /> ส่งออกเป็น File Excel
             </button>
@@ -383,7 +442,7 @@ export default function Receive() {
         {/* ตัวสแกน QR Code พร้อมกรอบ */}
         <div
           id="reader"
-          ref={oUserInfo?.FTUsrName ? oScannerRef : null}
+          ref={oScannerRef}
           className={`my-4 relative flex items-center justify-center  md:w-[50%] w-[100%] mx-auto ${bScanning ? "h-[50%]" : "h-[0px] pointer-events-none"
             } transition-opacity duration-300`}
         >
