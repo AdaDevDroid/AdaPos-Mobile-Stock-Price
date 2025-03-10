@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaUser, FaLock } from "react-icons/fa";
-import { C_PRCxOpenIndexedDB, C_INSxUserToDB, C_INSxSysConfigToDB } from "@/hooks/CIndexedDB";
+import { C_PRCxOpenIndexedDB, C_INSxUserToDB, C_INSoSysConfigToDB, C_DELoSysConfigData } from "@/hooks/CIndexedDB";
 
 export default function Login() {
   const router = useRouter();
@@ -40,56 +40,74 @@ export default function Login() {
     e.preventDefault();
     setError("");
     console.log("process login 1");
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
 
-    console.log("process login 3");
-    if (res.ok) {
-      const oData = await res.json();
-      const oNewUser = {
-        FTUsrCode: oData.user.FTUsrCode,
-        FTUsrLogin: oData.user.FTUsrLogin,
-        FTUsrPass: oData.user.FTUsrLoginPwd,
-        FTUsrName: oData.user.FTUsrName,
-        FTBchCode: oData.user.FTBchCode,
-        FTAgnCode: oData.user.FTAgnCode,
-        FTMerCode: oData.user.FTMerCode,
-      };
-      const oDatabase = await C_PRCxOpenIndexedDB();
-      await C_INSxUserToDB(oDatabase, oNewUser);
-
-      console.log("process login 4");
-      router.push("/main"); // ✅ ไปหน้าหลักเมื่อ Login สำเร็จ
-    } else {
-      console.log("process login 5");
-      setError("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
-    }
-
-    console.log("Process Sync SysConfig 1");
-    const rConfig = await fetch("/api/query/config", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    });
-
-    if (rConfig.ok) {
-      const oData = await rConfig.json();
-      const oSysConfig = {
-        FTSysCode: oData.config.FTSysCode,
-        FTSysStaUsrValue: oData.config.FTSysStaUsrValue,
-      };
-
-      const oDatabase = await C_PRCxOpenIndexedDB();
-      await C_INSxSysConfigToDB(oDatabase, oSysConfig);
-
-      console.log("Process Sync SysConfig 2");
-      router.push("/main"); // ✅ ไปหน้าหลักเมื่อ Login สำเร็จ
-    } else {
       console.log("process login 3");
-    }
+      if (res.ok) {
+        const oData = await res.json();
+        const oNewUser = {
+          FTUsrCode: oData.user.FTUsrCode,
+          FTUsrLogin: oData.user.FTUsrLogin,
+          FTUsrPass: oData.user.FTUsrLoginPwd,
+          FTUsrName: oData.user.FTUsrName,
+          FTBchCode: oData.user.FTBchCode,
+          FTAgnCode: oData.user.FTAgnCode,
+          FTMerCode: oData.user.FTMerCode,
+        };
+        const oDatabase = await C_PRCxOpenIndexedDB();
+        await C_INSxUserToDB(oDatabase, oNewUser);
 
+        console.log("process login 4");
+
+        // Sync SysConfig
+        console.log("Process Sync SysConfig 1");
+        const rConfig = await fetch("/api/query/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        const oConfigData = await rConfig.json();
+        console.log(oConfigData);
+
+        if (rConfig.ok) {
+          
+          C_DELoSysConfigData(oDatabase);
+
+          if (oConfigData && Array.isArray(oConfigData.config)) {
+            for (const config of oConfigData.config) {
+              const oSysConfig = {
+                FTSysCode: config.FTSysCode,
+                FTSysStaUsrValue: config.FTSysStaUsrValue,
+              };
+
+              if (oSysConfig.FTSysCode && oSysConfig.FTSysStaUsrValue) {
+                await C_INSoSysConfigToDB(oDatabase, oSysConfig);
+                console.log("Process Sync SysConfig 2");
+              } else {
+                console.error("Invalid SysConfig data:", oSysConfig);
+              }
+            }
+          } else {
+            console.error("Invalid Config Data Structure:", oConfigData);
+          }
+        } else {
+          console.log("Failed to sync SysConfig");
+        }
+
+        router.push("/main"); // ✅ ไปหน้าหลักเมื่อ Login สำเร็จ
+      } else {
+        console.log("process login 5");
+        setError("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+      }
+    } catch (error) {
+      console.error("Login failed:", error);
+      setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
+    }
   };
 
   return (
