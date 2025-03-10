@@ -16,6 +16,7 @@ import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryReceiveModal from "@/components/HistoryReceiveModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
 
+
 export default function Receive() {
   const [tRefDoc, setRefDoc] = useState("");
   const [oProducts, setProducts] = useState<Product[]>([]);
@@ -240,6 +241,7 @@ export default function Receive() {
     );
   };
 
+
   {/* export excel */ }
   const exportProduct = () => {
     const formattedProducts = oProducts.map(oProducts => ({
@@ -308,6 +310,7 @@ export default function Receive() {
       alert("✅ บันทึกข้อมูลสำเร็จ");
     }
   }
+
 
   return (
     <div className="p-4 ms-1 mx-auto bg-white" onClick={C_SETxCloseDropdown}>

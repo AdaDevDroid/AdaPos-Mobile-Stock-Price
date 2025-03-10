@@ -11,106 +11,314 @@ import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CAdjustStockToExcel';
 
-interface Product {
-  id: number;
-  barcode: string;
-  cost: number;
-  quantity: number;
-}
+
+import { History, Product, UserInfo } from "@/models/models"
+import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB } from "@/hooks/CIndexedDB";
+import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
+import HistoryReceiveModal from "@/components/HistoryReceiveModal";
+import ProductStockModal from "@/components/ProductStockModal";
+
+
+
 
 export default function ReceiveGoods() {
-  const [refDoc, setRefDoc] = useState("");
-  const [products, setProducts] = useState<Product[]>([]);
+
+  const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
+  const limitData = 3;
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isProductOpen, setIsProductOpen] = useState(false);
+  const [bDropdownOpen, setIsOpen] = useState(false);
+
+  const [tHistoryDate, setHistoryDate] = useState("");
+  const [tHistoryRefDoc, setHistoryRefDoc] = useState("");
+  const [tRefDoc, setRefDoc] = useState("");
+  const [oProducts, setProducts] = useState<Product[]>([]);
   const [barcode, setBarcode] = useState("");
-  const [cost, setCost] = useState("");
+
   const [quantity, setQuantity] = useState("1");
-  const [isOpen, setIsOpen] = useState(false);
-  const [checked, setChecked] = useState(false);
+ 
+  const [bCheckAutoScan, setChecked] = useState(false);
   const [searchText, setSearchText] = useState<string>(""); // string
-  const [pendingBarcode, setPendingBarcode] = useState<string | null>(null);
-  const checkedRef = useRef(checked);
-  const costRef = useRef(cost);
+
+
+  const [isLoading, setIsLoading] = useState(false);
+  const checkedRef = useRef(bCheckAutoScan);
+  const [productHistoryList, setProductHistoryList] = useState<Product[]>();
+  const [historyList, setHistoryList] = useState<History[]>([]);
+  const [oDb, setDB] = useState<IDBDatabase | null>(null);
+  const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [tRefSeq, setRefSeq] = useState("");
+  const isNetworkOnline = useNetworkStatus();
 
   {/* เช็ค User*/}
   useAuth();
 
-  {/* ใช้ useEffect ในการเก็บค่า checked และ cost ไว้ */}
-  useEffect(() => {
-    checkedRef.current = checked;
-    costRef.current = cost;
-  }, [checked, cost]);
 
-  {/* ใช้ useEffect ในการเก็บค่า cost ไว้ */}
-  useEffect(() => {
-    if (pendingBarcode !== null) {
-      addProduct(pendingBarcode, cost); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
-      setPendingBarcode(null);
-    }
-  }, [cost]);
+    {/* เปิด IndexedDB */ }
+    useEffect(() => {
+      const initDB = async () => {
+        const database = await C_PRCxOpenIndexedDB();
+        setDB(database);
+  
+        // ✅ ดึงข้อมูลผู้ใช้หลังจาก oDb ถูกตั้งค่า
+        const data = await C_GETxUserData(database);
+        if (data) {
+          setUserInfo(data);
+          console.log("✅ ข้อมูลผู้ใช้ถูกตั้งค่า:", data);
+        }
+  
+        setRefSeq(crypto.randomUUID());
+      };
+  
+      initDB();
+    }, []);
+    {/* set HistoryList เมื่อ oDb ถูกเซ็ต  */ }
+    useEffect(() => {
+      if (oDb) {
+        C_PRCxFetchHistoryList();
+        C_PRCxFetchProductHistoryList();
+      }
+    }, [oDb]);
+    {/* ใช้ useEffect ในการเก็บค่า checked และ cost  */ }
+    useEffect(() => {
+      checkedRef.current = bCheckAutoScan;
+     
+    }, [bCheckAutoScan]);
 
-  {/* สแกน BarCode */}
-  const { C_PRCxStartScanner, bScanning, oScannerRef } = CCameraScanner(
+  
+
+
+  {/* สแกน BarCode */ }
+  const { C_PRCxStartScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning, oScannerRef } = CCameraScanner(
     (ptDecodedText) => {
+      C_PRCxPauseScanner();
       if (checkedRef.current) {
-        setBarcode(ptDecodedText);
-        alert(`เพิ่มข้อมูล: ${ptDecodedText}`);
-        addProduct(ptDecodedText, costRef.current);
+        const bConfirmed = window.confirm(`เพิ่มข้อมูล: ${ptDecodedText} ?`);
+        if (bConfirmed) {
+          setBarcode(ptDecodedText);
+          C_ADDxProduct(ptDecodedText);
+        }
       } else {
         setBarcode(ptDecodedText);
         alert(`ข้อความ: ${ptDecodedText}`);
       }
+      // ✅ รอ 500ms ก่อนเปิดกล้องใหม่
+      setTimeout(() => {
+        C_PRCxResumeScanner();
+      }, 500);
     }
   );
-  
-  {/* เพิ่มสินค้า */}
-  const addProduct = (barcode: string, cost: string) => {
-    if (!cost) {
-      setCost("0");
-      setPendingBarcode(barcode);
+
+
+
+  {/* ดึงข้อมูล History จาก IndexedDB */ }
+  const C_PRCxFetchHistoryList = async () => {
+    if (!oDb) {
+      console.error("❌ Database is not initialized");
       return;
     }
 
-    if (!barcode || !quantity) return;
+    const transaction = oDb.transaction("TCNTHistoryStock", "readonly");
+    const store = transaction.objectStore("TCNTHistoryStock");
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      if (request.result) {
+        const mappedData: History[] = request.result.map((item: History) => ({
+          FTDate: item.FTDate,
+          FTRefDoc: item.FTRefDoc,
+          FNStatus: item.FNStatus,
+          FTRefSeq: item.FTRefSeq
+        }));
+
+        console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData); // ✅ ตรวจสอบข้อมูลที่ดึงมา
+        setHistoryList(mappedData);
+      }
+    };
+
+    request.onerror = () => {
+      console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
+    };
+  };
+
+    const C_PRCxFetchProductHistoryList = async () => {
+      if (!oDb) {
+        console.error("❌ Database is not initialized");
+        return;
+      }
+  
+      const transaction = oDb.transaction("TCNTProductStock", "readonly");
+      const store = transaction.objectStore("TCNTProductStock");
+      const request = store.getAll();
+  
+      request.onsuccess = () => {
+        if (request.result) {
+          const mappedData: Product[] = request.result.map((item: Product) => ({
+            FNId: item.FNId,
+            FTBarcode: item.FTBarcode,
+            FCCost: item.FCCost, // Add this line
+            FNQuantity: item.FNQuantity,
+            FTRefDoc: item.FTRefDoc,
+            FTRefSeq: item.FTRefSeq
+          }));
+  
+          console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData);
+          setProductHistoryList(mappedData);
+        }
+      };
+  
+      request.onerror = () => {
+        console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
+      };
+    };
+  
+    const C_INSxHistoryToIndexedDB = async () => {
+      if (!oDb) {
+        console.error("❌ Database is not initialized");
+        return;
+      }
+      const currentDate = new Date().toLocaleDateString("th-TH");
+  
+      const historyData: History = {
+        FTDate: currentDate,
+        FTRefDoc: tRefDoc,
+        FNStatus: 1,
+        FTRefSeq: tRefSeq
+      };
+  
+      await C_INSxDataIndexedDB(oDb, "TCNTHistoryStock", [historyData]);
+    };
+    const C_INSxProductToIndexedDB = async () => {
+      if (!oDb) {
+        console.error("❌ Database is not initialized");
+        return;
+      }
+  
+      const productData = oProducts.map((oProducts) => ({
+        FNId: oProducts.FNId,
+        FTBarcode: oProducts.FTBarcode,
+        FCCost: oProducts.FCCost, // Add this line
+        FNQuantity: oProducts.FNQuantity,
+        FTRefDoc: oProducts.FTRefDoc,
+        FTRefSeq: oProducts.FTRefSeq
+      }));
+  
+      await C_INSxDataIndexedDB(oDb, "TCNTProductStock", productData);
+      setProducts([]);
+    };
+  
+  {/* เพิ่มสินค้า */ }
+  const C_ADDxProduct = (ptBarcode: string) => {
+
+
+    if (!ptBarcode || !quantity ) {
+      alert("❌ กรุณากรอกข้อมูลให้ครบ");
+      return;
+    }
 
     setProducts((prevProducts) => {
-      const newId = Math.max(...prevProducts.map(p => p.id), 0) + 1;
+      const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
 
-      const newProduct = {
-        id: newId,
-        barcode,
-        cost: parseFloat(cost),
-        quantity: parseInt(quantity),
+      const newProduct: Product = {
+        FNId: newId,
+        FTBarcode: ptBarcode,
+        FNQuantity: Number(quantity),
+        FTRefDoc: tRefDoc,
+        FTRefSeq: tRefSeq,
+        FCCost: 0
       };
+ 
 
       return [...prevProducts, newProduct];
     });
 
     setBarcode("");
-    setCost("");
     setQuantity("1");
   };
 
-  {/* ลบสินค้า */}
-  const removeProduct = (id: number) => {
+  {/* ลบสินค้า */ }
+  const C_DELxProduct = (id: number) => {
     setProducts((prevProducts) =>
       prevProducts
-        .filter((product) => product.id !== id)
+        .filter((product) => product.FNId !== id)
         .map((product, index) => ({ ...product, id: index + 1 })) //รีเซ็ต ID ใหม่
     );
   };
-
      {/* export excel */}
-     const exportProduct = () => {
-      const oDataProducts = products.map(product => ({
-        tBarcode: product.barcode,
-        tQTY: product.quantity.toString()
+    const exportProduct = () => {
+      const oDataProducts = oProducts.map(product => ({
+        tPdtCode: "",
+        tBarcode: product.FTBarcode,
+        tStockCode: "",
+        tQTY: product.FNQuantity.toString()
       }));
-
+      C_PRCxSaveDB() 
       exportToExcel(oDataProducts);
     };
 
+
+      {/* ปิด Dropdown เมื่อคลิกข้างนอก */ }
+  const C_SETxCloseDropdown = () => {
+    if (bDropdownOpen) {
+      setIsOpen(false);
+    }
+  };
+  const C_SETxViewHistoryProduct = (history: History) => {
+    const oFiltered = productHistoryList?.filter((product) => product.FTRefDoc === history.FTRefDoc);
+    setHistoryDate(history.FTDate);
+    setHistoryRefDoc(history.FTRefDoc);
+    setFilteredProduct(oFiltered || []);
+    setIsProductOpen(true);
+  };
+  const handleRepeat = (history: History) => {
+    alert(`ทำซ้ำใบอ้างอิง Receive: ${history.FTRefDoc}`);
+  };
+
+
+    {/* Upload */ }
+    async function C_PRCxSaveDB() {
+      if (!isNetworkOnline) {
+        alert("❌ ข้อความ: Internet Offline");
+        return;
+      }
+      if (!oProducts || oProducts.length === 0) {
+        alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
+        return;
+      }
+      setIsLoading(true); // ✅ เริ่ม Loading
+      try {
+        console.log("✅ หา RefSeq ใหม่");
+        const newRefSeq = crypto.randomUUID();
+        setRefSeq(newRefSeq);
+        console.log("✅ RefSeq = ",newRefSeq);
+  
+        console.log("✅ ข้อมูล History ถูกบันทึก");
+        await C_INSxHistoryToIndexedDB();
+  
+        console.log("✅ ข้อมูล Product ถูกบันทึก");
+        await C_INSxProductToIndexedDB();
+  
+        console.log("✅ เข้าลบข้อมูล History, Data ที่เกิน limit");
+        if (!oDb) {
+          console.error("❌ Database is not initialized");
+          return;
+        }
+        await C_DELxLimitData(oDb, limitData, "TCNTHistoryStock", "TCNTProductStock");
+  
+        console.log("✅ โหลดข้อมูล List ใหม่");
+        await C_PRCxFetchHistoryList();
+        await C_PRCxFetchProductHistoryList();
+      } catch (error) {
+        console.error("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
+      } finally {
+        setRefDoc("");
+        setIsLoading(false); // ✅ จบ Loading
+        alert("✅ บันทึกข้อมูลสำเร็จ");
+      }
+    }
+
   return (
-    <div className="p-4 ms-1 mx-auto bg-white">
+    <div className="p-4 ms-1 mx-auto bg-white" onClick={C_SETxCloseDropdown}>
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
         <div className="flex flex-row w-full py-2">
           {/* หัวข้อ */}
@@ -118,7 +326,7 @@ export default function ReceiveGoods() {
           {/* ปุ่ม 3 จุด จอเล็ก */}
           <button
             className="md:hidden ml-2 p-2 rounded-md ml-auto text-gray-500 hover:text-gray-700 text-[18px]"
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={() => setIsOpen(!bDropdownOpen)}
           >
             <FaEllipsisV />
           </button>
@@ -136,17 +344,17 @@ export default function ReceiveGoods() {
           {/* ปุ่ม 3 จุด */}
           <button
             className="hidden md:block ml-2 p-2 rounded-md text-gray-500 hover:text-gray-700 text-[18px]"
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={() => setIsOpen(!bDropdownOpen)}
           >
             <FaEllipsisV />
           </button>
         </div>
         {/* Dropdown Menu */}
-        {isOpen && (
+        {bDropdownOpen && (
           <div className="absolute right-4 top-6 mt-12 bg-white border shadow-lg rounded-md w-auto text-[16px]">
             <button
               className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
-              onClick={() => alert(`ข้อความ: อัพโหลดผ่าน Web Services`)}
+              onClick={C_PRCxSaveDB}
             >
               <FaFileAlt className="mr-2 text-gray-700" /> อัพโหลดผ่าน Web Services2
             </button>
@@ -158,7 +366,7 @@ export default function ReceiveGoods() {
             </button>
             <button
               className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
-              onClick={() => alert(`ข้อความ: ประวัติการทำรายการ`)}
+              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
             >
               <FaHistory className="mr-2 text-gray-700" /> ประวัติการทำรายการ
             </button>
@@ -172,16 +380,16 @@ export default function ReceiveGoods() {
           type="text"
           label={"ระบุจุดตรวจนับ"}
           icon={<FaRegCalendar />}
-          value={refDoc}
+          value={tRefDoc}
           onChange={setRefDoc}
           placeholder="ระบุจุดตรวจนับ เช่น ชั้นวาง A1, คลังหลัง"
         />
 
-        {/* ตัวสแกน QR Code พร้อมกรอบ */}
-        <div
+      {/* ตัวสแกน QR Code พร้อมกรอบ */}
+      <div
           id="reader"
-          ref={oScannerRef}
-          className={`my-4 relative flex items-center justify-center w-[50%] mx-auto ${bScanning ? "h-[50%]" : "h-[0px] pointer-events-none"
+          ref={oUserInfo?.FTUsrName ? oScannerRef : null}
+          className={`my-4 relative flex items-center justify-center  md:w-[50%] w-[100%] mx-auto ${bScanning ? "h-[50%]" : "h-[0px] pointer-events-none"
             } transition-opacity duration-300`}
         >
         </div>
@@ -202,7 +410,7 @@ export default function ReceiveGoods() {
           onChange={setQuantity}
           label={"จำนวนที่นับได้"}
           icon={<FaPlus />}
-          onClick={() => addProduct(barcode, cost)}
+          onClick={() => C_ADDxProduct(barcode)}
         />
       </div>
 
@@ -217,13 +425,13 @@ export default function ReceiveGoods() {
           </tr>
         </thead>
         <tbody className="bg-white">
-          {products.map((product) => (
-            <tr key={product.id} className="border text-center text-gray-500 text-[14px]">
-              <td className="p-2">{product.id}</td>
-              <td className="p-2">{product.barcode}</td>
-              <td className="p-2">{product.quantity}</td>
+          {oProducts.map((product) => (
+            <tr key={product.FNId} className="border text-center text-gray-500 text-[14px]">
+              <td className="p-2">{product.FNId}</td>
+              <td className="p-2">{product.FTBarcode}</td>
+              <td className="p-2">{product.FNQuantity}</td>
               <td className="p-2">
-                <button onClick={() => removeProduct(product.id)} className="text-red-500">
+                <button onClick={() => C_DELxProduct(product.FNId)} className="text-red-500">
                   <FaTrash />
                 </button>
               </td>
@@ -234,20 +442,46 @@ export default function ReceiveGoods() {
 
       <div className="flex flex-col md:flex-row items-start md:items-center mt-4 ">
         {/* จำนวนรายการ */}
-        <p className="text-gray-500 text-[14px]">จำนวนรายการ: {products.length} รายการ</p>
+        <p className="text-gray-500 text-[14px]">จำนวนรายการ: {oProducts.length} รายการ</p>
 
         <div className="flex w-full md:w-auto md:ml-auto pt-2 relative">
           <label className="flex items-center text-gray-500 cursor-pointer">
             <input
               type="checkbox"
-              checked={checked}
-              onChange={() => setChecked(!checked)}
+              checked={bCheckAutoScan}
+              onChange={() => setChecked(!bCheckAutoScan)}
               className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
             />
             <span className="ml-2 text-[14px]">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>
           </label>
         </div>
       </div>
+
+      {/* ประวัติการทำรายการ */}
+      <HistoryReceiveModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        oDataHistory={historyList}
+        onView={C_SETxViewHistoryProduct}
+        onRepeat={handleRepeat} />
+
+      {/* ข้อมูลประวัติสินค้า */}
+      <ProductStockModal
+        isOpen={isProductOpen}
+        onClose={() => setIsProductOpen(false)}
+        oDataProduct={oFilteredProduct || []}
+        tDate={tHistoryDate}
+        tRefDoc={tHistoryRefDoc}
+      />
+
+      {isLoading && (
+        <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+        </div>
+      )}
+
+
+
     </div>
   );
 }
