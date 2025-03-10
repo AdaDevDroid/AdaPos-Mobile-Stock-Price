@@ -91,6 +91,9 @@ export const C_GETxUserData = async (oDb: IDBDatabase): Promise<UserInfo | null>
             FTBchCode: userData.FTBchCode,
             FTAgnCode: userData.FTAgnCode,
             FTMerCode: userData.FTMerCode,
+            FTUsrLogin: userData.FTUsrLogin,
+            FTUsrPass: userData.FTUsrPass,
+            FTUsrCode: userData.FTUsrCode
           };
           resolve(userInfo);
         } else {

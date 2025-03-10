@@ -18,7 +18,6 @@ export async function POST() {
     `);
 
     const aData = aResult.recordset;
-    console.log("Data fetched:", aData); // เพิ่มการแสดงผลข้อมูลใน console
     const oSysConfig = aData.map((record: TsysConfig) => ({ ...record }));
 
     if (oSysConfig.length === 0) {

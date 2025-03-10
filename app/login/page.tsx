@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaUser, FaLock } from "react-icons/fa";
-import { C_PRCxOpenIndexedDB, C_INSxUserToDB, C_INSoSysConfigToDB, C_DELoSysConfigData } from "@/hooks/CIndexedDB";
+import { C_PRCxOpenIndexedDB, C_INSxUserToDB, C_INSoSysConfigToDB, C_DELoSysConfigData, C_GETxUserData } from "@/hooks/CIndexedDB";
+import { CEncrypt } from '../../hooks/CEncrypt';
 
 export default function Login() {
   const router = useRouter();
@@ -39,6 +40,20 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!navigator.onLine) {
+      const oDatabase = await C_PRCxOpenIndexedDB();
+      const oUserData = await C_GETxUserData(oDatabase);
+      const tEncryptedPassword = new CEncrypt("2").C_PWDtASE128Encrypt(password);
+
+      if (oUserData && oUserData.FTUsrLogin === username && oUserData.FTUsrPass === tEncryptedPassword) {
+        router.push("/main");
+      } else {
+        setError("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+      }
+      return;
+    }
+
     console.log("process login 1");
     try {
       const res = await fetch("/api/auth/login", {
