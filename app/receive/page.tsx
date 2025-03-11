@@ -13,7 +13,7 @@ import exportToExcel from '@/hooks/CTransfersToExcel';
 import { History, Product, UserInfo } from "@/models/models"
 import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
-import HistoryReceiveModal from "@/components/HistoryReceiveModal";
+import HistoryModal from "@/components/HistoryModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
 import { C_SETxFormattedDate } from "@/hooks/CSP";
 
@@ -29,10 +29,8 @@ export default function Receive() {
   const [tSearchPoText, setSearchText] = useState<string>(""); // string
   const [oPendingBarcode, setPendingBarcode] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [isProductOpen, setIsProductOpen] = useState(false);
   const [historyList, setHistoryList] = useState<History[]>([]);
   const [productHistoryList, setProductHistoryList] = useState<Product[]>();
-  const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
   const [oDb, setDB] = useState<IDBDatabase | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const limitData = 3;
@@ -44,6 +42,8 @@ export default function Receive() {
 
   const [tHistoryDate, setHistoryDate] = useState("");
   const [tHistoryRefDoc, setHistoryRefDoc] = useState("");
+  const [isProductOpen, setIsProductOpen] = useState(false);
+  const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
 
   {/* เช็ค User*/ }
   useAuth();
@@ -296,7 +296,6 @@ export default function Receive() {
     alert(`ทำซ้ำใบอ้างอิง Receive: ${history.FTRefDoc}`);
   };
 
-  {/* Upload */ }
   async function C_PRCxSaveDB() {
     try {
       console.log("✅ หา RefSeq ใหม่");
@@ -327,6 +326,20 @@ export default function Receive() {
       alert("✅ บันทึกข้อมูลสำเร็จ");
     }
   }
+  const insertProducts = async () => {
+    try {
+      const response = await fetch('/api/query/insertDataProduct', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(oProducts)
+      });
+  
+      const data = await response.json();
+      console.log("✅ Insert Success:", data);
+    } catch (error) {
+      console.error("❌ Insert Failed:", error);
+    }
+  };
 
   async function C_PRCxUploadeWebServices() {
     setIsLoading(true);
@@ -342,7 +355,7 @@ export default function Receive() {
     }
 
     //  Upload ผ่าน Web Services
-
+    insertProducts();
     // Save Data to IndexedDB
     C_PRCxSaveDB();
 
@@ -351,11 +364,6 @@ export default function Receive() {
 
   async function C_PRCxExportExcel() {
     setIsLoading(true);
-    if (!isNetworkOnline) {
-      setIsLoading(false);
-      alert("❌ ข้อความ: Internet Offline");
-      return;
-    }
     if (!oProducts || oProducts.length === 0) {
       setIsLoading(false);
       alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
@@ -523,7 +531,7 @@ export default function Receive() {
       </div>
 
       {/* ประวัติการทำรายการ */}
-      <HistoryReceiveModal
+      <HistoryModal
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         oDataHistory={historyList}

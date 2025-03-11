@@ -15,8 +15,8 @@ import exportToExcel from '@/hooks/CAdjustStockToExcel';
 import { History, Product, UserInfo } from "@/models/models"
 import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
-import HistoryReceiveModal from "@/components/HistoryReceiveModal";
-import ProductStockModal from "@/components/ProductStockModal";
+import HistoryModal from "@/components/HistoryModal";
+import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
 
 
 
@@ -473,7 +473,7 @@ export default function ReceiveGoods() {
       </div>
 
       {/* ประวัติการทำรายการ */}
-      <HistoryReceiveModal
+      <HistoryModal
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         oDataHistory={historyList}
@@ -481,7 +481,7 @@ export default function ReceiveGoods() {
         onRepeat={handleRepeat} />
 
       {/* ข้อมูลประวัติสินค้า */}
-      <ProductStockModal
+      <ProductTranferNStockModal
         isOpen={isProductOpen}
         onClose={() => setIsProductOpen(false)}
         oDataProduct={oFilteredProduct || []}

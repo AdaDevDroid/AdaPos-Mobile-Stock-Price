@@ -1,7 +1,7 @@
 import React from "react";
 import { Product } from "@/models/models"
 
-interface StockModalProps {
+interface TransferNStockModalProps {
     isOpen: boolean;
     onClose: () => void;
     oDataProduct: Product[];
@@ -9,12 +9,12 @@ interface StockModalProps {
     tRefDoc: string;
 }
 
-const ProductStockModal: React.FC<StockModalProps> = ({ isOpen, onClose, oDataProduct, tDate, tRefDoc}) => {
+const ProductTranferNStockModal: React.FC<TransferNStockModalProps> = ({ isOpen, onClose, oDataProduct, tDate, tRefDoc}) => {
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-white w-[50%] rounded-lg shadow-lg">
+            <div className="bg-white md:w-[50%] w-[90%] rounded-lg shadow-lg">
                 {/* หัวข้อ Modal */}
                 <div className="flex justify-between p-4 border-b">
                     <h2 className="text-lg font-bold">ประวัติการทำรายการ</h2>
@@ -29,7 +29,7 @@ const ProductStockModal: React.FC<StockModalProps> = ({ isOpen, onClose, oDataPr
                 </div>
 
                 {/* ตารางประวัติการทำรายการ */}
-                <div className="px-4">
+                <div className="px-4 pb-4">
                     <table className="w-full border-collapse mt-4 rounded-lg overflow-hidden">
                         <thead>
                             <tr className="bg-gray-100 border text-m text-[14px]">
@@ -54,4 +54,4 @@ const ProductStockModal: React.FC<StockModalProps> = ({ isOpen, onClose, oDataPr
     );
 };
 
-export default ProductStockModal;
+export default ProductTranferNStockModal;
