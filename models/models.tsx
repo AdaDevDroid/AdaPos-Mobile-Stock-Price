@@ -24,4 +24,12 @@ export interface UserInfo {
     FTBchCode: string;
     FTAgnCode: string;
     FTMerCode: string;
+    FTUsrLogin: string;
+    FTUsrPass: string;  
+    FTUsrCode: string;  
+  }
+
+  export interface SysConfig {
+    FTSysCode: string;
+    FTSysStaUsrValue: string;
   }

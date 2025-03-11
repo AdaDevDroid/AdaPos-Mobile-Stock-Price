@@ -2,6 +2,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaUser, FaLock } from "react-icons/fa";
+import { C_PRCxOpenIndexedDB, C_INSxUserToDB, C_INSoSysConfigToDB, C_DELoSysConfigData, C_GETxUserData } from "@/hooks/CIndexedDB";
+import { CEncrypt } from '../../hooks/CEncrypt';
+import { serialize, parse } from "cookie";
 
 export default function Login() {
   const router = useRouter();
@@ -11,6 +14,14 @@ export default function Login() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    // ✅ ดึง Cookie จาก Request
+    const cookies = parse(document.cookie);
+    const savedUsername = cookies.rememberedUsername;
+    if (savedUsername) {
+      setUsername(savedUsername);
+      setRememberMe(true);
+    }
+
     fetch("/api/auth/me", { credentials: "include" }) // 👈 ส่ง Cookie ไปให้ API
       .then((res) => res.json())
       .then((data) => {
@@ -38,25 +49,102 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!navigator.onLine) {
+      const oDatabase = await C_PRCxOpenIndexedDB();
+      const oUserData = await C_GETxUserData(oDatabase);
+      const tEncryptedPassword = new CEncrypt("2").C_PWDtASE128Encrypt(password);
+
+      if (oUserData && oUserData.FTUsrLogin === username && oUserData.FTUsrPass === tEncryptedPassword) {
+        router.push("/main");
+      } else {
+        setError("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+      }
+      return;
+    }
+
     console.log("process login 1");
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    console.log("process login 3");
-    if (res.ok) {
-      console.log("process login 4");
-      router.push("/main"); // ✅ ไปหน้าหลักเมื่อ Login สำเร็จ
-    } else {
-      console.log("process login 5");
-      setError("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+
+      console.log("process login 3");
+      if (res.ok) {
+        const oData = await res.json();
+        const oNewUser = {
+          FTUsrCode: oData.user.FTUsrCode,
+          FTUsrLogin: oData.user.FTUsrLogin,
+          FTUsrPass: oData.user.FTUsrLoginPwd,
+          FTUsrName: oData.user.FTUsrName,
+          FTBchCode: oData.user.FTBchCode,
+          FTAgnCode: oData.user.FTAgnCode,
+          FTMerCode: oData.user.FTMerCode,
+        };
+        const oDatabase = await C_PRCxOpenIndexedDB();
+        await C_INSxUserToDB(oDatabase, oNewUser);
+
+        console.log("process login 4");
+
+        // Sync SysConfig
+        console.log("Process Sync SysConfig 1");
+        const rConfig = await fetch("/api/query/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        const oConfigData = await rConfig.json();
+        console.log(oConfigData);
+
+        if (rConfig.ok) {
+          
+          C_DELoSysConfigData(oDatabase);
+
+          if (oConfigData && Array.isArray(oConfigData.config)) {
+            for (const config of oConfigData.config) {
+              const oSysConfig = {
+                FTSysCode: config.FTSysCode,
+                FTSysStaUsrValue: config.FTSysStaUsrValue,
+              };
+
+              if (oSysConfig.FTSysCode && oSysConfig.FTSysStaUsrValue) {
+                await C_INSoSysConfigToDB(oDatabase, oSysConfig);
+                console.log("Process Sync SysConfig 2");
+              } else {
+                console.error("Invalid SysConfig data:", oSysConfig);
+              }
+            }
+          } else {
+            console.error("Invalid Config Data Structure:", oConfigData);
+          }
+        } else {
+          console.log("Failed to sync SysConfig");
+        }
+
+        if (rememberMe) {
+          document.cookie = serialize('rememberedUsername', username, {
+            maxAge: 7 * 24 * 60 * 60, // 7 days
+            path: "/",
+          });
+        } else {
+          document.cookie = serialize('rememberedUsername', '', { maxAge: -1, path: "/" });
+        }
+
+        router.push("/main"); // ✅ ไปหน้าหลักเมื่อ Login สำเร็จ
+      } else {
+        console.log("process login 5");
+        setError("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+      }
+    } catch (error) {
+      console.error("Login failed:", error);
+      setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
     }
   };
 
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-gray-100">
-
       <div className="flex flex-col items-center text-center mb-6">
         <div className="bg-blue-500 text-white text-2xl font-bold flex items-center justify-center w-16 h-16 rounded-md">
           Ada
@@ -64,7 +152,6 @@ export default function Login() {
         <h2 className="text-2xl font-bold mt-4">AdaPos+ Stock & Price</h2>
         <p className="text-gray-500">เข้าสู่ระบบเพื่อใช้งาน</p>
       </div>
-
 
       <div className="w-full max-w-md p-8 bg-white shadow-lg rounded-lg">
         <form onSubmit={handleLogin} className="space-y-4">
@@ -96,7 +183,7 @@ export default function Login() {
           <div className="flex items-center justify-between">
             <label className="flex items-center">
               <input type="checkbox" checked={rememberMe} onChange={() => setRememberMe(!rememberMe)} className="mr-2" />
-              จดจำการเข้าสู่ระบบ
+              จดจำผู้ใช้งาน
             </label>
             <a href="#" className="text-blue-500 text-sm">ลืมรหัสผ่าน?</a>
           </div>
