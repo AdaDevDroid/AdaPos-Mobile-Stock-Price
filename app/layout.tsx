@@ -8,8 +8,8 @@ import Sidebar from "@/components/Sidebar";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname(); // ดึง URL ปัจจุบัน
-  const hideSidebarPages = ["/login"]; // หน้าที่ไม่ต้องการให้แสดง Sidebar
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // สถานะการเปิด-ปิดของ Sidebar
+  const showSidebarPages = ["/main", "/receive", "/transfer", "/stock", "/price-check"]; // ระบุหน้าที่ต้องการให้แสดง Sidebar
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -24,15 +24,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <NetworkStatusProvider>
           <div className="flex h-screen">
-            {/* แสดง Sidebar เฉพาะหน้าที่ไม่ใช่ /login */}
-            {!hideSidebarPages.includes(pathname) && (
+            {/* แสดง Sidebar เฉพาะหน้าที่กำหนด */}
+            {showSidebarPages.includes(pathname) && (
               <div className={`fixed h-full transition-width duration-300 ${isSidebarOpen ? 'w-64' : 'w-16'}`}>
                 <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
               </div>
             )}
 
             {/* เนื้อหาหลักของแต่ละหน้า */}
-            <main className="flex-1 transition-margin duration-300" style={{ marginLeft: hideSidebarPages.includes(pathname) ? 0 : isSidebarOpen ? '16rem' : '4rem' }}>
+            <main
+              className="flex-1 transition-margin duration-300"
+              style={{ marginLeft: showSidebarPages.includes(pathname) ? (isSidebarOpen ? '16rem' : '4rem') : 0 }}
+            >
               {children}
             </main>
           </div>

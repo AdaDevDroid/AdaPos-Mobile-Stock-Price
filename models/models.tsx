@@ -5,6 +5,11 @@ export interface Product {
     FNQuantity: number;
     FTRefDoc: string;
     FTRefSeq: string;
+    FTXthDocKey: string;
+    FTBchCode: string;
+    FTAgnCode: string;
+    FTUsrName: string;
+    FDCreateOn: string;
 }
 
 export interface History {

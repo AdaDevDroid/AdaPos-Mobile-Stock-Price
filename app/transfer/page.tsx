@@ -10,104 +10,327 @@ import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaH
 import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CTransfersToExcel';
-
-interface Product {
-  id: number;
-  barcode: string;
-  cost: number;
-  quantity: number;
-}
+import { History, Product, UserInfo } from "@/models/models"
+import { C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_PRCxOpenIndexedDB } from "@/hooks/CIndexedDB";
+import { C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
+import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
+import HistoryModal from "@/components/HistoryModal";
+import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
 
 export default function ReceiveGoods() {
   const [refDoc, setRefDoc] = useState("");
-  const [products, setProducts] = useState<Product[]>([]);
+  const [oProducts, setProducts] = useState<Product[]>([]);
   const [barcode, setBarcode] = useState("");
-  const [cost, setCost] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [isOpen, setIsOpen] = useState(false);
   const [checked, setChecked] = useState(false);
-  const [searchText, setSearchText] = useState<string>(""); // string
-  const [pendingBarcode, setPendingBarcode] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState<string>("");
   const checkedRef = useRef(checked);
-  const costRef = useRef(cost);
+  const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [tRefSeq, setRefSeq] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [oDb, setDB] = useState<IDBDatabase | null>(null);
+  const isNetworkOnline = useNetworkStatus();
+  const [historyList, setHistoryList] = useState<History[]>([]);
+  const [productHistoryList, setProductHistoryList] = useState<Product[]>();
+  const limitData = 3;
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
-  {/* เช็ค User*/}
+  const [tHistoryDate, setHistoryDate] = useState("");
+  const [tHistoryRefDoc, setHistoryRefDoc] = useState("");
+  const [isProductOpen, setIsProductOpen] = useState(false);
+  const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
+
+  {/* เช็ค User*/ }
   useAuth();
 
-  {/* ใช้ useEffect ในการเก็บค่า checked และ cost ไว้ */}
+  {/* เปิด IndexedDB */ }
+  useEffect(() => {
+    const initDB = async () => {
+      setIsLoading(true);
+
+      try {
+        const database = await C_PRCxOpenIndexedDB();
+        setDB(database);
+
+        // ✅ ดึงข้อมูลผู้ใช้หลังจาก oDb ถูกตั้งค่า
+        const data = await C_GETxUserData(database);
+        if (data) {
+          setUserInfo(data);
+          console.log("✅ ข้อมูลผู้ใช้ถูกตั้งค่า:", data);
+        }
+
+        setRefSeq(crypto.randomUUID());
+      } catch (error) {
+        console.error("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initDB();
+  }, []);
+
+  {/* set HistoryList เมื่อ oDb ถูกเซ็ต  */ }
+  useEffect(() => {
+    if (oDb) {
+      C_PRCxFetchHistoryList();
+      C_PRCxFetchProductHistoryList();
+    }
+  }, [oDb]);
+
+  {/* ใช้ useEffect ในการเก็บค่า checked ไว้ */ }
   useEffect(() => {
     checkedRef.current = checked;
-    costRef.current = cost;
-  }, [checked, cost]);
-
-  {/* ใช้ useEffect ในการเก็บค่า cost ไว้ */}
-  useEffect(() => {
-    if (pendingBarcode !== null) {
-      addProduct(pendingBarcode, cost); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
-      setPendingBarcode(null);
-    }
-  }, [cost]);
-
-  {/* สแกน BarCode */}
-  const { C_PRCxStartScanner, bScanning, oScannerRef } = CCameraScanner(
+  }, [checked]);
+  {/* สแกน BarCode */ }
+  const { C_PRCxStartScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning, oScannerRef } = CCameraScanner(
     (ptDecodedText) => {
+      C_PRCxPauseScanner();
       if (checkedRef.current) {
-        setBarcode(ptDecodedText);
-        alert(`เพิ่มข้อมูล: ${ptDecodedText}`);
-        addProduct(ptDecodedText, costRef.current);
+        const bConfirmed = window.confirm(`เพิ่มข้อมูล: ${ptDecodedText} ?`);
+        if (bConfirmed) {
+          setBarcode(ptDecodedText);
+          C_ADDxProduct(ptDecodedText);
+        }
       } else {
         setBarcode(ptDecodedText);
         alert(`ข้อความ: ${ptDecodedText}`);
       }
+      // ✅ รอ 500ms ก่อนเปิดกล้องใหม่
+      setTimeout(() => {
+        C_PRCxResumeScanner();
+      }, 500);
     }
   );
-  
-  {/* เพิ่มสินค้า */}
-  const addProduct = (barcode: string, cost: string) => {
-    if (!cost) {
-      setCost("0");
-      setPendingBarcode(barcode);
+
+  {/* ดึงข้อมูล History จาก IndexedDB */ }
+  const C_PRCxFetchHistoryList = async () => {
+    if (!oDb) {
+      console.error("❌ Database is not initialized");
       return;
     }
+
+    const transaction = oDb.transaction("TCNTHistoryTransfer", "readonly");
+    const store = transaction.objectStore("TCNTHistoryTransfer");
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      if (request.result) {
+        const mappedData: History[] = request.result.map((item: History) => ({
+          FTDate: item.FTDate,
+          FTRefDoc: item.FTRefDoc,
+          FNStatus: item.FNStatus,
+          FTRefSeq: item.FTRefSeq
+        }));
+
+        console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData); // ✅ ตรวจสอบข้อมูลที่ดึงมา
+        setHistoryList(mappedData);
+      }
+    };
+
+    request.onerror = () => {
+      console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
+    };
+  };
+
+  const C_PRCxFetchProductHistoryList = async () => {
+    if (!oDb) {
+      console.error("❌ Database is not initialized");
+      return;
+    }
+
+    const transaction = oDb.transaction("TCNTProductTransfer", "readonly");
+    const store = transaction.objectStore("TCNTProductTransfer");
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      if (request.result) {
+        const mappedData: Product[] = request.result.map((item: Product) => ({
+          FNId: item.FNId,
+          FTBarcode: item.FTBarcode,
+          FCCost: 0,
+          FNQuantity: item.FNQuantity,
+          FTRefDoc: item.FTRefDoc,
+          FTRefSeq: item.FTRefSeq,
+          FTXthDocKey: item.FTXthDocKey,
+          FTBchCode: item.FTBchCode,
+          FTAgnCode: item.FTAgnCode,
+          FTUsrName: item.FTUsrName,
+          FDCreateOn: item.FDCreateOn
+        }));
+
+        console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData);
+        setProductHistoryList(mappedData);
+      }
+    };
+
+    request.onerror = () => {
+      console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
+    };
+  };
+
+  {/* เพิ่มสินค้า */ }
+  const C_ADDxProduct = (barcode: string) => {
 
     if (!barcode || !quantity) return;
 
     setProducts((prevProducts) => {
-      const newId = Math.max(...prevProducts.map(p => p.id), 0) + 1;
+      const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
 
       const newProduct = {
-        id: newId,
-        barcode,
-        cost: parseFloat(cost),
-        quantity: parseInt(quantity),
+        FNId: newId,
+        FTBarcode: barcode,
+        FCCost: 0,
+        FNQuantity: parseInt(quantity),
+        FTRefDoc: refDoc,
+        FTRefSeq: tRefSeq,
+        FTXthDocKey: "TCNTPdtTwxHD",
+        FTBchCode: oUserInfo?.FTBchCode || "",
+        FTAgnCode: oUserInfo?.FTAgnCode || "",
+        FTUsrName: oUserInfo?.FTUsrName || "",
+        FDCreateOn: C_SETxFormattedDate()
       };
 
       return [...prevProducts, newProduct];
     });
 
     setBarcode("");
-    setCost("");
     setQuantity("1");
   };
 
-  {/* ลบสินค้า */}
+  {/* ลบสินค้า */ }
   const removeProduct = (id: number) => {
     setProducts((prevProducts) =>
       prevProducts
-        .filter((product) => product.id !== id)
+        .filter((product) => product.FNId !== id)
         .map((product, index) => ({ ...product, id: index + 1 })) //รีเซ็ต ID ใหม่
     );
   };
+  const C_SETxViewHistoryProduct = (history: History) => {
+    const oFiltered = productHistoryList?.filter((product) => product.FTRefSeq === history.FTRefSeq);
+    setHistoryDate(history.FTDate);
+    setHistoryRefDoc(history.FTRefDoc);
+    setFilteredProduct(oFiltered || []);
+    setIsProductOpen(true);
+  };
 
-    {/* export excel */}
-    const exportProduct = () => {
-      const formattedProducts = products.map(product => ({
-        tBarcode: product.barcode,
-        tCost: product.cost.toString(),
-        tQTY: product.quantity.toString()
-      }));
-      exportToExcel(formattedProducts);
+  {/* export excel */ }
+  const exportProduct = () => {
+    const formattedProducts = oProducts.map(product => ({
+      tBarcode: product.FTBarcode,
+      tCost: product.FCCost.toString(),
+      tQTY: product.FNQuantity.toString()
+    }));
+    exportToExcel(formattedProducts);
+  };
+
+  const C_INSxHistoryToIndexedDB = async () => {
+    if (!oDb) {
+      console.error("❌ Database is not initialized");
+      return;
+    }
+    const currentDate = new Date().toLocaleDateString("th-TH");
+
+    const historyData: History = {
+      FTDate: currentDate,
+      FTRefDoc: refDoc,
+      FNStatus: 1,
+      FTRefSeq: tRefSeq
     };
+
+    await C_INSxDataIndexedDB(oDb, "TCNTHistoryTransfer", [historyData]);
+  };
+  const C_INSxProductToIndexedDB = async () => {
+    if (!oDb) {
+      console.error("❌ Database is not initialized");
+      return;
+    }
+
+    const productData = oProducts.map((oProducts) => ({
+      FNId: oProducts.FNId,
+      FTBarcode: oProducts.FTBarcode,
+      FCCost: 0,
+      FNQuantity: oProducts.FNQuantity,
+      FTRefDoc: oProducts.FTRefDoc,
+      FTRefSeq: oProducts.FTRefSeq,
+      FTXthDocKey: "TCNTPdtTwxHD",
+      FTBchCode: oUserInfo?.FTBchCode || "",
+      FTAgnCode: oUserInfo?.FTAgnCode || "",
+      FTUsrName: oUserInfo?.FTUsrName || "",
+      FDCreateOn: C_SETxFormattedDate()
+    }));
+
+    await C_INSxDataIndexedDB(oDb, "TCNTProductTransfer", productData);
+    setProducts([]);
+  };
+
+  async function C_PRCxSaveDB() {
+    try {
+      console.log("✅ หา RefSeq ใหม่");
+      const newRefSeq = crypto.randomUUID();
+      setRefSeq(newRefSeq);
+      console.log("✅ RefSeq = ", newRefSeq);
+
+      console.log("✅ ข้อมูล History ถูกบันทึก");
+      await C_INSxHistoryToIndexedDB();
+
+      console.log("✅ ข้อมูล Product ถูกบันทึก");
+      await C_INSxProductToIndexedDB();
+
+      console.log("✅ เข้าลบข้อมูล History, Data ที่เกิน limit");
+      if (!oDb) {
+        console.error("❌ Database is not initialized");
+        return;
+      }
+      await C_DELxLimitData(oDb, limitData, "TCNTHistoryReceive", "TCNTProductReceive");
+
+      console.log("✅ โหลดข้อมูล List ใหม่");
+      await C_PRCxFetchHistoryList();
+      await C_PRCxFetchProductHistoryList();
+    } catch (error) {
+      console.error("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
+    } finally {
+      setRefDoc("");
+      alert("✅ บันทึกข้อมูลสำเร็จ");
+    }
+  }
+
+  async function C_PRCxUploadeWebServices() {
+    setIsLoading(true);
+    if (!isNetworkOnline) {
+      setIsLoading(false);
+      alert("❌ ข้อความ: Internet Offline");
+      return;
+    }
+    if (!oProducts || oProducts.length === 0) {
+      setIsLoading(false);
+      alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
+      return;
+    }
+
+    //  Upload ผ่าน Web Services
+    C_INSxProducts(oProducts);
+    // Save Data to IndexedDB
+    C_PRCxSaveDB();
+
+    setIsLoading(false);
+  }
+  async function C_PRCxExportExcel() {
+    setIsLoading(true);
+    if (!oProducts || oProducts.length === 0) {
+      setIsLoading(false);
+      alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
+      return;
+    }
+
+    // ส่งออกเป็น Excel
+    exportProduct();
+    // Save Data to IndexedDB
+    C_PRCxSaveDB();
+
+    setIsLoading(false);
+  }
 
   return (
     <div className="p-4 ms-1 mx-auto bg-white">
@@ -146,19 +369,19 @@ export default function ReceiveGoods() {
           <div className="absolute right-4 top-6 mt-12 bg-white border shadow-lg rounded-md w-auto text-[16px]">
             <button
               className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
-              onClick={() => alert(`ข้อความ: อัพโหลดผ่าน Web Services`)}
+              onClick={C_PRCxUploadeWebServices}
             >
               <FaFileAlt className="mr-2 text-gray-700" /> อัพโหลดผ่าน Web Services2
             </button>
             <button
               className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
-              onClick={exportProduct}
+              onClick={C_PRCxExportExcel}
             >
               <FaDownload className="mr-2 text-gray-700" /> ส่งออกเป็น File Excel
             </button>
             <button
               className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
-              onClick={() => alert(`ข้อความ: ประวัติการทำรายการ`)}
+              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
             >
               <FaHistory className="mr-2 text-gray-700" /> ประวัติการทำรายการ
             </button>
@@ -181,7 +404,7 @@ export default function ReceiveGoods() {
         <div
           id="reader"
           ref={oScannerRef}
-          className={`my-4 relative flex items-center justify-center w-[50%] mx-auto ${bScanning ? "h-[50%]" : "h-[0px] pointer-events-none"
+          className={`my-4 relative flex items-center justify-center  md:w-[50%] w-[100%] mx-auto ${bScanning ? "h-[50%]" : "h-[0px] pointer-events-none"
             } transition-opacity duration-300`}
         >
         </div>
@@ -196,7 +419,7 @@ export default function ReceiveGoods() {
           onClick={C_PRCxStartScanner}
         />
 
-    
+
 
         <InputWithLabelAndButton
           type="number"
@@ -204,7 +427,7 @@ export default function ReceiveGoods() {
           onChange={setQuantity}
           label={"จำนวนที่ได้รับ"}
           icon={<FaPlus />}
-          onClick={() => addProduct(barcode, cost)}
+          onClick={() => C_ADDxProduct(barcode)}
         />
       </div>
 
@@ -219,13 +442,13 @@ export default function ReceiveGoods() {
           </tr>
         </thead>
         <tbody className="bg-white">
-          {products.map((product) => (
-            <tr key={product.id} className="border text-center text-gray-500 text-[14px]">
-              <td className="p-2">{product.id}</td>
-              <td className="p-2">{product.barcode}</td>
-              <td className="p-2">{product.quantity}</td>
+          {oProducts.map((product, index) => (
+            <tr key={index} className="border text-center text-gray-500 text-[14px]">
+              <td className="p-2">{product.FNId}</td>
+              <td className="p-2">{product.FTBarcode}</td>
+              <td className="p-2">{product.FNQuantity}</td>
               <td className="p-2">
-                <button onClick={() => removeProduct(product.id)} className="text-red-500">
+                <button onClick={() => removeProduct(product.FNId)} className="text-red-500">
                   <FaTrash />
                 </button>
               </td>
@@ -236,7 +459,7 @@ export default function ReceiveGoods() {
 
       <div className="flex flex-col md:flex-row items-start md:items-center mt-4 ">
         {/* จำนวนรายการ */}
-        <p className="text-gray-500 text-[14px]">จำนวนรายการ: {products.length} รายการ</p>
+        <p className="text-gray-500 text-[14px]">จำนวนรายการ: {oProducts.length} รายการ</p>
 
         <div className="flex w-full md:w-auto md:ml-auto pt-2 relative">
           <label className="flex items-center text-gray-500 cursor-pointer">
@@ -250,6 +473,29 @@ export default function ReceiveGoods() {
           </label>
         </div>
       </div>
+      {/* ประวัติการทำรายการ */}
+      <HistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        oDataHistory={historyList}
+        onView={C_SETxViewHistoryProduct}
+        onRepeat={() => alert("2222")} />
+
+      {/* ข้อมูลประวัติสินค้า */}
+      <ProductTranferNStockModal
+        isOpen={isProductOpen}
+        onClose={() => setIsProductOpen(false)}
+        oDataProduct={oFilteredProduct || []}
+        tDate={tHistoryDate}
+        tRefDoc={tHistoryRefDoc}
+      />
+
+      {isLoading && (
+        <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+        </div>
+      )}
+
     </div>
   );
 }

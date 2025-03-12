@@ -9,7 +9,7 @@ interface HistoryModalProps {
     onRepeat: (history: History) => void;
 }
 
-const HistoryReceiveModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, oDataHistory, onView, onRepeat }) => {
+const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, oDataHistory, onView, onRepeat }) => {
     if (!isOpen) return null;
 
     return (
@@ -68,4 +68,4 @@ const HistoryReceiveModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, oDa
     );
 };
 
-export default HistoryReceiveModal;
+export default HistoryModal;

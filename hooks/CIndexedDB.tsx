@@ -2,7 +2,7 @@ import { History, Product, UserInfo, SysConfig } from "@/models/models"
 
 export const C_PRCxOpenIndexedDB = async () => {
   const DB_NAME = "AdaDB";
-  const DB_VERSION = 9;
+  const DB_VERSION = 11;
 
   return new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -38,6 +38,7 @@ export const C_PRCxOpenIndexedDB = async () => {
         store.createIndex("FTRefDoc", "FTRefDoc", { unique: false });
         store.createIndex("FNStatus", "FNStatus", { unique: false });
         store.createIndex("FTRefSeq", "FTRefSeq", { unique: false });
+
         console.log("✅ สร้างตาราง 'TCNTHistoryReceive' สำเร็จ");
       }
 
@@ -50,9 +51,42 @@ export const C_PRCxOpenIndexedDB = async () => {
         store.createIndex("FNQuantity", "FNQuantity", { unique: false });
         store.createIndex("FTRefDoc", "FTRefDoc", { unique: false });
         store.createIndex("FTRefSeq", "FTRefSeq", { unique: false });
+        store.createIndex("FTXthDocKey", "FTXthDocKey", { unique: false });
+        store.createIndex("FTBchCode", "FTBchCode", { unique: false });
+        store.createIndex("FTAgnCode", "FTAgnCode", { unique: false });
+        store.createIndex("FTUsrName", "FTUsrName", { unique: false });
+        store.createIndex("FDCreateOn", "FDCreateOn", { unique: false });
         console.log("✅ สร้างตาราง 'TCNTProductReceive' สำเร็จ");
       }
-   // 🔹 สร้างตาราง TCNTHistoryReceive ถ้ายังไม่มี
+
+      // 🔹 สร้างตาราง TCNTHistoryTransfer ถ้ายังไม่มี
+      if (!db.objectStoreNames.contains("TCNTHistoryTransfer")) {
+        const store = db.createObjectStore("TCNTHistoryTransfer", { autoIncrement: true });
+        store.createIndex("FTDate", "FTDate", { unique: false });
+        store.createIndex("FTRefDoc", "FTRefDoc", { unique: false });
+        store.createIndex("FNStatus", "FNStatus", { unique: false });
+        store.createIndex("FTRefSeq", "FTRefSeq", { unique: false });
+        console.log("✅ สร้างตาราง 'TCNTHistoryReceive' สำเร็จ");
+      }
+
+      // 🔹 สร้างตาราง TCNTProductTransfer ถ้ายังไม่มี
+      if (!db.objectStoreNames.contains("TCNTProductTransfer")) {
+        const store = db.createObjectStore("TCNTProductTransfer", { autoIncrement: true });
+        store.createIndex("FNId", "FNId", { unique: false });
+        store.createIndex("FTBarcode", "FTBarcode", { unique: false });
+        store.createIndex("FCCost", "FCCost", { unique: false });
+        store.createIndex("FNQuantity", "FNQuantity", { unique: false });
+        store.createIndex("FTRefDoc", "FTRefDoc", { unique: false });
+        store.createIndex("FTRefSeq", "FTRefSeq", { unique: false });
+        store.createIndex("FTXthDocKey", "FTXthDocKey", { unique: false });
+        store.createIndex("FTBchCode", "FTBchCode", { unique: false });
+        store.createIndex("FTAgnCode", "FTAgnCode", { unique: false });
+        store.createIndex("FTUsrName", "FTUsrName", { unique: false });
+        store.createIndex("FDCreateOn", "FDCreateOn", { unique: false });
+        console.log("✅ สร้างตาราง 'TCNTProductReceive' สำเร็จ");
+      }
+
+      // 🔹 สร้างตาราง TCNTHistoryStock ถ้ายังไม่มี
       if (!db.objectStoreNames.contains("TCNTHistoryStock")) {
         const store = db.createObjectStore("TCNTHistoryStock", { autoIncrement: true });
         store.createIndex("FTDate", "FTDate", { unique: false });
@@ -61,7 +95,8 @@ export const C_PRCxOpenIndexedDB = async () => {
         store.createIndex("FTRefSeq", "FTRefSeq", { unique: false });
         console.log("✅ สร้างตาราง 'TCNTHistoryReceive' สำเร็จ");
       }
-            // 🔹 สร้างตาราง TCNTProductReceive ถ้ายังไม่มี
+
+      // 🔹 สร้างตาราง TCNTProductStock ถ้ายังไม่มี
       if (!db.objectStoreNames.contains("TCNTProductStock")) {
         const store = db.createObjectStore("TCNTProductStock", { autoIncrement: true });
         store.createIndex("FNId", "FNId", { unique: false });
@@ -69,6 +104,11 @@ export const C_PRCxOpenIndexedDB = async () => {
         store.createIndex("FNQuantity", "FNQuantity", { unique: false });
         store.createIndex("FTRefDoc", "FTRefDoc", { unique: false });
         store.createIndex("FTRefSeq", "FTRefSeq", { unique: false });
+        store.createIndex("FTXthDocKey", "FTXthDocKey", { unique: false });
+        store.createIndex("FTBchCode", "FTBchCode", { unique: false });
+        store.createIndex("FTAgnCode", "FTAgnCode", { unique: false });
+        store.createIndex("FTUsrName", "FTUsrName", { unique: false });
+        store.createIndex("FDCreateOn", "FDCreateOn", { unique: false });
         console.log("✅ สร้างตาราง 'TCNTProductReceive' สำเร็จ");
       }
       
@@ -312,6 +352,7 @@ const C_DELxProductsByRefDocs = async (oDb: IDBDatabase, refDocs: string[], ptTa
       };
 
       request.onerror = () => {
+        console.error(`❌ ไม่สามารถลบข้อมูลจาก ${storeName} ที่ FTRefSeq = ${refDoc}`);
         console.error(`❌ ไม่สามารถลบข้อมูลจาก ${storeName} ที่ FTRefSeq = ${refDoc}`);
       };
     });
