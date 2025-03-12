@@ -40,11 +40,14 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, oDataHisto
                                     <td className="p-2">{data.FTDate}</td>
                                     <td className="p-2">{data.FTRefDoc}</td>
                                     <td className="p-2">
-                                        {data.FNStatus === 1 ? (
-                                            <span className="bg-green-100 text-green-600 px-2 py-1 rounded-lg">บันทึกแล้ว</span>
-                                        ) : (
-                                            <span className="bg-red-100 text-red-600 px-2 py-1 rounded-lg">ยกเลิก</span>
-                                        )}
+                                        <span
+                                            className={`inline-flex items-center px-2 py-1 rounded-lg ${data.FNStatus === 1
+                                                ? "bg-green-100 text-green-600"
+                                                : "bg-red-100 text-red-600"
+                                                }`}
+                                        >
+                                            {data.FNStatus === 1 ? "บันทึกแล้ว" : "ยกเลิก"}
+                                        </span>
                                     </td>
                                     <td className="p-2">
                                         <button onClick={() => onView(data)} className="text-blue-500 hover:underline">
@@ -60,9 +63,6 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, oDataHisto
                         </tbody>
                     </table>
                 </div>
-
-                
-
             </div>
         </div>
     );

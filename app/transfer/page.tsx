@@ -33,7 +33,6 @@ export default function ReceiveGoods() {
   const isNetworkOnline = useNetworkStatus();
   const [historyList, setHistoryList] = useState<History[]>([]);
   const [productHistoryList, setProductHistoryList] = useState<Product[]>();
-  const limitData = 3;
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const [tHistoryDate, setHistoryDate] = useState("");
@@ -283,7 +282,7 @@ export default function ReceiveGoods() {
         console.error("❌ Database is not initialized");
         return;
       }
-      await C_DELxLimitData(oDb, limitData, "TCNTHistoryReceive", "TCNTProductReceive");
+      await C_DELxLimitData(oDb, "TCNTHistoryReceive", "TCNTProductReceive");
 
       console.log("✅ โหลดข้อมูล List ใหม่");
       await C_PRCxFetchHistoryList();
