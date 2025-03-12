@@ -16,6 +16,7 @@ import { C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
+import RepeatModal from "@/components/RepeatModal";
 
 export default function ReceiveGoods() {
   const [refDoc, setRefDoc] = useState("");
@@ -32,17 +33,16 @@ export default function ReceiveGoods() {
   const [oDb, setDB] = useState<IDBDatabase | null>(null);
   const isNetworkOnline = useNetworkStatus();
   const [historyList, setHistoryList] = useState<History[]>([]);
-  const [productHistoryList, setProductHistoryList] = useState<Product[]>();
+  const [oProductHistoryList, setProductHistoryList] = useState<Product[]>();
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-
   const [tHistoryDate, setHistoryDate] = useState("");
   const [tHistoryRefDoc, setHistoryRefDoc] = useState("");
   const [isProductOpen, setIsProductOpen] = useState(false);
   const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
+  const [isRepeat, setIsRepeat] = useState(false);
 
   {/* เช็ค User*/ }
   useAuth();
-
   {/* เปิด IndexedDB */ }
   useEffect(() => {
     const initDB = async () => {
@@ -66,10 +66,8 @@ export default function ReceiveGoods() {
         setIsLoading(false);
       }
     };
-
     initDB();
   }, []);
-
   {/* set HistoryList เมื่อ oDb ถูกเซ็ต  */ }
   useEffect(() => {
     if (oDb) {
@@ -77,7 +75,6 @@ export default function ReceiveGoods() {
       C_PRCxFetchProductHistoryList();
     }
   }, [oDb]);
-
   {/* ใช้ useEffect ในการเก็บค่า checked ไว้ */ }
   useEffect(() => {
     checkedRef.current = checked;
@@ -102,7 +99,6 @@ export default function ReceiveGoods() {
       }, 500);
     }
   );
-
   {/* ดึงข้อมูล History จาก IndexedDB */ }
   const C_PRCxFetchHistoryList = async () => {
     if (!oDb) {
@@ -132,7 +128,6 @@ export default function ReceiveGoods() {
       console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
     };
   };
-
   const C_PRCxFetchProductHistoryList = async () => {
     if (!oDb) {
       console.error("❌ Database is not initialized");
@@ -168,7 +163,6 @@ export default function ReceiveGoods() {
       console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
     };
   };
-
   {/* เพิ่มสินค้า */ }
   const C_ADDxProduct = (barcode: string) => {
 
@@ -197,7 +191,6 @@ export default function ReceiveGoods() {
     setBarcode("");
     setQuantity("1");
   };
-
   {/* ลบสินค้า */ }
   const removeProduct = (id: number) => {
     setProducts((prevProducts) =>
@@ -207,13 +200,12 @@ export default function ReceiveGoods() {
     );
   };
   const C_SETxViewHistoryProduct = (history: History) => {
-    const oFiltered = productHistoryList?.filter((product) => product.FTRefSeq === history.FTRefSeq);
+    const oFiltered = oProductHistoryList?.filter((product) => product.FTRefSeq === history.FTRefSeq);
     setHistoryDate(history.FTDate);
     setHistoryRefDoc(history.FTRefDoc);
     setFilteredProduct(oFiltered || []);
     setIsProductOpen(true);
   };
-
   {/* export excel */ }
   const exportProduct = () => {
     const formattedProducts = oProducts.map(product => ({
@@ -223,7 +215,6 @@ export default function ReceiveGoods() {
     }));
     exportToExcel(formattedProducts);
   };
-
   const C_INSxHistoryToIndexedDB = async () => {
     if (!oDb) {
       console.error("❌ Database is not initialized");
@@ -263,7 +254,6 @@ export default function ReceiveGoods() {
     await C_INSxDataIndexedDB(oDb, "TCNTProductTransfer", productData);
     setProducts([]);
   };
-
   async function C_PRCxSaveDB() {
     try {
       console.log("✅ หา RefSeq ใหม่");
@@ -294,7 +284,6 @@ export default function ReceiveGoods() {
       alert("✅ บันทึกข้อมูลสำเร็จ");
     }
   }
-
   async function C_PRCxUploadeWebServices() {
     setIsLoading(true);
     if (!isNetworkOnline) {
@@ -330,7 +319,35 @@ export default function ReceiveGoods() {
 
     setIsLoading(false);
   }
+  const C_SETxViewRepeat = (history: History) => {
+    // กรองข้อมูลสินค้าตาม FTRefSeq
+    const oFiltered = oProductHistoryList?.filter((product) => product.FTRefSeq === history.FTRefSeq);
 
+    if (!oFiltered || oFiltered.length === 0) {
+      console.warn("⚠ ไม่มีข้อมูลสินค้าในรายการนี้");
+      return;
+    }
+
+    // ตั้งค่า State ของ Products ก่อนทำงาน
+    setIsRepeat(true);
+    setProducts(oFiltered);
+    setRefDoc(history.FTRefDoc);
+    
+  };
+  const C_PRCxRepeatSelect = async (option: string) => {
+    try {
+      if (option === "webService") {
+        await C_PRCxUploadeWebServices();
+      } else if (option === "excel") {
+        await C_PRCxExportExcel();
+      }
+    } catch (error) {
+      console.error("❌ เกิดข้อผิดพลาดการทำซ้ำ:", error);
+    }
+
+    // ปิด Modal หลังจากทำงานเสร็จ
+    setIsRepeat(false);
+  };
   return (
     <div className="p-4 ms-1 mx-auto bg-white">
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
@@ -478,7 +495,7 @@ export default function ReceiveGoods() {
         onClose={() => setIsHistoryOpen(false)}
         oDataHistory={historyList}
         onView={C_SETxViewHistoryProduct}
-        onRepeat={() => alert("2222")} />
+        onRepeat={C_SETxViewRepeat} />
 
       {/* ข้อมูลประวัติสินค้า */}
       <ProductTranferNStockModal
@@ -495,6 +512,12 @@ export default function ReceiveGoods() {
         </div>
       )}
 
+      {/* Repeat */}
+      <RepeatModal
+        isOpen={isRepeat}
+        onClose={() => setIsRepeat(false)}
+        onOptionSelect={C_PRCxRepeatSelect}
+      />
     </div>
   );
 }
