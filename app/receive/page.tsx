@@ -91,7 +91,7 @@ export default function Receive() {
       setIsLoading(true);
       C_ADDxProduct(oPendingBarcode, tCost); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
       setPendingBarcode(null);
-      setIsLoading(true);
+      setIsLoading(false);
     }
   }, [tCost]);
 

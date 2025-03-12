@@ -18,6 +18,18 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
     C_PRCxRequestCameraPermission();
   }, []);
 
+  const C_GETxQrBoxSize = () => {
+    const screenWidth = window.innerWidth;
+  
+    if (screenWidth > 1024) {
+      return { width: 400, height: 250 }; // สำหรับคอมพิวเตอร์
+    } else if (screenWidth > 768) {
+      return { width: 300, height: 180 }; // สำหรับแท็บเล็ต
+    } else {
+      return { width: 250, height: 150 }; // สำหรับมือถือ
+    }
+  };
+
   const C_PRCxStartScanner = () => {
     if (bScanning && oHtml5QrCode.current) {
       // 🔴 หยุดสแกน
@@ -38,7 +50,7 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
       qrScanner
         .start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 300, height: 150 } },
+          { fps: 10, qrbox: C_GETxQrBoxSize() },
           (decodedText) => {
             try {
               onScan(decodedText);
