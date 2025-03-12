@@ -1,3 +1,4 @@
+import { Product } from "@/models/models";
 
 export function C_SETxFormattedDate(): string {
     const now = new Date();
@@ -13,3 +14,18 @@ export function C_SETxFormattedDate(): string {
 
     return `${buddhistYear}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
 }
+
+export const C_INSxProducts = async (oProducts: Product[]) => {
+    try {
+      const response = await fetch('/api/query/insertDataProduct', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(oProducts)
+      });
+  
+      const data = await response.json();
+      console.log("✅ Insert Success:", data);
+    } catch (error) {
+      console.error("❌ Insert Failed:", error);
+    }
+};

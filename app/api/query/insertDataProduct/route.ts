@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
         for (const product of products) {
             const {
-                FNId, FTBarcode, FCCost, FNQuantity, FTRefDoc, FTRefSeq,
+                FNId, FTBarcode, FCCost, FNQuantity, FTRefDoc,
                 FTXthDocKey, FTBchCode, FTAgnCode, FTUsrName, FDCreateOn
             } = product;
             
@@ -40,8 +40,8 @@ export async function POST(req: NextRequest) {
             request.input("FCXtdQty", FNQuantity);
             request.input("FCXtdQtyAll", FNQuantity);
             request.input("FCXtdCostIn", FCCost);
-            request.input("FDLastUpdOn", FDCreateOn);
-            request.input("FDCreateOn", FDCreateOn);
+            request.input("FDLastUpdOn", convertToCE(FDCreateOn)); 
+            request.input("FDCreateOn", convertToCE(FDCreateOn));
             request.input("FTLastUpdBy", FTUsrName);
             request.input("FTCreateBy", FTUsrName);
             request.input("FTAgnCode", FTAgnCode);
@@ -68,3 +68,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ message: "Insert Failed", error }, { status: 500 });
     }
 }
+
+const convertToCE = (dateString: string) => {
+    const date = new Date(dateString);
+    if (date.getFullYear() > 2500) {
+        date.setFullYear(date.getFullYear() - 543);
+    }
+    return date.toISOString().replace("T", " ").substring(0, 23);
+};

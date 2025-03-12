@@ -12,7 +12,7 @@ import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CTransfersToExcel';
 import { History, Product, UserInfo } from "@/models/models"
 import { C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_PRCxOpenIndexedDB } from "@/hooks/CIndexedDB";
-import { C_SETxFormattedDate } from "@/hooks/CSP";
+import { C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
@@ -254,7 +254,7 @@ export default function ReceiveGoods() {
       FNQuantity: oProducts.FNQuantity,
       FTRefDoc: oProducts.FTRefDoc,
       FTRefSeq: oProducts.FTRefSeq,
-      FTXthDocKey: "TCNTPdtTwiHD",
+      FTXthDocKey: "TCNTPdtTwxHD",
       FTBchCode: oUserInfo?.FTBchCode || "",
       FTAgnCode: oUserInfo?.FTAgnCode || "",
       FTUsrName: oUserInfo?.FTUsrName || "",
@@ -310,7 +310,7 @@ export default function ReceiveGoods() {
     }
 
     //  Upload ผ่าน Web Services
-
+    C_INSxProducts(oProducts);
     // Save Data to IndexedDB
     C_PRCxSaveDB();
 
@@ -404,7 +404,7 @@ export default function ReceiveGoods() {
         <div
           id="reader"
           ref={oScannerRef}
-          className={`my-4 relative flex items-center justify-center w-[50%] mx-auto ${bScanning ? "h-[50%]" : "h-[0px] pointer-events-none"
+          className={`my-4 relative flex items-center justify-center  md:w-[50%] w-[100%] mx-auto ${bScanning ? "h-[50%]" : "h-[0px] pointer-events-none"
             } transition-opacity duration-300`}
         >
         </div>

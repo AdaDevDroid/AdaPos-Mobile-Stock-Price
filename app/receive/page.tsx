@@ -15,7 +15,7 @@ import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexed
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
-import { C_SETxFormattedDate } from "@/hooks/CSP";
+import { C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
 
 
 export default function Receive() {
@@ -326,21 +326,6 @@ export default function Receive() {
       alert("✅ บันทึกข้อมูลสำเร็จ");
     }
   }
-  const insertProducts = async () => {
-    try {
-      const response = await fetch('/api/query/insertDataProduct', {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(oProducts)
-      });
-  
-      const data = await response.json();
-      console.log("✅ Insert Success:", data);
-    } catch (error) {
-      console.error("❌ Insert Failed:", error);
-    }
-  };
-
   async function C_PRCxUploadeWebServices() {
     setIsLoading(true);
     if (!isNetworkOnline) {
@@ -355,7 +340,7 @@ export default function Receive() {
     }
 
     //  Upload ผ่าน Web Services
-    insertProducts();
+    C_INSxProducts(oProducts);
     // Save Data to IndexedDB
     C_PRCxSaveDB();
 

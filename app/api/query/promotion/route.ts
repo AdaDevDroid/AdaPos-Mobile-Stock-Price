@@ -1,6 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
-import { parse } from "cookie";
-import { C_CTDoConnectToDatabase } from '../../database/connect_db';
+import { NextResponse } from "next/server";
 
 interface PdtData {
      ptAgnCode: string;
@@ -11,7 +9,7 @@ interface PdtData {
      ptPdtCode: string;
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
 
      try {
           const pdtData: PdtData = {

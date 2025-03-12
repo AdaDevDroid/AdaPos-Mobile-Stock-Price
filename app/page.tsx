@@ -1,36 +1,51 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.authenticated) {
-          console.log("ยังไม่ login");
-          router.push("/login");
+    const checkAuth = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+        const data = await res.json();
+
+        if (data.authenticated) {
+          console.log("✅ login แล้ว");
+          router.replace("/main");
         } else {
-          console.log("login แล้ว");
-          router.push("/main");
+          console.log("❌ ยังไม่ login");
+          router.replace("/login");
         }
-      })
-      .catch(() => {
-        router.push("/login");
-        console.log("ยังไม่ login catch");
-      });
+      } catch (error) {
+        console.error("❌ ยังไม่ login (catch)", error);
+        router.replace("/login");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
   }, [router]);
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => console.log('Service Worker registered:', reg))
-        .catch(err => console.error('Service Worker registration failed:', err));
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => console.log("Service Worker registered:", reg))
+        .catch((err) => console.error("Service Worker registration failed:", err));
     }
   }, []);
 
-  // Return null or an empty fragment to render nothing
+  if (loading) {
+    return (
+      <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return null;
 }
