@@ -63,13 +63,35 @@ const PricePromotionCheck = () => {
   const handleSearch = async () => {
     setLoading(true);
     try {
+      // Fetch FTPdtCode based on searchType and searchQuery
+      const responseCode = await fetch('/api/query/selectUrlPdtCode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ searchType, searchQuery })
+      });
+
+      if (!responseCode.ok) {
+        alert('ไม่พบข้อมูลสินค้า');
+        throw new Error('Network response was not ok');
+      }
+
+      const dataCode = await responseCode.json();
+      if (!dataCode.data || dataCode.data.length === 0) {
+        alert('ไม่พบข้อมูลสินค้า');
+        throw new Error('No product code found');
+      }
+
+      const pdtCode = dataCode.data[0].FTPdtCode;
+
       const pdtData = {
         ptAgnCode: '',
         ptBchCode: '',
         ptMerCode: '',
         ptShpCode: '',
         ptWahCode: '',
-        ptPdtCode: searchQuery,
+        ptPdtCode: pdtCode,
       };
 
       const response = await fetch('/api/call-promotion', {
@@ -81,13 +103,18 @@ const PricePromotionCheck = () => {
       });
 
       if (!response.ok) {
+        alert('ไม่พบข้อมูลสินค้า');
         throw new Error('Network response was not ok');
       }
 
       const data = await response.json();
+      if (!data.roItem) {
+        alert('ไม่พบข้อมูลสินค้า');
+      }
       setProductData(data.roItem);
     } catch (error) {
       console.error('Error fetching product data:', error);
+      alert('ไม่พบข้อมูลสินค้า');
     } finally {
       setLoading(false);
     }
