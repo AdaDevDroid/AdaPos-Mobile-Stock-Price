@@ -164,13 +164,13 @@ export const C_GETxUserData = async (oDb: IDBDatabase): Promise<UserInfo | null>
         if (request.result.length > 0) {
           const userData = request.result[0]; // เอาข้อมูล user ตัวแรก
           const userInfo: UserInfo = {
+            FTUsrCode: userData.FTUsrCode,
+            FTUsrLogin: userData.FTUsrLogin,
+            FTUsrPass: userData.FTUsrPass,
             FTUsrName: userData.FTUsrName,
             FTBchCode: userData.FTBchCode,
             FTAgnCode: userData.FTAgnCode,
             FTMerCode: userData.FTMerCode,
-            FTUsrLogin: userData.FTUsrLogin,
-            FTUsrPass: userData.FTUsrPass,
-            FTUsrCode: userData.FTUsrCode
           };
           resolve(userInfo);
         } else {

@@ -9,35 +9,42 @@ interface PdtData {
      ptPdtCode: string;
 }
 
-export async function GET() {
+const urlMaster = 'https://dev.ada-soft.com:44340/AdaStandard/API2PSMaster/V5';
 
+export async function POST(request: Request) {
      try {
-          const pdtData: PdtData = {
-               ptAgnCode: '00001',
-               ptBchCode: '00001',
-               ptMerCode: '00001',
-               ptShpCode: '00001',
-               ptWahCode: '00001',
-               ptPdtCode: '00001',
-          };
+          const pdtData: PdtData = await request.json();
 
           const response = await fetch(
-               'https://dev.ada-soft.com:44340/AdaStandard/API2PSMaster/V5/Check/CheckProduct', 
+               `${urlMaster}/Check/CheckProduct`,
                {
                  method: 'POST',
                  headers: {
                    'Content-Type': 'application/json',
-                   // 'Authorization': `Bearer ${YOUR_TOKEN}`
                  },
                  body: JSON.stringify(pdtData)
                }
-             );
-         
-          const data = await response.json();
-          console.log('PdtData :', data);
+          );
 
-          return NextResponse.json(data, { status: 200 });
+          if (!response.ok) {
+               throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          const result = {
+               rtCode: data.rtCode,
+               rtDesc: data.rtDesc,
+               roItem: data.roItem
+          };
+
+          return NextResponse.json(result, { status: 200 });
      } catch (error) {
-          return NextResponse.json({ message: error }, { status: 403 });
+          console.error('Error fetching product data:', error);
+          if (error instanceof Error) {
+               return NextResponse.json({ message: error.message }, { status: 403 });
+          } else {
+               return NextResponse.json({ message: 'Unknown error occurred' }, { status: 403 });
+          }
      }
 }

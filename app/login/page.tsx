@@ -90,15 +90,15 @@ export default function Login() {
 
         // Sync SysConfig
         console.log("Process Sync SysConfig 1");
-        const rConfig = await fetch("/api/query/config", {
+        const rSysConfig = await fetch("/api/query/selectSysConfig", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
         });
 
-        const oConfigData = await rConfig.json();
+        const oConfigData = await rSysConfig.json();
         console.log(oConfigData);
 
-        if (rConfig.ok) {
+        if (rSysConfig.ok) {
           
           C_DELoSysConfigData(oDatabase);
 
