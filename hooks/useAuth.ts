@@ -1,6 +1,5 @@
 "use client";
 import { useEffect } from "react";
-import { useNetworkStatus } from "./NetworkStatusContext";
 
 export function useAuth() {
   useEffect(() => {
