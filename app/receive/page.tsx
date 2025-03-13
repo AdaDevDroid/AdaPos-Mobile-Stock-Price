@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory } from "react-icons/fa";
 import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
-import exportToExcel from '@/hooks/CTransfersToExcel';
+import exportToExcel from '@/hooks/CTransferreceiptoutToExcel';
 import { History, Product, UserInfo } from "@/models/models"
 import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
@@ -272,8 +272,8 @@ export default function Receive() {
   {/* export excel */ }
   const exportProduct = () => {
     const formattedProducts = oProducts.map(oProducts => ({
+      tPdtCode: "", // Add the tPdtCode property
       tBarcode: oProducts.FTBarcode,
-      tCost: oProducts.FCCost.toString(),
       tQTY: oProducts.FNQuantity.toString()
     }));
     exportToExcel(formattedProducts);

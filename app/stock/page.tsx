@@ -10,14 +10,12 @@ import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaH
 import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CAdjustStockToExcel';
-
-
 import { History, Product, UserInfo } from "@/models/models"
 import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
-
+import { C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
 
 
 
@@ -28,19 +26,14 @@ export default function ReceiveGoods() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isProductOpen, setIsProductOpen] = useState(false);
   const [bDropdownOpen, setIsOpen] = useState(false);
-
   const [tHistoryDate, setHistoryDate] = useState("");
   const [tHistoryRefDoc, setHistoryRefDoc] = useState("");
   const [tRefDoc, setRefDoc] = useState("");
   const [oProducts, setProducts] = useState<Product[]>([]);
   const [barcode, setBarcode] = useState("");
-
   const [quantity, setQuantity] = useState("1");
- 
   const [bCheckAutoScan, setChecked] = useState(false);
   const [searchText, setSearchText] = useState<string>(""); // string
-
-
   const [isLoading, setIsLoading] = useState(false);
   const checkedRef = useRef(bCheckAutoScan);
   const [productHistoryList, setProductHistoryList] = useState<Product[]>();
@@ -69,9 +62,10 @@ export default function ReceiveGoods() {
   
         setRefSeq(crypto.randomUUID());
       };
-  
       initDB();
     }, []);
+
+
     {/* set HistoryList เมื่อ oDb ถูกเซ็ต  */ }
     useEffect(() => {
       if (oDb) {
@@ -79,10 +73,10 @@ export default function ReceiveGoods() {
         C_PRCxFetchProductHistoryList();
       }
     }, [oDb]);
+
     {/* ใช้ useEffect ในการเก็บค่า checked และ cost  */ }
     useEffect(() => {
       checkedRef.current = bCheckAutoScan;
-     
     }, [bCheckAutoScan]);
 
   
@@ -154,17 +148,17 @@ export default function ReceiveGoods() {
       request.onsuccess = () => {
         if (request.result) {
           const mappedData: Product[] = request.result.map((item: Product) => ({
-            FNId: item.FNId,
-            FTBarcode: item.FTBarcode,
-            FCCost: item.FCCost, // Add this line
-            FNQuantity: item.FNQuantity,
-            FTRefDoc: item.FTRefDoc,
-            FTRefSeq: item.FTRefSeq,
-            FTXthDocKey: item.FTXthDocKey,
-            FTBchCode: item.FTBchCode,
-            FTAgnCode: item.FTAgnCode,
-            FTUsrName: item.FTUsrName,
-            FDCreateOn: item.FDCreateOn
+          FNId: item.FNId,
+          FTBarcode: item.FTBarcode,
+          FCCost: 0,
+          FNQuantity: item.FNQuantity,
+          FTRefDoc: item.FTRefDoc,
+          FTRefSeq: item.FTRefSeq,
+          FTXthDocKey: item.FTXthDocKey,
+          FTBchCode: item.FTBchCode,
+          FTAgnCode: item.FTAgnCode,
+          FTUsrName: item.FTUsrName,
+          FDCreateOn: item.FDCreateOn
           }));
   
           console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData);
@@ -202,15 +196,15 @@ export default function ReceiveGoods() {
       const productData = oProducts.map((oProducts) => ({
         FNId: oProducts.FNId,
         FTBarcode: oProducts.FTBarcode,
-        FCCost: oProducts.FCCost, // Add this line
+        FCCost: 0,
         FNQuantity: oProducts.FNQuantity,
         FTRefDoc: oProducts.FTRefDoc,
         FTRefSeq: oProducts.FTRefSeq,
-        FTXthDocKey: "",
-        FTBchCode: "",
-        FTAgnCode: "",
+        FTXthDocKey: "TCNTPdtTwxHD",
+        FTBchCode: oUserInfo?.FTBchCode || "",
+        FTAgnCode: oUserInfo?.FTAgnCode || "",
         FTUsrName: oUserInfo?.FTUsrName || "",
-        FDCreateOn: new Date().toLocaleDateString("th-TH")
+        FDCreateOn: C_SETxFormattedDate()
       }));
   
       await C_INSxDataIndexedDB(oDb, "TCNTProductStock", productData);
@@ -230,17 +224,17 @@ export default function ReceiveGoods() {
       const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
 
       const newProduct: Product = {
-        FNId: newId,
-        FTBarcode: ptBarcode,
-        FNQuantity: Number(quantity),
+     FNId: newId,
+        FTBarcode: barcode,
+        FCCost: 0,
+        FNQuantity: parseInt(quantity),
         FTRefDoc: tRefDoc,
         FTRefSeq: tRefSeq,
-        FCCost: 0,
-        FTXthDocKey: "",
-        FTBchCode: "",
-        FTAgnCode: "",
+        FTXthDocKey: "TCNTPdtTwxHD",
+        FTBchCode: oUserInfo?.FTBchCode || "",
+        FTAgnCode: oUserInfo?.FTAgnCode || "",
         FTUsrName: oUserInfo?.FTUsrName || "",
-        FDCreateOn: new Date().toLocaleDateString("th-TH")
+        FDCreateOn: C_SETxFormattedDate()
       };
  
 
@@ -259,6 +253,8 @@ export default function ReceiveGoods() {
         .map((product, index) => ({ ...product, id: index + 1 })) //รีเซ็ต ID ใหม่
     );
   };
+
+
      {/* export excel */}
     const exportProduct = () => {
       const oDataProducts = oProducts.map(product => ({
@@ -267,7 +263,6 @@ export default function ReceiveGoods() {
         tStockCode: "",
         tQTY: product.FNQuantity.toString()
       }));
-      C_PRCxSaveDB() 
       exportToExcel(oDataProducts);
     };
 
@@ -332,6 +327,44 @@ export default function ReceiveGoods() {
       }
     }
 
+
+
+    async function C_PRCxUploadeWebServices() {
+      setIsLoading(true);
+      if (!isNetworkOnline) {
+        setIsLoading(false);
+        alert("❌ ข้อความ: Internet Offline");
+        return;
+      }
+      if (!oProducts || oProducts.length === 0) {
+        setIsLoading(false);
+        alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
+        return;
+      }
+  
+      //  Upload ผ่าน Web Services
+      C_INSxProducts(oProducts);
+      // Save Data to IndexedDB
+      C_PRCxSaveDB();
+  
+      setIsLoading(false);
+    }
+    
+    async function C_PRCxExportExcel() {
+      setIsLoading(true);
+      if (!oProducts || oProducts.length === 0) {
+        setIsLoading(false);
+        alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
+        return;
+      }
+  
+      // ส่งออกเป็น Excel
+      exportProduct();
+      // Save Data to IndexedDB
+      C_PRCxSaveDB();
+  
+      setIsLoading(false);
+    }
   return (
     <div className="p-4 ms-1 mx-auto bg-white" onClick={C_SETxCloseDropdown}>
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
@@ -369,13 +402,13 @@ export default function ReceiveGoods() {
           <div className="absolute right-4 top-6 mt-12 bg-white border shadow-lg rounded-md w-auto text-[16px]">
             <button
               className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
-              onClick={C_PRCxSaveDB}
+              onClick={C_PRCxUploadeWebServices}
             >
               <FaFileAlt className="mr-2 text-gray-700" /> อัพโหลดผ่าน Web Services2
             </button>
             <button
               className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
-              onClick={exportProduct}
+              onClick={C_PRCxExportExcel}
             >
               <FaDownload className="mr-2 text-gray-700" /> ส่งออกเป็น File Excel
             </button>
