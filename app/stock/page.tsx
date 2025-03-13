@@ -16,6 +16,7 @@ import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
 import { C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
+import RepeatModal from "@/components/RepeatModal";
 
 
 
@@ -35,12 +36,13 @@ export default function ReceiveGoods() {
   const [searchText, setSearchText] = useState<string>(""); // string
   const [isLoading, setIsLoading] = useState(false);
   const checkedRef = useRef(bCheckAutoScan);
-  const [productHistoryList, setProductHistoryList] = useState<Product[]>();
+  const [oProductHistoryList, setProductHistoryList] = useState<Product[]>();
   const [historyList, setHistoryList] = useState<History[]>([]);
   const [oDb, setDB] = useState<IDBDatabase | null>(null);
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [tRefSeq, setRefSeq] = useState("");
   const isNetworkOnline = useNetworkStatus();
+  const [isRepeat, setIsRepeat] = useState(false);
 
   {/* เช็ค User*/}
   useAuth();
@@ -273,16 +275,12 @@ export default function ReceiveGoods() {
     }
   };
   const C_SETxViewHistoryProduct = (history: History) => {
-    const oFiltered = productHistoryList?.filter((product) => product.FTRefDoc === history.FTRefDoc);
+    const oFiltered = oProductHistoryList?.filter((product) => product.FTRefDoc === history.FTRefDoc);
     setHistoryDate(history.FTDate);
     setHistoryRefDoc(history.FTRefDoc);
     setFilteredProduct(oFiltered || []);
     setIsProductOpen(true);
   };
-  const handleRepeat = (history: History) => {
-    alert(`ทำซ้ำใบอ้างอิง Receive: ${history.FTRefDoc}`);
-  };
-
 
     {/* Upload */ }
     async function C_PRCxSaveDB() {
@@ -364,6 +362,36 @@ export default function ReceiveGoods() {
   
       setIsLoading(false);
     }
+
+    const C_SETxViewRepeat = (history: History) => {
+      // กรองข้อมูลสินค้าตาม FTRefSeq
+      const oFiltered = oProductHistoryList?.filter((product) => product.FTRefSeq === history.FTRefSeq);
+  
+      if (!oFiltered || oFiltered.length === 0) {
+        console.warn("⚠ ไม่มีข้อมูลสินค้าในรายการนี้");
+        return;
+      }
+  
+      // ตั้งค่า State ของ Products ก่อนทำงาน
+      setProducts(oFiltered);
+      setRefDoc(history.FTRefDoc);
+      setIsRepeat(true);
+    };
+
+    const C_PRCxRepeatSelect = async (option: string) => {
+      try {
+        if (option === "webService") {
+          await C_PRCxUploadeWebServices();
+        } else if (option === "excel") {
+          await C_PRCxExportExcel();
+        }
+      } catch (error) {
+        console.error("❌ เกิดข้อผิดพลาดการทำซ้ำ:", error);
+      }
+  
+      // ปิด Modal หลังจากทำงานเสร็จ
+      setIsRepeat(false);
+    };
   return (
     <div className="p-4 ms-1 mx-auto bg-white" onClick={C_SETxCloseDropdown}>
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
@@ -510,7 +538,7 @@ export default function ReceiveGoods() {
         onClose={() => setIsHistoryOpen(false)}
         oDataHistory={historyList}
         onView={C_SETxViewHistoryProduct}
-        onRepeat={handleRepeat} />
+        onRepeat={C_SETxViewRepeat} />
 
       {/* ข้อมูลประวัติสินค้า */}
       <ProductTranferNStockModal
@@ -527,8 +555,12 @@ export default function ReceiveGoods() {
         </div>
       )}
 
-
-
+      {/* Repeat */}
+      <RepeatModal
+        isOpen={isRepeat}
+        onClose={() => setIsRepeat(false)}
+        onOptionSelect={C_PRCxRepeatSelect}
+      />
     </div>
   );
 }
