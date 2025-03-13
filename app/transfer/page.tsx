@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory } from "react-icons/fa";
 import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
-import exportToExcel from '@/hooks/CTransfersToExcel';
+import exportToExcel from '@/hooks/CProducttransferwahouseToExcel';
 import { History, Product, UserInfo } from "@/models/models"
 import { C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_PRCxOpenIndexedDB } from "@/hooks/CIndexedDB";
 import { C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
@@ -79,6 +79,8 @@ export default function ReceiveGoods() {
   useEffect(() => {
     checkedRef.current = checked;
   }, [checked]);
+
+
   {/* สแกน BarCode */ }
   const { C_PRCxStartScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning, oScannerRef } = CCameraScanner(
     (ptDecodedText) => {
@@ -199,6 +201,8 @@ export default function ReceiveGoods() {
         .map((product, index) => ({ ...product, id: index + 1 })) //รีเซ็ต ID ใหม่
     );
   };
+
+  
   const C_SETxViewHistoryProduct = (history: History) => {
     const oFiltered = oProductHistoryList?.filter((product) => product.FTRefSeq === history.FTRefSeq);
     setHistoryDate(history.FTDate);
@@ -209,8 +213,8 @@ export default function ReceiveGoods() {
   {/* export excel */ }
   const exportProduct = () => {
     const formattedProducts = oProducts.map(product => ({
+      tPdtCode: "", // Add the tPdtCode property
       tBarcode: product.FTBarcode,
-      tCost: product.FCCost.toString(),
       tQTY: product.FNQuantity.toString()
     }));
     exportToExcel(formattedProducts);

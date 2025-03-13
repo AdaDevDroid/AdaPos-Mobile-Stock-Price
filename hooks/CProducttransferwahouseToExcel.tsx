@@ -3,12 +3,11 @@ import * as XLSX from 'xlsx';
 
 interface oData {
   tBarcode: string;
-  tCost: string;
   tQTY: string;
 }
 
 const exportToExcel = (data: oData[]) => {
-    const header1 = [["*Bar Code Text[25]", "Cost[50]", " * Qty [18,4] "]];
+    const header1 = [["* Product Code Text[20]", "* Bar Code Text[25]", " * Qty  Decimal[18,4]  "]];
     const emptySheet = XLSX.utils.aoa_to_sheet([[]]);
 
   
@@ -22,9 +21,9 @@ const exportToExcel = (data: oData[]) => {
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, emptySheet, "Suggestion");
-    XLSX.utils.book_append_sheet(workbook, worksheet1, "Adjust Stock");
+    XLSX.utils.book_append_sheet(workbook, worksheet1, "Producttransferwahouse");
   
-    XLSX.writeFile(workbook, "Transfers.xlsx");
+    XLSX.writeFile(workbook, "Producttransferwahouse.xlsx");
   };
 
 export default exportToExcel;
