@@ -111,7 +111,7 @@ export const C_PRCxOpenIndexedDB = async () => {
         store.createIndex("FDCreateOn", "FDCreateOn", { unique: false });
         console.log("✅ สร้างตาราง 'TCNTProductReceive' สำเร็จ");
       }
-      
+
     };
 
     request.onsuccess = () => {
@@ -126,9 +126,26 @@ export const C_PRCxOpenIndexedDB = async () => {
   });
 };
 
-export const C_DELxLimitData = async (oDb: IDBDatabase, pnLimitData: number, ptHistoryName: string, ptDataList: string): Promise<void> => {
+export const C_DELxLimitData = async (oDb: IDBDatabase, ptHistoryName: string, ptDataList: string): Promise<void> => {
+  let nLimitData = 5
 
-  const deletedRefDocs = await C_DELxHistoryData(oDb!!, ptHistoryName, pnLimitData);
+  const dataConfig = await C_GETxConfig(oDb);
+        if (dataConfig) {
+          dataConfig.forEach((config) => {
+            if (config.FTSysCode === "nVB_LimitTmp") {
+              const limitValue = parseInt(config.FTSysStaUsrValue, 10);
+              if (!isNaN(limitValue)) {
+                nLimitData = limitValue;
+              } else {
+                nLimitData = 5;
+              }
+            }
+          });
+        }
+
+  console.log("Limit Data: ",nLimitData)
+
+  const deletedRefDocs = await C_DELxHistoryData(oDb!!, ptHistoryName, nLimitData);
   if (deletedRefDocs.length > 0) {
     console.log("รายการที่จะลบ", deletedRefDocs);
     await C_DELxProductsByRefDocs(oDb!!, deletedRefDocs, ptDataList);
@@ -168,6 +185,40 @@ export const C_GETxUserData = async (oDb: IDBDatabase): Promise<UserInfo | null>
       };
     } catch (error) {
       console.error("❌ เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:", error);
+      reject(null);
+    }
+  });
+};
+
+export const C_GETxConfig = async (oDb: IDBDatabase): Promise<SysConfig[] | null> => {
+  return new Promise((resolve, reject) => {
+    try {
+      // 🔹 เปิด transaction แบบ readonly
+      const transaction = oDb.transaction("TsysConfig", "readonly");
+      const store = transaction.objectStore("TsysConfig");
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        const result = request.result; // ได้ข้อมูลเป็น array
+
+        if (result.length > 0) {
+          const configData: SysConfig[] = result.map((item) => ({
+            FTSysCode: item.FTSysCode,
+            FTSysStaUsrValue: item.FTSysStaUsrValue
+          }));
+          resolve(configData);
+        } else {
+          console.warn("⚠️ ไม่พบข้อมูลใน IndexedDB");
+          resolve(null);
+        }
+      };
+
+      request.onerror = () => {
+        console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB");
+        reject(null);
+      };
+    } catch (error) {
+      console.error("❌ เกิดข้อผิดพลาดในการดึงข้อมูล:", error);
       reject(null);
     }
   });
@@ -234,7 +285,7 @@ export const C_INSoSysConfigToDB = async (oDb: IDBDatabase, oSysConfig: SysConfi
       console.error("❌ ไม่สามารถเพิ่มข้อมูลในตาราง 'TsysConfig' ได้", event);
       reject(false);
     };
- 
+
   });
 };
 

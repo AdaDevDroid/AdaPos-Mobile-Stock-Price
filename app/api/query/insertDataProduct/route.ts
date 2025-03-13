@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
                 FNId, FTBarcode, FCCost, FNQuantity, FTRefDoc,
                 FTXthDocKey, FTBchCode, FTAgnCode, FTUsrName, FDCreateOn
             } = product;
-            
+
             const request = pool.request();
             request.input("FTBchCode", FTBchCode);
             request.input("FTXthDocNo", FTRefDoc);
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
             request.input("FCXtdQty", FNQuantity);
             request.input("FCXtdQtyAll", FNQuantity);
             request.input("FCXtdCostIn", FCCost);
-            request.input("FDLastUpdOn", convertToCE(FDCreateOn)); 
+            request.input("FDLastUpdOn", convertToCE(FDCreateOn));
             request.input("FDCreateOn", convertToCE(FDCreateOn));
             request.input("FTLastUpdBy", FTUsrName);
             request.input("FTCreateBy", FTUsrName);
@@ -71,8 +71,14 @@ export async function POST(req: NextRequest) {
 
 const convertToCE = (dateString: string) => {
     const date = new Date(dateString);
+
     if (date.getFullYear() > 2500) {
         date.setFullYear(date.getFullYear() - 543);
     }
-    return date.toISOString().replace("T", " ").substring(0, 23);
+
+    // แปลงเป็น UTC ก่อนลงฐานข้อมูล
+    const offset = date.getTimezoneOffset() * 60000; // คำนวณ Offset (เป็น milliseconds)
+    const utcDate = new Date(date.getTime() - offset);
+
+    return utcDate.toISOString().replace("T", " ").substring(0, 23);
 };

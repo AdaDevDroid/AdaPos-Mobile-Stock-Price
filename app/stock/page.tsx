@@ -24,7 +24,6 @@ import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
 export default function ReceiveGoods() {
 
   const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
-  const limitData = 3;
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isProductOpen, setIsProductOpen] = useState(false);
   const [bDropdownOpen, setIsOpen] = useState(false);
@@ -318,7 +317,7 @@ export default function ReceiveGoods() {
           console.error("❌ Database is not initialized");
           return;
         }
-        await C_DELxLimitData(oDb, limitData, "TCNTHistoryStock", "TCNTProductStock");
+        await C_DELxLimitData(oDb, "TCNTHistoryStock", "TCNTProductStock");
   
         console.log("✅ โหลดข้อมูล List ใหม่");
         await C_PRCxFetchHistoryList();

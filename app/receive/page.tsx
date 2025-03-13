@@ -11,11 +11,12 @@ import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CTransfersToExcel';
 import { History, Product, UserInfo } from "@/models/models"
-import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB } from "@/hooks/CIndexedDB";
+import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_GETxConfig } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
 import { C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
+import RepeatModal from "@/components/RepeatModal";
 
 
 export default function Receive() {
@@ -23,57 +24,56 @@ export default function Receive() {
   const [oProducts, setProducts] = useState<Product[]>([]);
   const [tBarcode, setBarcode] = useState("");
   const [tCost, setCost] = useState("");
-  const [tQty, setQuantity] = useState("1");
-  const [bDropdownOpen, setIsOpen] = useState(false);
-  const [bCheckAutoScan, setChecked] = useState(false);
+  const [tQty, setQty] = useState("1");
   const [tSearchPoText, setSearchText] = useState<string>(""); // string
   const [oPendingBarcode, setPendingBarcode] = useState<string | null>(null);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [historyList, setHistoryList] = useState<History[]>([]);
-  const [productHistoryList, setProductHistoryList] = useState<Product[]>();
+  const [oHistoryList, setHistoryList] = useState<History[]>([]);
+  const [oProductHistoryList, setProductHistoryList] = useState<Product[]>();
   const [oDb, setDB] = useState<IDBDatabase | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const limitData = 3;
-  const isNetworkOnline = useNetworkStatus();
-  const checkedRef = useRef(bCheckAutoScan);
-  const costRef = useRef(tCost);
+  const tCostRef = useRef(tCost);
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [tRefSeq, setRefSeq] = useState("");
-
   const [tHistoryDate, setHistoryDate] = useState("");
   const [tHistoryRefDoc, setHistoryRefDoc] = useState("");
-  const [isProductOpen, setIsProductOpen] = useState(false);
   const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
 
-  {/* เช็ค User*/ }
+  const isNetworkOnline = useNetworkStatus();
+  const [isLoading, setIsLoading] = useState(false);
+  const [bCheckAutoScan, setChecked] = useState(false);
+  const bCheckedRef = useRef(bCheckAutoScan);
+  const [bDropdownOpen, setIsOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isRepeat, setIsRepeat] = useState(false);
+  const [isProductOpen, setIsProductOpen] = useState(false);
+
+  {/* เช็ค User */ }
   useAuth();
-  {/* เปิด IndexedDB */ }
+  {/* Set init IndexedDB */ }
   useEffect(() => {
     const initDB = async () => {
-      setIsLoading(true); // ✅ เริ่ม Loading
+      setIsLoading(true);
 
       try {
         const database = await C_PRCxOpenIndexedDB();
         setDB(database);
 
-        // ✅ ดึงข้อมูลผู้ใช้หลังจาก oDb ถูกตั้งค่า
+        // ดึงข้อมูลผู้ใช้หลังจาก oDb ถูกตั้งค่า
         const data = await C_GETxUserData(database);
         if (data) {
           setUserInfo(data);
-          console.log("✅ ข้อมูลผู้ใช้ถูกตั้งค่า:", data);
+          console.log("✅ ข้อมูลผู้ใช้ถูกตั้งค่า");
         }
-
         setRefSeq(crypto.randomUUID());
       } catch (error) {
         console.error("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
       } finally {
-        setIsLoading(false); // ✅ จบ Loading
+        setIsLoading(false);
       }
     };
 
     initDB();
   }, []);
-  {/* set HistoryList เมื่อ oDb ถูกเซ็ต  */ }
+  {/* FetchData เมื่อ oDb ถูกเซ็ต  */ }
   useEffect(() => {
     if (oDb) {
       C_PRCxFetchHistoryList();
@@ -82,41 +82,36 @@ export default function Receive() {
   }, [oDb]);
   {/* ใช้ useEffect ในการเก็บค่า checked และ cost  */ }
   useEffect(() => {
-    checkedRef.current = bCheckAutoScan;
-    costRef.current = tCost;
+    bCheckedRef.current = bCheckAutoScan;
+    tCostRef.current = tCost;
   }, [bCheckAutoScan, tCost]);
-
   useEffect(() => {
     if (oPendingBarcode !== null) {
       setIsLoading(true);
       C_ADDxProduct(oPendingBarcode, tCost); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
       setPendingBarcode(null);
-      setIsLoading(true);
+      setIsLoading(false);
     }
   }, [tCost]);
-
   {/* สแกน BarCode */ }
   const { C_PRCxStartScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning, oScannerRef } = CCameraScanner(
     (ptDecodedText) => {
       C_PRCxPauseScanner();
-      if (checkedRef.current) {
+      if (bCheckedRef.current) {
         const bConfirmed = window.confirm(`เพิ่มข้อมูล: ${ptDecodedText} ?`);
         if (bConfirmed) {
           setBarcode(ptDecodedText);
-          C_ADDxProduct(ptDecodedText, costRef.current);
+          C_ADDxProduct(ptDecodedText, tCostRef.current);
         }
       } else {
         setBarcode(ptDecodedText);
         alert(`ข้อความ: ${ptDecodedText}`);
       }
-      // ✅ รอ 500ms ก่อนเปิดกล้องใหม่
       setTimeout(() => {
         C_PRCxResumeScanner();
       }, 500);
     }
   );
-
-  {/* ดึงข้อมูล History จาก IndexedDB */ }
   const C_PRCxFetchHistoryList = async () => {
     if (!oDb) {
       console.error("❌ Database is not initialized");
@@ -145,7 +140,6 @@ export default function Receive() {
       console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
     };
   };
-
   const C_PRCxFetchProductHistoryList = async () => {
     if (!oDb) {
       console.error("❌ Database is not initialized");
@@ -181,7 +175,6 @@ export default function Receive() {
       console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
     };
   };
-
   const C_INSxHistoryToIndexedDB = async () => {
     if (!oDb) {
       console.error("❌ Database is not initialized");
@@ -203,25 +196,24 @@ export default function Receive() {
       console.error("❌ Database is not initialized");
       return;
     }
-
+    console.log("Products ก่อน insert ลง DB", oProducts)
     const productData = oProducts.map((oProducts) => ({
       FNId: oProducts.FNId,
       FTBarcode: oProducts.FTBarcode,
       FCCost: oProducts.FCCost,
       FNQuantity: oProducts.FNQuantity,
       FTRefDoc: oProducts.FTRefDoc,
-      FTRefSeq: oProducts.FTRefSeq,
+      FTRefSeq: tRefSeq,
       FTXthDocKey: "TCNTPdtTwiHD",
       FTBchCode: oUserInfo?.FTBchCode || "",
       FTAgnCode: oUserInfo?.FTAgnCode || "",
       FTUsrName: oUserInfo?.FTUsrName || "",
       FDCreateOn: C_SETxFormattedDate()
     }));
-
+    console.log("Products ก่อน insert ลง DB 2", productData)
     await C_INSxDataIndexedDB(oDb, "TCNTProductReceive", productData);
     setProducts([]);
   };
-
   {/* เพิ่มสินค้า */ }
   const C_ADDxProduct = (ptBarcode: string, ptCost: string) => {
     if (!ptCost) {
@@ -257,7 +249,7 @@ export default function Receive() {
 
     setBarcode("");
     setCost("");
-    setQuantity("1");
+    setQty("1");
   };
   {/* ลบสินค้า */ }
   const C_DELxProduct = (id: number) => {
@@ -267,8 +259,6 @@ export default function Receive() {
         .map((product, index) => ({ ...product, id: index + 1 })) //รีเซ็ต ID ใหม่
     );
   };
-
-
   {/* export excel */ }
   const exportProduct = () => {
     const formattedProducts = oProducts.map(oProducts => ({
@@ -278,24 +268,12 @@ export default function Receive() {
     }));
     exportToExcel(formattedProducts);
   };
-
   {/* ปิด Dropdown เมื่อคลิกข้างนอก */ }
   const C_SETxCloseDropdown = () => {
     if (bDropdownOpen) {
       setIsOpen(false);
     }
   };
-  const C_SETxViewHistoryProduct = (history: History) => {
-    const oFiltered = productHistoryList?.filter((product) => product.FTRefSeq === history.FTRefSeq);
-    setHistoryDate(history.FTDate);
-    setHistoryRefDoc(history.FTRefDoc);
-    setFilteredProduct(oFiltered || []);
-    setIsProductOpen(true);
-  };
-  const handleRepeat = (history: History) => {
-    alert(`ทำซ้ำใบอ้างอิง Receive: ${history.FTRefDoc}`);
-  };
-
   async function C_PRCxSaveDB() {
     try {
       console.log("✅ หา RefSeq ใหม่");
@@ -314,7 +292,7 @@ export default function Receive() {
         console.error("❌ Database is not initialized");
         return;
       }
-      await C_DELxLimitData(oDb, limitData, "TCNTHistoryReceive", "TCNTProductReceive");
+      await C_DELxLimitData(oDb, "TCNTHistoryReceive", "TCNTProductReceive");
 
       console.log("✅ โหลดข้อมูล List ใหม่");
       await C_PRCxFetchHistoryList();
@@ -325,7 +303,7 @@ export default function Receive() {
       setRefDoc("");
       alert("✅ บันทึกข้อมูลสำเร็จ");
     }
-  }
+  };
   async function C_PRCxUploadeWebServices() {
     setIsLoading(true);
     if (!isNetworkOnline) {
@@ -338,15 +316,14 @@ export default function Receive() {
       alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
       return;
     }
-
+    console.log("Products ก่อนอัพโหลด", oProducts)
     //  Upload ผ่าน Web Services
     C_INSxProducts(oProducts);
     // Save Data to IndexedDB
     C_PRCxSaveDB();
 
     setIsLoading(false);
-  }
-
+  };
   async function C_PRCxExportExcel() {
     setIsLoading(true);
     if (!oProducts || oProducts.length === 0) {
@@ -361,8 +338,42 @@ export default function Receive() {
     C_PRCxSaveDB();
 
     setIsLoading(false);
-  }
+  };
+  const C_SETxViewHistoryProduct = (history: History) => {
+    const oFiltered = oProductHistoryList?.filter((product) => product.FTRefSeq === history.FTRefSeq);
+    setHistoryDate(history.FTDate);
+    setHistoryRefDoc(history.FTRefDoc);
+    setFilteredProduct(oFiltered || []);
+    setIsProductOpen(true);
+  };
+  const C_SETxViewRepeat = (history: History) => {
+    // กรองข้อมูลสินค้าตาม FTRefSeq
+    const oFiltered = oProductHistoryList?.filter((product) => product.FTRefSeq === history.FTRefSeq);
 
+    if (!oFiltered || oFiltered.length === 0) {
+      console.warn("⚠ ไม่มีข้อมูลสินค้าในรายการนี้");
+      return;
+    }
+
+    // ตั้งค่า State ของ Products ก่อนทำงาน
+    setProducts(oFiltered);
+    setRefDoc(history.FTRefDoc);
+    setIsRepeat(true);
+  };
+  const C_PRCxRepeatSelect = async (option: string) => {
+    try {
+      if (option === "webService") {
+        await C_PRCxUploadeWebServices();
+      } else if (option === "excel") {
+        await C_PRCxExportExcel();
+      }
+    } catch (error) {
+      console.error("❌ เกิดข้อผิดพลาดการทำซ้ำ:", error);
+    }
+
+    // ปิด Modal หลังจากทำงานเสร็จ
+    setIsRepeat(false);
+  };
 
   return (
     <div className="p-4 ms-1 mx-auto bg-white" onClick={C_SETxCloseDropdown}>
@@ -386,7 +397,7 @@ export default function Receive() {
             onChange={setSearchText}
             placeholder="ค้นหาใบ PO"
             icon={<GrDocumentText />}
-            onClick={() => alert(`ข้อความ: ${tSearchPoText}`)}
+            onClick={() => alert(`ค้นหาใบ PO`)}
           />
           {/* ปุ่ม 3 จุด */}
           <button
@@ -462,7 +473,7 @@ export default function Receive() {
         <InputWithLabelAndButton
           type="number"
           value={tQty}
-          onChange={setQuantity}
+          onChange={setQty}
           label={"จำนวนที่ได้รับ"}
           icon={<FaPlus />}
           onClick={() => C_ADDxProduct(tBarcode, tCost)}
@@ -519,9 +530,9 @@ export default function Receive() {
       <HistoryModal
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
-        oDataHistory={historyList}
+        oDataHistory={oHistoryList}
         onView={C_SETxViewHistoryProduct}
-        onRepeat={handleRepeat} />
+        onRepeat={C_SETxViewRepeat} />
 
       {/* ข้อมูลประวัติสินค้า */}
       <ProductReceiveModal
@@ -538,6 +549,12 @@ export default function Receive() {
         </div>
       )}
 
+      {/* Repeat */}
+      <RepeatModal
+        isOpen={isRepeat}
+        onClose={() => setIsRepeat(false)}
+        onOptionSelect={C_PRCxRepeatSelect}
+      />
     </div>
   );
 }
