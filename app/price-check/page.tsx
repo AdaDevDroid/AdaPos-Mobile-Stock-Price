@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Search, Barcode, Tag, Calendar, Package, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Tag, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
 
 interface Price {
@@ -56,21 +56,28 @@ const PricePromotionCheck = () => {
 
   const [searchType, setSearchType] = useState('barcode');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [showAllPromotions, setShowAllPromotions] = useState(false);
   const [productData, setProductData] = useState<ProductData | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchProductData();
-  }, []);
-
-  const fetchProductData = async () => {
+  const handleSearch = async () => {
+    setLoading(true);
     try {
+      const pdtData = {
+        ptAgnCode: '',
+        ptBchCode: '',
+        ptMerCode: '',
+        ptShpCode: '',
+        ptWahCode: '',
+        ptPdtCode: searchQuery,
+      };
+
       const response = await fetch('/api/query/promotion', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify(pdtData)
       });
 
       if (!response.ok) {
@@ -81,190 +88,205 @@ const PricePromotionCheck = () => {
       setProductData(data.roItem);
     } catch (error) {
       console.error('Error fetching product data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSearch = () => {
-    // Mock search function
-    console.log('Searching for:', searchQuery, 'Type:', searchType);
-  };
-
   return (
-    <div className="container mx-auto max-w-4xl">
-      <div className="flex flex-row w-full py-2">
-        {/* หัวข้อ */}
-        <h1 className="text-2xl font-bold mb-6">ตรวจสอบราคา/โปรโมชั่น</h1>
+    <div className="p-4 ms-1 mx-auto bg-white" >
+      <div className="flex flex-col items-start md:items-center pb-6">
+        
+        {/* Page Title */}
+        <div className="flex flex-row w-full py-2">
+          <h1 className="text-2xl font-bold md:pb-0">ตรวจสอบราคา/โปรโมชั่น</h1>
+        </div>
 
-      </div>
-      {/* Search Section */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Search Type */}
-          <div className="md:col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              วิธีค้นหา
-            </label>
-            <select
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={searchType}
-              onChange={(e) => setSearchType(e.target.value)}
-            >
-              <option value="barcode">บาร์โค้ด</option>
-              <option value="name">ชื่อสินค้า</option>
-              <option value="category">หมวดหมู่</option>
-            </select>
-          </div>
+        <div className="w-full">
 
-          {/* Search Input */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              ค้นหา
-            </label>
-            <div className="flex">
-              <input
-                type="text"
-                className="flex-1 px-4 py-2 border rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder={
-                  searchType === 'barcode'
-                    ? 'สแกนหรือป้อนบาร์โค้ด'
-                    : searchType === 'name'
-                    ? 'ป้อนชื่อสินค้า'
-                    : 'ป้อนชื่อหมวดหมู่'
-                }
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <button
-                onClick={handleSearch}
-                className="px-6 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700"
-              >
-                <Search className="w-5 h-5" />
-              </button>
+          {/* Search Section */}
+          <div className="bg-white rounded-lg mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Search Type */}
+              <div className="md:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  วิธีค้นหา
+                </label>
+                <select
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={searchType}
+                  onChange={(e) => setSearchType(e.target.value)}
+                >
+                  <option value="barcode">บาร์โค้ด</option>
+                  <option value="name">ชื่อสินค้า</option>
+                  <option value="product_code">รหัสสินค้า</option>
+                </select>
+              </div>
+
+              {/* Search Input */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ค้นหา
+                </label>
+                <div className="flex">
+                  <input
+                    type="text"
+                    className="flex-1 px-4 py-2 border rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder={
+                      searchType === 'barcode'
+                        ? 'สแกนหรือป้อนบาร์โค้ด'
+                        : searchType === 'name'
+                          ? 'ป้อนชื่อสินค้า'
+                          : 'ป้อนรหัสสินค้า'
+                    }
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <button
+                    onClick={handleSearch}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700"
+                  >
+                    <Search className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Product Details */}
-      {productData && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          {/* Product Header */}
-          <div className="p-4 border-b">
-            <div className="flex flex-wrap md:flex-nowrap gap-4">
-              {/* Product Image */}
-              <img
-                src='/api/placeholder/150/150'
-                alt={productData.rtPdtName}
-                className="w-32 h-32 object-cover rounded-lg"
-              />
-              
-              {/* Product Info */}
-              <div className="flex-1">
-                <h2 className="text-xl font-semibold mb-2">{productData.rtPdtName}</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {productData.aoPdtBar && productData.aoPdtBar.length > 0 && (
-                    <>
-                      <div>
-                        <p className="text-sm text-gray-600">บาร์โค้ด</p>
-                        <p className="font-medium">{productData.aoPdtBar[0].ptBarCode}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">หน่วย</p>
-                        <p className="font-medium">{productData.aoPdtBar[0].rtPunName}</p>
-                      </div>
-                    </>
-                  )}
-                  {productData.aoPdtStk && productData.aoPdtStk.length > 0 && (
-                    <div>
-                      <p className="text-sm text-gray-600">สต็อก</p>
-                      <p className="font-medium">{productData.aoPdtStk[0].rcStkQty} หน่วย</p>
+          {/* Loading Indicator */}
+          {loading && (
+            <div className="flex justify-center items-center py-4">
+              <div className="loader"></div>
+              <p className="ml-2">กำลังโหลด...</p>
+            </div>
+          )}
+
+          {/* Product Details */}
+          {productData && (
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              {/* Product Header */}
+              <div className="p-4 border-b">
+                <div className="flex flex-wrap md:flex-nowrap gap-4">
+
+                  {/* Product Image */}
+                  {/* <img
+                    src='/api/placeholder/150/150'
+                    alt={productData.rtPdtName}
+                    className="w-32 h-32 object-cover rounded-lg"
+                  /> */}
+
+                  {/* Product Info */}
+                  <div className="flex-1">
+                    <h2 className="text-xl font-semibold mb-2">{productData.rtPdtName}</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {productData.aoPdtBar && productData.aoPdtBar.length > 0 && (
+                        <>
+                          <div>
+                            <p className="text-sm text-gray-600">บาร์โค้ด</p>
+                            <p className="font-medium">{productData.aoPdtBar[0].ptBarCode}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">หน่วย</p>
+                            <p className="font-medium">{productData.aoPdtBar[0].rtPunName}</p>
+                          </div>
+                        </>
+                      )}
+                      {productData.aoPdtStk && productData.aoPdtStk.length > 0 && (
+                        <div>
+                          <p className="text-sm text-gray-600">สต็อก</p>
+                          <p className="font-medium">{productData.aoPdtStk[0].rcStkQty} หน่วย</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Current Price */}
+                  {productData.aoPdtPrice && productData.aoPdtPrice.length > 0 && (
+                    <div className="text-center md:text-right">
+                      <p className="text-sm text-gray-600">ราคาปัจจุบัน</p>
+                      <p className="text-3xl font-bold text-blue-600">
+                        ฿{productData.aoPdtPrice[0].rcPrice.toLocaleString()}
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Current Price */}
+              {/* Price List */}
               {productData.aoPdtPrice && productData.aoPdtPrice.length > 0 && (
-                <div className="text-center md:text-right">
-                  <p className="text-sm text-gray-600">ราคาปัจจุบัน</p>
-                  <p className="text-3xl font-bold text-blue-600">
-                    ฿{productData.aoPdtPrice[0].rcPrice.toLocaleString()}
-                  </p>
+                <div className="p-4 bg-gray-50 border-b">
+                  <h3 className="font-semibold mb-3 flex items-center">
+                    <Tag className="w-4 h-4 mr-2" />
+                    ราคาตามประเภท
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {productData.aoPdtPrice.map((price: Price, index: number) => (
+                      <div
+                        key={index}
+                        className="bg-white p-3 rounded-lg border"
+                      >
+                        <p className="text-sm text-gray-600">
+                          {price.rtPghDocType === '1' ? 'ราคาปกติ' : price.rtPghDocType}
+                        </p>
+                        <p className="text-lg font-semibold">
+                          ฿{price.rcPrice.toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Promotions */}
+              {productData.aoPdtPmt && productData.aoPdtPmt.length > 0 && (
+                <div className="p-4">
+                  <h3 className="font-semibold mb-3 flex items-center">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    โปรโมชั่นที่ใช้ได้
+                  </h3>
+                  <div className="space-y-4">
+                    {productData.aoPdtPmt.slice(0, showAllPromotions ? undefined : 2).map((promo: Promotion, index: number) => (
+                      <div
+                        key={index}
+                        className="bg-white p-4 rounded-lg border"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-medium">{promo.rtPmhName}</h4>
+                        </div>
+                        <div className="mt-2 text-sm">
+                          <p className="text-gray-500">
+                            ระยะเวลา: {new Date(promo.rdPmhDStart).toLocaleDateString('th-TH')} - {new Date(promo.rdPmhDStop).toLocaleDateString('th-TH')}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {productData.aoPdtPmt.length > 2 && (
+                      <button
+                        onClick={() => setShowAllPromotions(!showAllPromotions)}
+                        className="w-full py-2 text-blue-600 hover:text-blue-800 flex items-center justify-center"
+                      >
+                        {showAllPromotions ? (
+                          <>
+                            <ChevronUp className="w-4 h-4 mr-1" />
+                            แสดงน้อยลง
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-4 h-4 mr-1" />
+                            แสดงทั้งหมด ({productData.aoPdtPmt.length} รายการ)
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Price List */}
-          {productData.aoPdtPrice && productData.aoPdtPrice.length > 0 && (
-            <div className="p-4 bg-gray-50 border-b">
-              <h3 className="font-semibold mb-3 flex items-center">
-                <Tag className="w-4 h-4 mr-2" />
-                ราคาตามประเภท
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {productData.aoPdtPrice.map((price: Price, index: number) => (
-                  <div
-                    key={index}
-                    className="bg-white p-3 rounded-lg border"
-                  >
-                    <p className="text-sm text-gray-600">{price.rtPghDocType}</p>
-                    <p className="text-lg font-semibold">
-                      ฿{price.rcPrice.toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Promotions */}
-          {productData.aoPdtPmt && productData.aoPdtPmt.length > 0 && (
-            <div className="p-4">
-              <h3 className="font-semibold mb-3 flex items-center">
-                <Calendar className="w-4 h-4 mr-2" />
-                โปรโมชั่นที่ใช้ได้
-              </h3>
-              <div className="space-y-4">
-                {productData.aoPdtPmt.slice(0, showAllPromotions ? undefined : 2).map((promo: Promotion, index: number) => (
-                  <div
-                    key={index}
-                    className="bg-white p-4 rounded-lg border"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-medium">{promo.rtPmhName}</h4>
-                    </div>
-                    <div className="mt-2 text-sm">
-                      <p className="text-gray-500">
-                        ระยะเวลา: {new Date(promo.rdPmhDStart).toLocaleDateString('th-TH')} - {new Date(promo.rdPmhDStop).toLocaleDateString('th-TH')}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                
-                {productData.aoPdtPmt.length > 2 && (
-                  <button
-                    onClick={() => setShowAllPromotions(!showAllPromotions)}
-                    className="w-full py-2 text-blue-600 hover:text-blue-800 flex items-center justify-center"
-                  >
-                    {showAllPromotions ? (
-                      <>
-                        <ChevronUp className="w-4 h-4 mr-1" />
-                        แสดงน้อยลง
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="w-4 h-4 mr-1" />
-                        แสดงทั้งหมด ({productData.aoPdtPmt.length} รายการ)
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-            </div>
           )}
         </div>
-      )}
+
+      </div>
     </div>
   );
 };

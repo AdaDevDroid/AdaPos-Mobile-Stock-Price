@@ -11,16 +11,9 @@ interface PdtData {
 
 const urlMaster = 'https://dev.ada-soft.com:44340/AdaStandard/API2PSMaster/V5';
 
-export async function POST() { // เปลี่ยนจาก GET เป็น POST
+export async function POST(request: Request) {
      try {
-          const pdtData: PdtData = {
-               ptAgnCode: '00008',
-               ptBchCode: '00016',
-               ptMerCode: '',
-               ptShpCode: '',
-               ptWahCode: '',
-               ptPdtCode: '503506',
-          };
+          const pdtData: PdtData = await request.json();
 
           const response = await fetch(
                `${urlMaster}/Check/CheckProduct`,
@@ -38,7 +31,6 @@ export async function POST() { // เปลี่ยนจาก GET เป็�
           }
 
           const data = await response.json();
-          //console.log('PdtData :', data);
 
           const result = {
                rtCode: data.rtCode,
