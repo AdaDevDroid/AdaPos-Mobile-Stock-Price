@@ -72,7 +72,7 @@ const PricePromotionCheck = () => {
         ptPdtCode: searchQuery,
       };
 
-      const response = await fetch('/api/query/promotion', {
+      const response = await fetch('/api/call-promotion', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
