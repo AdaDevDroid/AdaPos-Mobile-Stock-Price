@@ -32,7 +32,7 @@ const RepeatModal: React.FC<RepeatModalProps> = ({isOpen, onClose, onOptionSelec
           </button>
   
           <button
-            className="w-full bg-green-500 text-white py-2 rounded-md mb-2 hover:bg-green-600 flex items-center justify-center"
+            className="w-full bg-blue-500 text-white py-2 rounded-md mb-2 hover:bg-blue-600 flex items-center justify-center"
             onClick={() => onOptionSelect("excel")}
           >
             <FaDownload className="mr-2 text-white text-lg" /> ส่งออกเป็น File Excel

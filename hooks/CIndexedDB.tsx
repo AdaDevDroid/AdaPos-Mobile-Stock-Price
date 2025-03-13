@@ -127,7 +127,7 @@ export const C_PRCxOpenIndexedDB = async () => {
 };
 
 export const C_DELxLimitData = async (oDb: IDBDatabase, ptHistoryName: string, ptDataList: string): Promise<void> => {
-  let nLimitData = 3
+  let nLimitData = 5
 
   const dataConfig = await C_GETxConfig(oDb);
         if (dataConfig) {
@@ -137,11 +137,13 @@ export const C_DELxLimitData = async (oDb: IDBDatabase, ptHistoryName: string, p
               if (!isNaN(limitValue)) {
                 nLimitData = limitValue;
               } else {
-                nLimitData = 3;
+                nLimitData = 5;
               }
             }
           });
         }
+
+  console.log("Limit Data: ",nLimitData)
 
   const deletedRefDocs = await C_DELxHistoryData(oDb!!, ptHistoryName, nLimitData);
   if (deletedRefDocs.length > 0) {
