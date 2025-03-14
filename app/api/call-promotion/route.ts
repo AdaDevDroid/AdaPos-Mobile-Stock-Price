@@ -10,14 +10,19 @@ interface PdtData {
      ptPdtCode: string;
 }
 
-const urlMaster = 'https://dev.ada-soft.com:44340/AdaStandard/API2PSMaster/V5';
+//const urlMaster = 'https://dev.ada-soft.com:44340/AdaStandard/API2PSMaster/V5';
 
 export async function POST(request: Request) {
      try {
           const pdtData: PdtData = await request.json();
           
+          // Validate input data
+          if (!pdtData.ptAgnCode || !pdtData.ptPdtCode) {
+               throw new Error("Invalid input data: Missing required fields");
+          }
+
           // Get the URL dynamically
-          // const urlMaster = await C_GetoUrlObject();
+          const urlMaster = await C_GetoUrlObject();
 
           const response = await fetch(
                `${urlMaster}/Check/CheckProduct`,
@@ -46,7 +51,7 @@ export async function POST(request: Request) {
      } catch (error) {
           console.error('Error fetching product data:', error);
           if (error instanceof Error) {
-               return NextResponse.json({ message: error.message }, { status: 403 });
+               return NextResponse.json({ message: `Error: ${error.message}` }, { status: 403 });
           } else {
                return NextResponse.json({ message: 'Unknown error occurred' }, { status: 403 });
           }

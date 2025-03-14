@@ -1,6 +1,6 @@
 // import { Product } from "@/models/models";
 
-export const C_GetoUrlObject = async () => {
+export const C_GetoUrlObject = async (): Promise<string> => {
   try {
     const response = await fetch('/api/query/selectUrlObject', {
       method: "POST",
@@ -8,7 +8,6 @@ export const C_GetoUrlObject = async () => {
     });
 
     const data = await response.json();
-    console.log("✅ Insert Success:", data);
     if (data.data && data.data.length > 0) {
       return data.data[0].FTUrlAddress; // Return the fetched URL
     } else {

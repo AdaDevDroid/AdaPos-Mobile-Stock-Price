@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Tag, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
+import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 
 interface Price {
   rtPdtCode: string;
@@ -59,11 +60,18 @@ const PricePromotionCheck = () => {
   const [showAllPromotions, setShowAllPromotions] = useState(false);
   const [productData, setProductData] = useState<ProductData | null>(null);
   const [loading, setLoading] = useState(false);
+  const isNetworkOnline = useNetworkStatus();
 
   const handleSearch = async () => {
+
+    if (!isNetworkOnline) {
+      setLoading(false);
+      alert("❌ ข้อความ: Internet Offline");
+      return;
+    }
+
     setLoading(true);
     try {
-      // Fetch FTPdtCode based on searchType and searchQuery
       const responseCode = await fetch('/api/query/selectUrlPdtCode', {
         method: 'POST',
         headers: {
@@ -79,7 +87,6 @@ const PricePromotionCheck = () => {
 
       const dataCode = await responseCode.json();
       if (!dataCode.data || dataCode.data.length === 0) {
-        alert('ไม่พบข้อมูลสินค้า');
         throw new Error('No product code found');
       }
 
@@ -123,7 +130,7 @@ const PricePromotionCheck = () => {
   return (
     <div className="p-4 ms-1 mx-auto bg-white" >
       <div className="flex flex-col items-start md:items-center pb-6">
-        
+
         {/* Page Title */}
         <div className="flex flex-row w-full py-2">
           <h1 className="text-2xl font-bold md:pb-0">ตรวจสอบราคา/โปรโมชั่น</h1>
@@ -182,7 +189,8 @@ const PricePromotionCheck = () => {
 
           {/* Loading Indicator */}
           {loading && (
-            <div className="flex justify-center items-center py-4">
+            <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
               <div className="loader"></div>
               <p className="ml-2">กำลังโหลด...</p>
             </div>
