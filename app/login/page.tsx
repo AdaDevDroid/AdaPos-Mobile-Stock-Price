@@ -90,15 +90,15 @@ export default function Login() {
 
         // Sync SysConfig
         console.log("Process Sync SysConfig 1");
-        const rConfig = await fetch("/api/query/config", {
+        const rSysConfig = await fetch("/api/query/selectSysConfig", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
         });
 
-        const oConfigData = await rConfig.json();
+        const oConfigData = await rSysConfig.json();
         console.log(oConfigData);
 
-        if (rConfig.ok) {
+        if (rSysConfig.ok) {
           
           C_DELoSysConfigData(oDatabase);
 
@@ -185,7 +185,7 @@ export default function Login() {
               <input type="checkbox" checked={rememberMe} onChange={() => setRememberMe(!rememberMe)} className="mr-2" />
               จดจำผู้ใช้งาน
             </label>
-            <a href="#" className="text-blue-500 text-sm">ลืมรหัสผ่าน?</a>
+            {/* <a href="#" className="text-blue-500 text-sm">ลืมรหัสผ่าน?</a> */}
           </div>
           <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded-md font-bold hover:bg-blue-600">
             เข้าสู่ระบบ
