@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Search, Tag, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
