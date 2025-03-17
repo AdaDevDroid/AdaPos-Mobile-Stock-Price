@@ -1,11 +1,10 @@
 "use client";
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Search, Tag, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import { C_PRCxOpenIndexedDB, C_GETxUserData } from "@/hooks/CIndexedDB";
 import { CCameraScanner } from "@/hooks/CCameraScanner";
-import InputWithLabelAndButton from "@/components/InputWithLabelAndButton";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 
 interface Price {
@@ -125,7 +124,6 @@ const PricePromotionCheck = () => {
 
       if (!response.ok) {
         alert('ไม่พบข้อมูลสินค้า');
-        throw new Error('Network response was not ok');
       }
 
       const data = await response.json();
@@ -135,13 +133,12 @@ const PricePromotionCheck = () => {
       setProductData(data.roItem);
     } catch (error) {
       console.error('Error fetching product data:', error);
-      alert('ไม่พบข้อมูลสินค้า');
     } finally {
       setLoading(false);
     }
   };
 
-  const { C_PRCxStartScanner, C_PRCxStopScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning, oScannerRef } = CCameraScanner(
+  const { C_PRCxStartScanner, C_PRCxStopScanner, C_PRCxPauseScanner, bScanning, oScannerRef } = CCameraScanner(
     (ptDecodedText) => {
       C_PRCxPauseScanner();
 
