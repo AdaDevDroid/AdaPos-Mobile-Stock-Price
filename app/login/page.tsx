@@ -14,6 +14,7 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const isOnline = useNetworkStatus()
 
   useEffect(() => {
     // ✅ ดึง Cookie จาก Request
@@ -54,10 +55,10 @@ export default function Login() {
     setLoading(true);
     try {
       const oDatabase = await C_PRCxOpenIndexedDB();
-      const isOnline = useNetworkStatus()
 
       const validateUser = async () => {
         if (!isOnline) {
+          console.log("เข้า login offline")
           const oUserData = await C_GETxUserData(oDatabase);
           const tEncryptedPassword = new CEncrypt("2").C_PWDtASE128Encrypt(password);
           return oUserData && oUserData.FTUsrLogin === username && oUserData.FTUsrPass === tEncryptedPassword;
@@ -110,7 +111,7 @@ export default function Login() {
                 console.error("Invalid Config Data Structure:", oConfigData);
               }
             }
-            
+
             return true;
           }
         }
@@ -118,13 +119,42 @@ export default function Login() {
       };
 
       if (await validateUser()) {
-        // ✅ ส่งข้อมูลผู้ใช้ไปยัง API เพื่อสร้าง Token
-        await fetch("/api/auth/login", {
+        if (!isOnline) {
+          // 🔴 กรณีออฟไลน์
+          console.log("🔴 Offline Mode: ใช้ Token จาก LocalStorage");
+          const token = await generateOfflineToken(username);
+          // 🔥 เก็บ Token ที่สร้างขึ้นไว้ใน LocalStorage
+          if (token) {
+            localStorage.setItem("session_token", token);
+            console.log("✅ Offline Token Created:", token);
+          } else {
+            console.error("❌ เกิดข้อผิดพลาดในการสร้าง Offline Token");
+          }
+
+          const cachedToken = localStorage.getItem("session_token");
+
+          if (cachedToken) {
+            console.log("✅ ใช้ Token ล่าสุด:", cachedToken);
+            router.push("/main");
+          } else {
+            console.error("❌ ไม่มี Token ใน Cache");
+          }
+          return;
+        }
+
+        // ✅ กรณีออนไลน์
+        const response = await fetch("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username }),
         });
 
+        if (!response.ok) throw new Error("❌ Login failed");
+
+        const data = await response.json();
+        console.log("✅ Login Success:", data);
+
+        // ✅ Redirect ไปหน้า Main
         router.push("/main");
       } else {
         setError("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
@@ -134,7 +164,7 @@ export default function Login() {
         maxAge: rememberMe ? 7 * 24 * 60 * 60 : -1,
         path: "/",
       });
-      
+
     } catch (error) {
       console.error("Login failed:", error);
       setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
@@ -142,6 +172,23 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  // 🔥 **ฟังก์ชันสร้าง Token ฝั่ง Client**
+  async function generateOfflineToken(username: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(`${username}-${Date.now()}`);
+
+    try {
+      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const token = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+
+      return token;
+    } catch (error) {
+      console.error("❌ Error generating offline token:", error);
+      return ""; 
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-gray-100">

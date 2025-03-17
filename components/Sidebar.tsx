@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { FaHome, FaBoxOpen, FaExchangeAlt, FaClipboardCheck, FaTags, FaSignOutAlt, FaBars } from "react-icons/fa";
+import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 
 const menuItems = [
   { name: "หน้าหลัก", icon: <FaHome />, path: "/main" },
@@ -19,13 +20,38 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname(); // ✅ ดึง path ของหน้าปัจจุบัน
+  const isNetworkOnline = useNetworkStatus();
 
   const handleLogout = async () => {
     console.log("logout");
-    await fetch("/api/auth/logout", { method: "POST" });
+
+    await caches.delete("my-api-cache-v1").then((success) => {
+      if (success) {
+        console.log("🗑️ Cache 'my-api-cache-v1' ถูกลบเรียบร้อย");
+      } else {
+        console.warn("⚠️ ไม่พบ Cache 'my-api-cache-v1' หรือถูกลบไปแล้ว");
+      }
+    });
+
+    if (isNetworkOnline) {
+      try {
+        await fetch("/api/auth/logout", { method: "POST" });
+        if (localStorage.getItem("session_token")) {
+          localStorage.removeItem("session_token");
+        };
+        console.log("✅ Logout ผ่าน API สำเร็จ");
+      } catch (error) {
+        console.error("❌ ไม่สามารถเรียก API Logout:", error);
+      }
+    } else {
+      console.warn("⚠️ ไม่มีอินเทอร์เน็ต, เคลียร์ Cookie และลบ Cache");
+      localStorage.removeItem("session_token");
+      document.cookie = "session_token=; path=/; max-age=0;";      
+    }
+
+    // 🔄 รีไดเรกต์ออกจากระบบ
     window.location.href = "/";
   };
-
   return (
     <div className={`h-full bg-white shadow-md text-white whitespace-nowrap ${isOpen ? "w-64" : "w-16"} transition-all duration-300 fixed`}>
       {/* ปุ่มเปิด-ปิด */}
