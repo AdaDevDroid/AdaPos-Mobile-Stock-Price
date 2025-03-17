@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
             request.input("FTXthDocNo", FTRefDoc);
             request.input("FNXtdSeqNo", FNId);
             request.input("FTXthDocKey", FTXthDocKey);
-            request.input("FTXthDocType", "1");
+            request.input("FTXthDocType", null);
             request.input("FTXtdBarCode", FTBarcode);
             request.input("FCXtdQty", FNQuantity);
             request.input("FCXtdQtyAll", FNQuantity);

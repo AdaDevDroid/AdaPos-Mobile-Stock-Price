@@ -11,7 +11,7 @@ import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CTransferreceiptoutToExcel';
 import { History, Product, UserInfo } from "@/models/models"
-import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB } from "@/hooks/CIndexedDB";
+import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_GETxConfig } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
@@ -46,6 +46,8 @@ export default function Receive() {
   const [isRepeat, setIsRepeat] = useState(false);
   const [isProductOpen, setIsProductOpen] = useState(false);
 
+  const [nFixPntShow, setFixPntShow] = useState(4);
+
   {/* เช็ค User */ }
   useAuth();
   {/* Set init IndexedDB */ }
@@ -63,6 +65,29 @@ export default function Receive() {
           setUserInfo(data);
           console.log("✅ ข้อมูลผู้ใช้ถูกตั้งค่า");
         }
+
+        const config = await C_GETxConfig(database);
+
+        if (config) {
+          // 🔍 ค้นหา FTSysCode ที่ตรงกับ "ADecPntShw"
+          const foundConfig = config.find((item) => item.FTSysCode === "ADecPntShw");
+
+          if (foundConfig) {
+            // แปลงค่าจาก string → int
+            const fixPntShow = parseInt(foundConfig.FTSysStaUsrValue, 10);
+
+            if (!isNaN(fixPntShow)) {
+              setFixPntShow(fixPntShow);
+            } else {
+              console.warn("⚠️ ค่า FTSysStaUsrValue ไม่ใช่ตัวเลข:", foundConfig.FTSysStaUsrValue);
+            }
+          } else {
+            console.warn("⚠️ ไม่พบค่า FTSysCode = 'ADecPntShw'");
+          }
+        } else {
+          console.warn("⚠️ ไม่มีข้อมูลจาก IndexedDB");
+        }
+
         setRefSeq(crypto.randomUUID());
       } catch (error) {
         console.error("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
@@ -94,7 +119,7 @@ export default function Receive() {
     }
   }, [tCost]);
   {/* สแกน BarCode */ }
-  const { C_PRCxStartScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning, oScannerRef } = CCameraScanner(
+  const { C_PRCxStartScanner, C_PRCxStopScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning, oScannerRef } = CCameraScanner(
     (ptDecodedText) => {
       C_PRCxPauseScanner();
       if (bCheckedRef.current) {
@@ -459,7 +484,7 @@ export default function Receive() {
           onChange={setBarcode}
           icon={bScanning ? <FiCameraOff /> : <FiCamera />}
           placeholder="สแกนหรือป้อนบาร์โค้ด"
-          onClick={C_PRCxStartScanner}
+          onClick={bScanning ? C_PRCxStopScanner : C_PRCxStartScanner}
         />
 
         <InputWithLabel
@@ -496,7 +521,7 @@ export default function Receive() {
             <tr key={index} className="border text-center text-gray-500 text-[14px]">
               <td className="p-2">{index + 1}</td>
               <td className="p-2">{oProducts.FTBarcode}</td>
-              <td className="p-2">฿{oProducts.FCCost.toFixed(2)}</td>
+              <td className="p-2">{oProducts.FCCost.toFixed(nFixPntShow)}</td>
               <td className="p-2">{oProducts.FNQuantity}</td>
               <td className="p-2">
                 <button onClick={() => C_DELxProduct(oProducts.FNId)} className="text-red-500">
