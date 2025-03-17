@@ -36,12 +36,16 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     if (isNetworkOnline) {
       try {
         await fetch("/api/auth/logout", { method: "POST" });
+        if (localStorage.getItem("session_token")) {
+          localStorage.removeItem("session_token");
+        };
         console.log("✅ Logout ผ่าน API สำเร็จ");
       } catch (error) {
         console.error("❌ ไม่สามารถเรียก API Logout:", error);
       }
     } else {
       console.warn("⚠️ ไม่มีอินเทอร์เน็ต, เคลียร์ Cookie และลบ Cache");
+      localStorage.removeItem("session_token");
       document.cookie = "session_token=; path=/; max-age=0;";      
     }
 
