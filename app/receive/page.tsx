@@ -248,7 +248,7 @@ export default function Receive() {
     }
 
     if (!ptBarcode || !tQty) {
-      alert("❌ กรุณากรอกข้อมูลให้ครบ");
+      alert("กรุณากรอกบาร์โค้ด");
       return;
     }
 
