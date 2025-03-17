@@ -141,21 +141,20 @@ const PricePromotionCheck = () => {
     }
   };
 
-  const { C_PRCxStartScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning } = CCameraScanner(
+  const { C_PRCxStartScanner, C_PRCxStopScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning, oScannerRef } = CCameraScanner(
     (ptDecodedText) => {
       C_PRCxPauseScanner();
-      const bConfirmed = window.confirm(`เพิ่มข้อมูล: ${ptDecodedText} ?`);
-      if (bConfirmed) {
-        setSearchQuery(ptDecodedText);
-        handleSearch();
-      }
+
+      setSearchQuery(ptDecodedText);
+      handleSearch();
+
       // ✅ รอ 500ms ก่อนเปิดกล้องใหม่
       setTimeout(() => {
-        C_PRCxResumeScanner();
+        // C_PRCxResumeScanner();
+        C_PRCxStopScanner();
       }, 500);
     }
   );
-  const oScannerRef = useRef<HTMLVideoElement | null>(null);
 
   return (
     <div className="p-4 ms-1 mx-auto bg-white" >
@@ -170,6 +169,16 @@ const PricePromotionCheck = () => {
 
           {/* Search Section */}
           <div className="bg-white rounded-lg mb-6">
+
+            {/* ตัวสแกน QR Code พร้อมกรอบ */}
+            <div
+              id="reader"
+              ref={oScannerRef}
+              className={`my-4 relative flex items-center justify-center  md:w-[50%] w-[100%] mx-auto ${bScanning ? "h-[50%]" : "h-[0px] pointer-events-none"
+                } transition-opacity duration-300`}
+            >
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Search Type */}
               <div className="md:col-span-1">
@@ -213,13 +222,16 @@ const PricePromotionCheck = () => {
 
                   {/* ปุ่มกล้อง */}
                   <button
-                    onClick={C_PRCxStartScanner}
+                    value={searchQuery}
+                    onClick={bScanning ? C_PRCxStopScanner : C_PRCxStartScanner}
                     className="px-4 py-2 bg-blue-600 text-white border-blue-500 hover:bg-blue-700"
                   >
                     <div className="flex items-center justify-center">
                       {bScanning ? <FiCameraOff className="w-6 h-6" /> : <FiCamera className="w-6 h-6" />}
                     </div>
                   </button>
+
+                  <div className="w-[1px] bg-gray-300"></div>
 
                   {/* ปุ่มค้นหา */}
                   <button
@@ -230,15 +242,7 @@ const PricePromotionCheck = () => {
                       <Search className="w-6 h-6" />
                     </div>
                   </button>
-                </div>
-                
-                 {/* Scanner Container */}
-                 <div
-                  className={`my-4 relative flex items-center justify-center md:w-[50%] w-[100%] mx-auto ${bScanning ? "h-[50%]" : "h-[0px] pointer-events-none"
-                    } transition-opacity duration-300`}
-                >
-                  {/* Scanner Reference */}
-                  <video ref={oScannerRef} className="w-full h-full object-cover" />
+
                 </div>
 
               </div>
