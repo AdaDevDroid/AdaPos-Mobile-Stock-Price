@@ -5,6 +5,7 @@ import { FaUser, FaLock } from "react-icons/fa";
 import { C_PRCxOpenIndexedDB, C_INSxUserToDB, C_INSoSysConfigToDB, C_DELoSysConfigData, C_GETxUserData } from "@/hooks/CIndexedDB";
 import { CEncrypt } from '../../hooks/CEncrypt';
 import { serialize, parse } from "cookie";
+import { useNetworkStatus } from '@/hooks/NetworkStatusContext'
 
 export default function Login() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // ✅ ดึง Cookie จาก Request
@@ -49,97 +51,95 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
-    if (!navigator.onLine) {
+    setLoading(true);
+    try {
       const oDatabase = await C_PRCxOpenIndexedDB();
-      const oUserData = await C_GETxUserData(oDatabase);
-      const tEncryptedPassword = new CEncrypt("2").C_PWDtASE128Encrypt(password);
+      const isOnline = useNetworkStatus()
 
-      if (oUserData && oUserData.FTUsrLogin === username && oUserData.FTUsrPass === tEncryptedPassword) {
+      const validateUser = async () => {
+        if (!isOnline) {
+          const oUserData = await C_GETxUserData(oDatabase);
+          const tEncryptedPassword = new CEncrypt("2").C_PWDtASE128Encrypt(password);
+          return oUserData && oUserData.FTUsrLogin === username && oUserData.FTUsrPass === tEncryptedPassword;
+        } else {
+          const userResponse = await fetch("/api/query/selectUsrLogin", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password }),
+          });
+          if (userResponse.ok) {
+            const oData = await userResponse.json();
+            await C_INSxUserToDB(oDatabase, {
+              FTUsrCode: oData.user.FTUsrCode,
+              FTUsrLogin: oData.user.FTUsrLogin,
+              FTUsrPass: oData.user.FTUsrLoginPwd,
+              FTUsrName: oData.user.FTUsrName,
+              FTBchCode: oData.user.FTBchCode,
+              FTAgnCode: oData.user.FTAgnCode,
+              FTMerCode: oData.user.FTMerCode,
+            });
+
+            // Sync SysConfig
+            console.log("Process Sync SysConfig 1");
+            const rSysConfig = await fetch("/api/query/selectSysConfig", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+            });
+
+            const oConfigData = await rSysConfig.json();
+            console.log(oConfigData);
+
+            if (rSysConfig.ok) {
+
+              C_DELoSysConfigData(oDatabase);
+
+              if (oConfigData && Array.isArray(oConfigData.config)) {
+                for (const config of oConfigData.config) {
+                  const oSysConfig = {
+                    FTSysCode: config.FTSysCode,
+                    FTSysStaUsrValue: config.FTSysStaUsrValue,
+                  };
+                  if (oSysConfig.FTSysCode && oSysConfig.FTSysStaUsrValue) {
+                    await C_INSoSysConfigToDB(oDatabase, oSysConfig);
+                    console.log("Process Sync SysConfig 2");
+                  } else {
+                    console.error("Invalid SysConfig data:", oSysConfig);
+                  }
+                }
+              } else {
+                console.error("Invalid Config Data Structure:", oConfigData);
+              }
+            }
+            
+            return true;
+          }
+        }
+        return false;
+      };
+
+      if (await validateUser()) {
+        // ✅ ส่งข้อมูลผู้ใช้ไปยัง API เพื่อสร้าง Token
+        await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username }),
+        });
+
         router.push("/main");
       } else {
         setError("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
       }
-      return;
-    }
 
-    console.log("process login 1");
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+      document.cookie = serialize('rememberedUsername', rememberMe ? username : '', {
+        maxAge: rememberMe ? 7 * 24 * 60 * 60 : -1,
+        path: "/",
       });
-
-      console.log("process login 3");
-      if (res.ok) {
-        const oData = await res.json();
-        const oNewUser = {
-          FTUsrCode: oData.user.FTUsrCode,
-          FTUsrLogin: oData.user.FTUsrLogin,
-          FTUsrPass: oData.user.FTUsrLoginPwd,
-          FTUsrName: oData.user.FTUsrName,
-          FTBchCode: oData.user.FTBchCode,
-          FTAgnCode: oData.user.FTAgnCode,
-          FTMerCode: oData.user.FTMerCode,
-        };
-        const oDatabase = await C_PRCxOpenIndexedDB();
-        await C_INSxUserToDB(oDatabase, oNewUser);
-
-        console.log("process login 4");
-
-        // Sync SysConfig
-        console.log("Process Sync SysConfig 1");
-        const rSysConfig = await fetch("/api/query/selectSysConfig", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        const oConfigData = await rSysConfig.json();
-        console.log(oConfigData);
-
-        if (rSysConfig.ok) {
-          
-          C_DELoSysConfigData(oDatabase);
-
-          if (oConfigData && Array.isArray(oConfigData.config)) {
-            for (const config of oConfigData.config) {
-              const oSysConfig = {
-                FTSysCode: config.FTSysCode,
-                FTSysStaUsrValue: config.FTSysStaUsrValue,
-              };
-
-              if (oSysConfig.FTSysCode && oSysConfig.FTSysStaUsrValue) {
-                await C_INSoSysConfigToDB(oDatabase, oSysConfig);
-                console.log("Process Sync SysConfig 2");
-              } else {
-                console.error("Invalid SysConfig data:", oSysConfig);
-              }
-            }
-          } else {
-            console.error("Invalid Config Data Structure:", oConfigData);
-          }
-        } else {
-          console.log("Failed to sync SysConfig");
-        }
-
-        if (rememberMe) {
-          document.cookie = serialize('rememberedUsername', username, {
-            maxAge: 7 * 24 * 60 * 60, // 7 days
-            path: "/",
-          });
-        } else {
-          document.cookie = serialize('rememberedUsername', '', { maxAge: -1, path: "/" });
-        }
-
-        router.push("/main"); // ✅ ไปหน้าหลักเมื่อ Login สำเร็จ
-      } else {
-        console.log("process login 5");
-        setError("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
-      }
+      
     } catch (error) {
       console.error("Login failed:", error);
       setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -187,8 +187,12 @@ export default function Login() {
             </label>
             {/* <a href="#" className="text-blue-500 text-sm">ลืมรหัสผ่าน?</a> */}
           </div>
-          <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded-md font-bold hover:bg-blue-600">
-            เข้าสู่ระบบ
+          <button
+            type="submit"
+            className="w-full bg-blue-500 text-white py-2 rounded-md font-bold hover:bg-blue-600"
+            disabled={loading} // Disable button while loading
+          >
+            {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
           </button>
         </form>
       </div>
