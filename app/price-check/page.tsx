@@ -1,9 +1,12 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Search, Tag, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import { C_PRCxOpenIndexedDB, C_GETxUserData } from "@/hooks/CIndexedDB";
+import { CCameraScanner } from "@/hooks/CCameraScanner";
+import InputWithLabelAndButton from "@/components/InputWithLabelAndButton";
+import { FiCamera, FiCameraOff } from "react-icons/fi";
 
 interface Price {
   rtPdtCode: string;
@@ -138,6 +141,22 @@ const PricePromotionCheck = () => {
     }
   };
 
+  const { C_PRCxStartScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning } = CCameraScanner(
+    (ptDecodedText) => {
+      C_PRCxPauseScanner();
+      const bConfirmed = window.confirm(`เพิ่มข้อมูล: ${ptDecodedText} ?`);
+      if (bConfirmed) {
+        setSearchQuery(ptDecodedText);
+        handleSearch();
+      }
+      // ✅ รอ 500ms ก่อนเปิดกล้องใหม่
+      setTimeout(() => {
+        C_PRCxResumeScanner();
+      }, 500);
+    }
+  );
+  const oScannerRef = useRef<HTMLVideoElement | null>(null);
+
   return (
     <div className="p-4 ms-1 mx-auto bg-white" >
       <div className="flex flex-col items-start md:items-center pb-6">
@@ -170,13 +189,19 @@ const PricePromotionCheck = () => {
 
               {/* Search Input */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+
+                {/* ส่วนหัวข้อค้นหา */}
+                <div className="mb-1 text-sm font-medium text-gray-700">
                   ค้นหา
-                </label>
+                </div>
+
+                {/* ช่องค้นหาและปุ่ม */}
                 <div className="flex">
                   <input
-                    type="text"
                     className="flex-1 px-4 py-2 border rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={
                       searchType === 'barcode'
                         ? 'สแกนหรือป้อนบาร์โค้ด'
@@ -184,17 +209,40 @@ const PricePromotionCheck = () => {
                           ? 'ป้อนชื่อสินค้า'
                           : 'ป้อนรหัสสินค้า'
                     }
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
                   />
+
+                  {/* ปุ่มกล้อง */}
+                  <button
+                    onClick={C_PRCxStartScanner}
+                    className="px-4 py-2 bg-blue-600 text-white border-blue-500 hover:bg-blue-700"
+                  >
+                    <div className="flex items-center justify-center">
+                      {bScanning ? <FiCameraOff className="w-6 h-6" /> : <FiCamera className="w-6 h-6" />}
+                    </div>
+                  </button>
+
+                  {/* ปุ่มค้นหา */}
                   <button
                     onClick={handleSearch}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-r-lg border-blue-500 hover:bg-blue-700"
                   >
-                    <Search className="w-5 h-5" />
+                    <div className="flex items-center justify-center">
+                      <Search className="w-6 h-6" />
+                    </div>
                   </button>
                 </div>
+                
+                 {/* Scanner Container */}
+                 <div
+                  className={`my-4 relative flex items-center justify-center md:w-[50%] w-[100%] mx-auto ${bScanning ? "h-[50%]" : "h-[0px] pointer-events-none"
+                    } transition-opacity duration-300`}
+                >
+                  {/* Scanner Reference */}
+                  <video ref={oScannerRef} className="w-full h-full object-cover" />
+                </div>
+
               </div>
+
             </div>
           </div>
 
