@@ -29,3 +29,18 @@ export const C_INSxProducts = async (oProducts: Product[]) => {
       console.error("❌ Insert Failed:", error);
     }
 };
+
+export const C_INSxStock = async (oProducts: Product[]) => {
+  try {
+    const response = await fetch('/api/query/insertDataAdjStk', {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(oProducts)
+    });
+
+    const data = await response.json();
+    console.log("✅ Insert Success:", data);
+  } catch (error) {
+    console.error("❌ Insert Failed:", error);
+  }
+};

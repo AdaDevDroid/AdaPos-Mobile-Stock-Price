@@ -15,7 +15,7 @@ import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexed
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
-import { C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
+import { C_INSxStock, C_SETxFormattedDate } from "@/hooks/CSP";
 import RepeatModal from "@/components/RepeatModal";
 
 
@@ -201,7 +201,7 @@ export default function ReceiveGoods() {
         FNQuantity: oProducts.FNQuantity,
         FTRefDoc: oProducts.FTRefDoc,
         FTRefSeq: oProducts.FTRefSeq,
-        FTXthDocKey: "TCNTPdtTwxHD",
+        FTXthDocKey: "TCNTDocDTTmpAdj",
         FTBchCode: oUserInfo?.FTBchCode || "",
         FTAgnCode: oUserInfo?.FTAgnCode || "",
         FTUsrName: oUserInfo?.FTUsrName || "",
@@ -231,7 +231,7 @@ export default function ReceiveGoods() {
         FNQuantity: parseInt(quantity),
         FTRefDoc: tRefDoc,
         FTRefSeq: tRefSeq,
-        FTXthDocKey: "TCNTPdtTwxHD",
+        FTXthDocKey: "TCNTDocDTTmpAdj",
         FTBchCode: oUserInfo?.FTBchCode || "",
         FTAgnCode: oUserInfo?.FTAgnCode || "",
         FTUsrName: oUserInfo?.FTUsrName || "",
@@ -340,7 +340,7 @@ export default function ReceiveGoods() {
       }
   
       //  Upload ผ่าน Web Services
-      C_INSxProducts(oProducts);
+      C_INSxStock(oProducts);
       // Save Data to IndexedDB
       C_PRCxSaveDB();
   
