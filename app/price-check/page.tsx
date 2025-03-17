@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Search, Tag, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
+import { C_PRCxOpenIndexedDB, C_GETxUserData } from "@/hooks/CIndexedDB";
 
 interface Price {
   rtPdtCode: string;
@@ -91,6 +92,16 @@ const PricePromotionCheck = () => {
       }
 
       const pdtCode = dataCode.data[0].FTPdtCode;
+
+      // Get user data from IndexedDB
+      const oDatabase = await C_PRCxOpenIndexedDB();
+      const oUserData = await C_GETxUserData(oDatabase);
+
+      if (!oUserData) {
+        alert("ไม่สามารถดึงข้อมูลผู้ใช้งานได้");
+        setLoading(false);
+        return;
+      }
 
       const pdtData = {
         ptAgnCode: '',
@@ -261,7 +272,13 @@ const PricePromotionCheck = () => {
                         className="bg-white p-3 rounded-lg border"
                       >
                         <p className="text-sm text-gray-600">
-                          {price.rtPghDocType === '1' ? 'ราคาปกติ' : price.rtPghDocType}
+                          {price.rtPghDocType === '1'
+                            ? 'ราคาปกติ'
+                            : price.rtPghDocType === '2'
+                              ? 'ราคาพิเศษ'
+                              : price.rtPghDocType === '5'
+                                ? 'ราคาสมาชิก'
+                                : price.rtPghDocType}
                         </p>
                         <p className="text-lg font-semibold">
                           ฿{price.rcPrice.toLocaleString()}
