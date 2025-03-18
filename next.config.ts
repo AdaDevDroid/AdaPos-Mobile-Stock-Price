@@ -10,7 +10,8 @@ const pwaConfig = withPWA({
 });
 
 const nextConfig: NextConfig = {
-  reactStrictMode: true, // ต้องอยู่ข้างนอก PWAConfig
+  reactStrictMode: true,
+  devIndicators: false,
   ...pwaConfig,
 };
 

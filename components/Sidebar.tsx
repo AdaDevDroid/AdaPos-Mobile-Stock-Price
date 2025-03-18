@@ -38,6 +38,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
         await fetch("/api/auth/logout", { method: "POST" });
         if (localStorage.getItem("session_token")) {
           localStorage.removeItem("session_token");
+          localStorage.removeItem("sidebarOpen");
         };
         console.log("✅ Logout ผ่าน API สำเร็จ");
       } catch (error) {
@@ -46,6 +47,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     } else {
       console.warn("⚠️ ไม่มีอินเทอร์เน็ต, เคลียร์ Cookie และลบ Cache");
       localStorage.removeItem("session_token");
+      localStorage.removeItem("sidebarOpen");
       document.cookie = "session_token=; path=/; max-age=0;";      
     }
 

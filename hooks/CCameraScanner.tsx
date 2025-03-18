@@ -15,45 +15,38 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
 
   const C_PRCxStartScanner = async () => {
     try {
-      // ✅ ขอ Camera Permission ก่อนเริ่มสแกน
-      await navigator.mediaDevices.getUserMedia({ video: true });
-      console.log("✅ Camera permission granted");
-
       if (bScanning && oHtml5QrCode.current) {
-        // 🔴 หยุดการสแกนถ้ากำลังทำงานอยู่
-        oHtml5QrCode.current.stop().then(() => {
-          console.log("📴 Scanner stopped");
-          setIsScanning(false);
-          oHtml5QrCode.current = null;
-        });
+        await oHtml5QrCode.current.stop();
+        console.log("📴 Scanner stopped");
+        setIsScanning(false);
+        oHtml5QrCode.current = null;
         return;
       }
-
-      if (!oScannerRef.current) return;
-      if (oHtml5QrCode.current) return;
-
+  
+      if (!oScannerRef.current || oHtml5QrCode.current) return;
+  
       const qrScanner = new Html5Qrcode("reader");
-
-      qrScanner
-        .start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: C_GETxQrBoxSize() },
-          (decodedText) => {
-            try {
-              onScan(decodedText);
-            } catch (error) {
-              console.error("Error in scan callback:", error);
-            }
-          },
-          (error) => error
-        )
-        .then(() => {
-          oHtml5QrCode.current = qrScanner;
-          setIsScanning(true);
-        })
-        .catch((err) => console.error("Error starting scanner:", err));
+  
+      await qrScanner.start(
+        { facingMode: "environment" },  // ใช้กล้องหลัง
+        { fps: 10, qrbox: C_GETxQrBoxSize() },
+        (decodedText) => {
+          try {
+            onScan(decodedText);
+          } catch (error) {
+            console.error("Error in scan callback:", error);
+          }
+        },
+        (errorMessage) => {
+          errorMessage
+        }
+      );
+  
+      console.log("✅ Scanner started");
+      oHtml5QrCode.current = qrScanner;
+      setIsScanning(true);
     } catch (error) {
-      console.log(error)
+      console.error("🚨 Error starting scanner:", error);
     }
   };
 
@@ -81,10 +74,10 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
         // ✅ ดึง video stream ที่กำลังใช้งานอยู่ แล้วปิดกล้อง
         navigator.mediaDevices.enumerateDevices().then((devices) => {
           devices
-            .filter((device) => device.kind === "videoinput") // เลือกเฉพาะกล้อง
+            .filter((device) => device.kind === "videoinput")
             .forEach(async (device) => {
               const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: device.deviceId } });
-              stream.getTracks().forEach((track) => track.stop()); // 🔥 ปิด track ของกล้องที่เปิดอยู่จริง
+              stream.getTracks().forEach((track) => track.stop());
               console.log("📸 Camera stream stopped");
             });
         });
