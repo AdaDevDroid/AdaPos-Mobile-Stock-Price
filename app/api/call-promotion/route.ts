@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { C_GetoUrlObject } from "../../../hooks/CConfig";
+// import { C_GetoUrlObject } from "../../../hooks/CConfig";
 
 interface PdtData {
      ptAgnCode: string;
@@ -10,19 +10,14 @@ interface PdtData {
      ptPdtCode: string;
 }
 
-//const urlMaster = 'https://dev.ada-soft.com:44340/AdaStandard/API2PSMaster/V5';
+const urlMaster = 'https://dev.ada-soft.com:44340/AdaStandard/API2PSMaster/V5';
 
 export async function POST(request: Request) {
      try {
           const pdtData: PdtData = await request.json();
-          
-          // Validate input data
-          if (!pdtData.ptAgnCode || !pdtData.ptPdtCode) {
-               throw new Error("Invalid input data: Missing required fields");
-          }
 
           // Get the URL dynamically
-          const urlMaster = await C_GetoUrlObject();
+          // const urlMaster = await C_GetoUrlObject();
 
           const response = await fetch(
                `${urlMaster}/Check/CheckProduct`,
