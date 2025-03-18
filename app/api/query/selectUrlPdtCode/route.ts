@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { C_CTDoConnectToDatabase } from '../../database/connect_db';
+// import { C_CTDoConnectToDatabase } from '../../database/connect_db';
+import sql from 'mssql';
+
+const config = {
+  user: process.env.USER_DB as string, // ชื่อผู้ใช้
+  password: process.env.PASSWORD_DB as string, //รหัสผ่าน
+  server: process.env.SERVER_DB as string, // ชื่อเซิร์ฟเวอร์
+  port: parseInt(process.env.PORT_DB as string, 10), // พอร์ต
+  database: "AdaAccSTD", // ชื่อฐานข้อมูล
+  options: {
+    encrypt: true, // ใช้ true ถ้าใช้ Azure
+    trustServerCertificate: true // ใช้ true ถ้าใช้ self-signed certificate
+  }
+};
 
 interface PdtCode {
      FTPdtCode: string | null;
@@ -10,7 +23,7 @@ interface PdtCode {
 export async function POST(req: NextRequest) {
      try {
           const { searchType, searchQuery } = await req.json();
-          const oPool = await C_CTDoConnectToDatabase();
+          const oPool = await sql.connect(config); //C_CTDoConnectToDatabase();
           const aResult = await oPool.request()
                .input('searchQuery', searchQuery || '')
                .query(`

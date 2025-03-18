@@ -3,6 +3,9 @@ import React, { useState } from 'react';
 import { Search, Tag, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
+import { C_PRCxOpenIndexedDB, C_GETxUserData } from "@/hooks/CIndexedDB";
+import { CCameraScanner } from "@/hooks/CCameraScanner";
+import { FiCamera, FiCameraOff } from "react-icons/fi";
 
 interface Price {
   rtPdtCode: string;
@@ -92,6 +95,16 @@ const PricePromotionCheck = () => {
 
       const pdtCode = dataCode.data[0].FTPdtCode;
 
+      // Get user data from IndexedDB
+      const oDatabase = await C_PRCxOpenIndexedDB();
+      const oUserData = await C_GETxUserData(oDatabase);
+
+      if (!oUserData) {
+        alert("ไม่สามารถดึงข้อมูลผู้ใช้งานได้");
+        setLoading(false);
+        return;
+      }
+
       const pdtData = {
         ptAgnCode: '',
         ptBchCode: '',
@@ -111,7 +124,6 @@ const PricePromotionCheck = () => {
 
       if (!response.ok) {
         alert('ไม่พบข้อมูลสินค้า');
-        throw new Error('Network response was not ok');
       }
 
       const data = await response.json();
@@ -121,11 +133,25 @@ const PricePromotionCheck = () => {
       setProductData(data.roItem);
     } catch (error) {
       console.error('Error fetching product data:', error);
-      alert('ไม่พบข้อมูลสินค้า');
     } finally {
       setLoading(false);
     }
   };
+
+  const { C_PRCxStartScanner, C_PRCxStopScanner, C_PRCxPauseScanner, bScanning, oScannerRef } = CCameraScanner(
+    (ptDecodedText) => {
+      C_PRCxPauseScanner();
+
+      setSearchQuery(ptDecodedText);
+      handleSearch();
+
+      // ✅ รอ 500ms ก่อนเปิดกล้องใหม่
+      setTimeout(() => {
+        // C_PRCxResumeScanner();
+        C_PRCxStopScanner();
+      }, 500);
+    }
+  );
 
   return (
     <div className="p-4 ms-1 mx-auto bg-white" >
@@ -140,6 +166,16 @@ const PricePromotionCheck = () => {
 
           {/* Search Section */}
           <div className="bg-white rounded-lg mb-6">
+
+            {/* ตัวสแกน QR Code พร้อมกรอบ */}
+            <div
+              id="reader"
+              ref={oScannerRef}
+              className={`my-4 relative flex items-center justify-center  md:w-[50%] w-[100%] mx-auto ${bScanning ? "h-[50%]" : "h-[0px] pointer-events-none"
+                } transition-opacity duration-300`}
+            >
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Search Type */}
               <div className="md:col-span-1">
@@ -159,13 +195,19 @@ const PricePromotionCheck = () => {
 
               {/* Search Input */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+
+                {/* ส่วนหัวข้อค้นหา */}
+                <div className="mb-1 text-sm font-medium text-gray-700">
                   ค้นหา
-                </label>
+                </div>
+
+                {/* ช่องค้นหาและปุ่ม */}
                 <div className="flex">
                   <input
-                    type="text"
                     className="flex-1 px-4 py-2 border rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={
                       searchType === 'barcode'
                         ? 'สแกนหรือป้อนบาร์โค้ด'
@@ -173,17 +215,35 @@ const PricePromotionCheck = () => {
                           ? 'ป้อนชื่อสินค้า'
                           : 'ป้อนรหัสสินค้า'
                     }
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
                   />
+
+                  {/* ปุ่มกล้อง */}
+                  <button
+                    value={searchQuery}
+                    onClick={bScanning ? C_PRCxStopScanner : C_PRCxStartScanner}
+                    className="px-4 py-2 bg-blue-600 text-white border-blue-500 hover:bg-blue-700"
+                  >
+                    <div className="flex items-center justify-center">
+                      {bScanning ? <FiCameraOff className="w-6 h-6" /> : <FiCamera className="w-6 h-6" />}
+                    </div>
+                  </button>
+
+                  <div className="w-[1px] bg-gray-300"></div>
+
+                  {/* ปุ่มค้นหา */}
                   <button
                     onClick={handleSearch}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-r-lg border-blue-500 hover:bg-blue-700"
                   >
-                    <Search className="w-5 h-5" />
+                    <div className="flex items-center justify-center">
+                      <Search className="w-6 h-6" />
+                    </div>
                   </button>
+
                 </div>
+
               </div>
+
             </div>
           </div>
 
@@ -261,7 +321,13 @@ const PricePromotionCheck = () => {
                         className="bg-white p-3 rounded-lg border"
                       >
                         <p className="text-sm text-gray-600">
-                          {price.rtPghDocType === '1' ? 'ราคาปกติ' : price.rtPghDocType}
+                          {price.rtPghDocType === '1'
+                            ? 'ราคาปกติ'
+                            : price.rtPghDocType === '2'
+                              ? 'ราคาพิเศษ'
+                              : price.rtPghDocType === '5'
+                                ? 'ราคาสมาชิก'
+                                : price.rtPghDocType}
                         </p>
                         <p className="text-lg font-semibold">
                           ฿{price.rcPrice.toLocaleString()}
