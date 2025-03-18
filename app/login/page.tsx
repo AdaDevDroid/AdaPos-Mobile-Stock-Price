@@ -135,9 +135,9 @@ export default function Login() {
 
           if (cachedToken) {
             console.log("✅ ใช้ Token ล่าสุด:", cachedToken);
-            router.push("/main");
+            router.push("/main"); // ✅ Redirect ไปหน้า Main
           } else {
-            console.error("❌ ไม่มี Token ใน Cache");
+            console.error("❌ ไม่มี Token ใน Cache, กรุณาเชื่อมต่ออินเทอร์เน็ต");
           }
           return;
         }
@@ -153,6 +153,9 @@ export default function Login() {
 
         const data = await response.json();
         console.log("✅ Login Success:", data);
+
+        // 🔥 เก็บ Token ไว้ใช้ใน Offline Mode
+        localStorage.setItem("session_token", data.token);
 
         // ✅ Redirect ไปหน้า Main
         router.push("/main");
@@ -183,10 +186,10 @@ export default function Login() {
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const token = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 
-      return token;
+      return token; // ✅ Return Token กลับไป
     } catch (error) {
       console.error("❌ Error generating offline token:", error);
-      return ""; 
+      return ""; // 🔴 กรณีเกิดข้อผิดพลาด return ค่าว่าง
     }
   }
 

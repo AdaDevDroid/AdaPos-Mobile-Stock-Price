@@ -7,20 +7,23 @@ import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname(); // ดึง URL ปัจจุบัน
-  const showSidebarPages = ["/main", "/receive", "/transfer", "/stock", "/price-check"]; // ระบุหน้าที่ต้องการให้แสดง Sidebar
+  const pathname = usePathname(); 
+  const showSidebarPages = ["/main", "/receive", "/transfer", "/stock", "/price-check"];
 
-  // 🔥 ใช้ค่าเริ่มต้นจาก localStorage หรือเป็น true ถ้ายังไม่มีค่า
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("sidebarOpen") === "false" ? false : true;
-    }
-    return true; // ค่าเริ่มต้นเมื่อรันบน Server
-  });
+  // 🔥 ใช้ useState โดยให้ค่าเริ่มต้นเป็น `null` แล้วใช้ useEffect โหลดค่าจาก localStorage
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean | null>(null);
 
-  // ✅ บันทึกค่าล่าสุดลงใน localStorage ทุกครั้งที่มีการเปลี่ยนค่า
   useEffect(() => {
-    localStorage.setItem("sidebarOpen", JSON.stringify(isSidebarOpen));
+    // ✅ โหลดค่าจาก localStorage หลังจาก component mount
+    const storedValue = localStorage.getItem("sidebarOpen");
+    setIsSidebarOpen(storedValue === "false" ? false : true);
+  }, []);
+
+  useEffect(() => {
+    // ✅ อัปเดต localStorage เมื่อค่าของ isSidebarOpen เปลี่ยนแปลง
+    if (isSidebarOpen !== null) {
+      localStorage.setItem("sidebarOpen", JSON.stringify(isSidebarOpen));
+    }
   }, [isSidebarOpen]);
 
   const toggleSidebar = () => {
@@ -37,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <NetworkStatusProvider>
           <div className="flex h-screen">
             {/* แสดง Sidebar เฉพาะหน้าที่กำหนด */}
-            {showSidebarPages.includes(pathname) && (
+            {showSidebarPages.includes(pathname) && isSidebarOpen !== null && (
               <div className={`fixed h-full transition-width duration-300 ${isSidebarOpen ? 'w-64' : 'w-16'}`}>
                 <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
               </div>
@@ -46,7 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* เนื้อหาหลักของแต่ละหน้า */}
             <main
               className="flex-1 transition-margin duration-300"
-              style={{ marginLeft: showSidebarPages.includes(pathname) ? (isSidebarOpen ? '16rem' : '4rem') : 0 }}
+              style={{ marginLeft: showSidebarPages.includes(pathname) && isSidebarOpen !== null ? (isSidebarOpen ? '16rem' : '4rem') : 0 }}
             >
               {children}
             </main>

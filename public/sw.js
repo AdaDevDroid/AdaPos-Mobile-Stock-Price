@@ -41,12 +41,12 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.url.includes("/api/auth/login")) {
     event.respondWith(
-      caches.open("auth-cache").then(async (cache) => {
+      caches.open("my-api-cache-v1").then(async (cache) => {
         try {
           // 🔵 1. ถ้ามีเน็ต ให้ fetch API ปกติ
           const response = await fetch(event.request);
           cache.put(event.request, response.clone()); // 🔥 Cache API Response
-          return response;ß
+          return response;
         } catch (error) {
           console.warn("🔴 Offline: ใช้ Token เดิมจาก Cache");
           // 🔴 2. ถ้าออฟไลน์ ดึง Response จาก Cache
