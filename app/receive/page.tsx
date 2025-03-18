@@ -210,7 +210,7 @@ export default function Receive() {
     const historyData: History = {
       FTDate: currentDate,
       FTRefDoc: tRefDoc,
-      FNStatus: 1,
+      FNStatus: isNetworkOnline ? 1 : 1,
       FTRefSeq: tRefSeq
     };
 
@@ -248,7 +248,7 @@ export default function Receive() {
     }
 
     if (!ptBarcode || !tQty) {
-      alert("กรุณากรอกบาร์โค้ด");
+      alert("กรุณากรอกบาร์โค้ด หรือจำนวนให้ครบถ้วน");
       return;
     }
 
@@ -331,15 +331,14 @@ export default function Receive() {
   };
   async function C_PRCxUploadeWebServices() {
     setIsLoading(true);
-    if (!isNetworkOnline) {
-      setIsLoading(false);
-      alert("❌ ข้อความ: Internet Offline");
-      return;
-    }
     if (!oProducts || oProducts.length === 0) {
       setIsLoading(false);
       alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
       return;
+    }
+    if (!isNetworkOnline) {
+      setIsLoading(false);
+      alert("❌ ข้อความ: Internet Offline ระบบยังไม่ Upload ขึ้น");
     }
     console.log("Products ก่อนอัพโหลด", oProducts)
     //  Upload ผ่าน Web Services

@@ -38,7 +38,7 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
           }
         },
         (errorMessage) => {
-          console.error("QR Code scan error:", errorMessage);
+          errorMessage
         }
       );
   
@@ -74,10 +74,10 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
         // ✅ ดึง video stream ที่กำลังใช้งานอยู่ แล้วปิดกล้อง
         navigator.mediaDevices.enumerateDevices().then((devices) => {
           devices
-            .filter((device) => device.kind === "videoinput") // เลือกเฉพาะกล้อง
+            .filter((device) => device.kind === "videoinput")
             .forEach(async (device) => {
               const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: device.deviceId } });
-              stream.getTracks().forEach((track) => track.stop()); // 🔥 ปิด track ของกล้องที่เปิดอยู่จริง
+              stream.getTracks().forEach((track) => track.stop());
               console.log("📸 Camera stream stopped");
             });
         });

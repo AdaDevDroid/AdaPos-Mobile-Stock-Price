@@ -2,40 +2,45 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 // ✅ สร้าง Context
-const NetworkStatusContext = createContext<boolean>(false);
+const NetworkStatusContext = createContext<boolean>(true);
 
-// ✅ สร้าง Provider
 export const NetworkStatusProvider = ({ children }: { children: React.ReactNode }) => {
-  const [isOnline, setIsOnline] = useState(false); // ค่าเริ่มต้นเป็น false
+  const [isOnline, setIsOnline] = useState<boolean>(true);
 
   useEffect(() => {
-    // ✅ ฟังก์ชันตรวจสอบสถานะอินเทอร์เน็ต
     const checkOnlineStatus = async () => {
-      try {
-        const response = await fetch("/test-network.txt", { cache: "no-store" });
-        setIsOnline(response.ok); // ถ้า fetch ผ่าน แสดงว่าออนไลน์
-      } catch (error) {
-        setIsOnline(false); // ถ้า fetch ไม่ผ่าน แสดงว่าออฟไลน์
-      }
-    };
+      let onlineStatus = navigator.onLine;
 
-    // ✅ ตั้งค่าค่าเริ่มต้นตาม navigator.onLine
-    setIsOnline(navigator.onLine);
-    
-    // ✅ ตรวจสอบเน็ตด้วย fetch() อีกครั้ง เผื่อ navigator.onLine ไม่แม่นยำ
-    checkOnlineStatus();
+      if (onlineStatus) {
+        try {
+          // 🔥 เช็คอินเทอร์เน็ตโดยใช้ API ที่เราควบคุมได้
+          const response = await fetch("/test-network.ts", { method: "HEAD", cache: "no-store" });
+          onlineStatus = response.ok;
+        } catch (error) {
+          onlineStatus = false;
+        }
+      }
+
+      setIsOnline(onlineStatus);
+    };
 
     const updateOnlineStatus = () => {
       setIsOnline(navigator.onLine);
-      checkOnlineStatus(); // เช็คซ้ำเผื่อ navigator.onLine ไม่ตรง
+      checkOnlineStatus(); // เช็คซ้ำให้แน่ใจ
     };
+
+    // ✅ เช็คสถานะทุก 5 วินาทีเผื่ออินเทอร์เน็ตตัดแล้วกลับมา
+    const interval = setInterval(checkOnlineStatus, 5000);
 
     window.addEventListener("online", updateOnlineStatus);
     window.addEventListener("offline", updateOnlineStatus);
 
+    updateOnlineStatus(); // เช็คครั้งแรก
+
     return () => {
       window.removeEventListener("online", updateOnlineStatus);
       window.removeEventListener("offline", updateOnlineStatus);
+      clearInterval(interval);
     };
   }, []);
 
@@ -46,5 +51,5 @@ export const NetworkStatusProvider = ({ children }: { children: React.ReactNode 
   );
 };
 
-// ✅ สร้าง Custom Hook
+// ✅ Custom Hook
 export const useNetworkStatus = () => useContext(NetworkStatusContext);
