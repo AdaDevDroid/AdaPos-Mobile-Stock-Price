@@ -25,7 +25,7 @@ const ProductTranferNStockModal: React.FC<TransferNStockModalProps> = ({ isOpen,
 
                 <div className="flex flex-row justify-between w-full pt-4 px-4">
                     <p className="text-gray-500 text-[14px]">วันที่: {tDate}</p>
-                    <p className="text-gray-500 text-[14px]">เลขที่อ้างอิง: {tRefDoc}</p>
+                    <p className="text-gray-500 text-[14px]">จุดตรวจนับ: {tRefDoc}</p>
                 </div>
 
                 {/* ตารางประวัติการทำรายการ */}
