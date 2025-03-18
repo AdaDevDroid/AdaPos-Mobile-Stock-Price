@@ -226,7 +226,7 @@ export default function ReceiveGoods() {
 
       const newProduct: Product = {
      FNId: newId,
-        FTBarcode: barcode,
+        FTBarcode: ptBarcode,
         FCCost: 0,
         FNQuantity: parseInt(quantity),
         FTRefDoc: tRefDoc,
