@@ -28,7 +28,7 @@ const RepeatModal: React.FC<RepeatModalProps> = ({isOpen, onClose, onOptionSelec
             className="w-full bg-blue-500 text-white py-2 rounded-md mb-2 hover:bg-blue-600 flex items-center justify-center"
             onClick={() => onOptionSelect("webService")}
           >
-            <FaFileAlt className="mr-2 text-white text-lg" /> อัพโหลดผ่าน Web Services
+            <FaFileAlt className="mr-2 text-white text-lg" /> บ้นทึก รอนำเข้ารายการ
           </button>
   
           <button

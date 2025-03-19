@@ -431,7 +431,7 @@ export default function ReceiveGoods() {
               className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
               onClick={C_PRCxUploadeWebServices}
             >
-              <FaFileAlt className="mr-2 text-gray-700" /> อัพโหลดผ่าน Web Services2
+              <FaFileAlt className="mr-2 text-gray-700" /> บ้นทึก รอนำเข้ารายการ
             </button>
             <button
               className="flex items-center w-full px-6 py-2 hover:bg-gray-100 whitespace-nowrap"
