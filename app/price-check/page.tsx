@@ -197,14 +197,14 @@ const PricePromotionCheck = () => {
               <div className="md:col-span-2">
 
                 {/* ส่วนหัวข้อค้นหา */}
-                <div className="mb-1 text-sm font-medium text-gray-700">
+                <div className="block text-sm font-medium text-gray-700 mb-1">
                   ค้นหา
                 </div>
 
                 {/* ช่องค้นหาและปุ่ม */}
                 <div className="flex">
                   <input
-                    className="flex-1 px-4 py-2 border rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
