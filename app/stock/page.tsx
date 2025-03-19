@@ -259,10 +259,11 @@ export default function ReceiveGoods() {
      {/* export excel */}
     const exportProduct = () => {
       const oDataProducts = oProducts.map(product => ({
-        tPdtCode: "",
+        tProductCode: "000001",
         tBarcode: product.FTBarcode,
         tStockCode: "",
-        tQTY: product.FNQuantity.toString()
+        tQTY: product.FNQuantity.toString(),
+        dCreateOn: C_SETxFormattedDate()
       }));
       exportToExcel(oDataProducts);
     };
