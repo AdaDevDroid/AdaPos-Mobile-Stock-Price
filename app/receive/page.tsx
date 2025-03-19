@@ -287,9 +287,9 @@ export default function Receive() {
   {/* export excel */ }
   const exportProduct = () => {
     const formattedProducts = oProducts.map(oProducts => ({
-      tPdtCode: "", // Add the tPdtCode property
       tBarcode: oProducts.FTBarcode,
-      tQTY: oProducts.FNQuantity.toString()
+      tQTY: oProducts.FNQuantity.toString(),      
+      tCost: oProducts.FCCost.toString()
     }));
     exportToExcel(formattedProducts);
   };

@@ -2,15 +2,22 @@ import * as XLSX from 'xlsx';
 
 
 interface oData {
-  tPdtCode: string;
+  tProductCode: string;
   tBarcode: string;
   tStockCode: string;
   tQTY: string;
+  dCreateOn: string;
 }
 
 const exportToExcel = (data: oData[]) => {
-    const header1 = [["*Product Code Text[20]", "*Bar Code Text[25]", "Stock Control Code[50]", " * Qty  Decimal[18,4] "]];
-    // const header1 = [[ "*Bar Code Text[25]", " * Qty  Decimal[18,4] "]];
+  const formattedProducts = data.map((oProduct) => ({
+    ProductCode: oProduct.tProductCode,
+    Barcode: oProduct.tBarcode,
+    StockControlCode: oProduct.tStockCode,
+    Quantity: parseFloat(oProduct.tQTY.toString()).toFixed(4), // แปลงเป็นทศนิยม 4 ตำแหน่ง
+    CreateOn: oProduct.dCreateOn,
+  }));
+    const header1 = [["*Product Code Text[20]", "*Bar Code Text[25]", "Stock Control Code[50]", " * Qty  Decimal[18,4] "," *Date / Time [datetime]"]];
     const emptySheet = XLSX.utils.aoa_to_sheet([[]]);
 
   
@@ -20,7 +27,7 @@ const exportToExcel = (data: oData[]) => {
    
 
     const worksheet1 = XLSX.utils.aoa_to_sheet(header1);
-    XLSX.utils.sheet_add_json(worksheet1, data, { origin: "A2", skipHeader: true });
+    XLSX.utils.sheet_add_json(worksheet1, formattedProducts, { origin: "A2", skipHeader: true });
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, emptySheet, "Suggestion");
