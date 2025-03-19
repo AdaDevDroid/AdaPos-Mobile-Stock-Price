@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
             console.log("🔍 Insert Data:", product);
             // ✅ INSERT ข้อมูลลงใน `TCNTDocSPDTTmp`
             await request.query(`
-            INSERT INTO dbo.TCNTDocSPDTTmp (
+            INSERT INTO dbo.TMBTDocDTTmp (
             FTBchCode, FTXthDocNo, FNXtdSeqNo, FTXthDocKey, FTXthDocType, 
             FTXtdBarCode, FCXtdQty, FCXtdQtyAll, FCXtdCostIn, FDLastUpdOn, 
             FDCreateOn, FTLastUpdBy, FTCreateBy, FTAgnCode

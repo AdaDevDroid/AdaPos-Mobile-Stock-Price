@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
 
 
-            INSERT INTO dbo.TCNTDocSPDTTmpAdj (
+            INSERT INTO dbo.TMBTDocDTTmpAdj (
             FTBchCode, FTXthDocSeq, FNXtdSeqNo, FTXthDocKey, FTXthDocType, 
             FTXtdBarCode,  FCXtdQtyAll, FTXtdBchRef, FDAjdDateTimeC1, FCAjdUnitQtyC1, FTAjdPlcCode,FDLastUpdOn, 
             FDCreateOn, FTLastUpdBy, FTCreateBy, FTTmpStatus,FTAgnCode
