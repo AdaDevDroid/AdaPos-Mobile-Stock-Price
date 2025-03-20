@@ -25,21 +25,17 @@ export default function Login() {
       setRememberMe(true);
     }
 
-    fetch("/api/auth/me", { credentials: "include" }) // 👈 ส่ง Cookie ไปให้ API
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.authenticated) {
+    const cachedToken = localStorage.getItem("session_token");
+
+        if (!cachedToken) {
           console.log("ยังไม่ login");
           //push หน้า login
           return;
         }
         console.log("login แล้ว");
         router.push("/main");
-      })
-      .catch(() => {
-        console.log("ยังไม่ login catch");
-      });
-  }, [router]);
+      
+  }, []);
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {

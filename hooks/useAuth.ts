@@ -5,8 +5,7 @@ export function useAuth() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-          console.log("🔴 Offline Mode: ใช้ Token จาก LocalStorage");
-
+        
           const cachedToken = localStorage.getItem("session_token");
           if (!cachedToken) {
             console.error("❌ ไม่มี Token ใน Cache, Redirect ไปหน้า Login");
