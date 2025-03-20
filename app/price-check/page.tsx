@@ -210,7 +210,7 @@ const PricePromotionCheck = () => {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={
                       searchType === 'barcode'
-                        ? 'สแกนหรือป้อนบาร์โค้ด'
+                        ? 'ป้อนบาร์โค้ด'
                         : searchType === 'name'
                           ? 'ป้อนชื่อสินค้า'
                           : 'ป้อนรหัสสินค้า'
