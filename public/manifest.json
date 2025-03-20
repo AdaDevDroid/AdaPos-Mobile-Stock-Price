@@ -1,6 +1,6 @@
 {
-    "name": "My PWA App",
-    "short_name": "PWA App",
+    "name": "AdaPos+ Mobile Stock & Price",
+    "short_name": "AdaPos+",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#ffffff",
