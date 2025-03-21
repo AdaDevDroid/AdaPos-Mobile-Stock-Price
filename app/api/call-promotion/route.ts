@@ -1,14 +1,6 @@
 import { NextResponse } from "next/server";
 // import { C_GetoUrlObject } from "../../../hooks/CConfig";
-
-interface PdtData {
-     ptAgnCode: string;
-     ptBchCode: string;
-     ptMerCode: string;
-     ptShpCode: string;
-     ptWahCode: string;
-     ptPdtCode: string;
-}
+import { PdtData } from "@/models/call-promotion";
 
 const urlMaster = 'https://dev.ada-soft.com:44340/AdaStandard/API2PSMaster/V5';
 

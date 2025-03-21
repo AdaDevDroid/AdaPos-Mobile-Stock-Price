@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import { C_CTDoConnectToDatabase } from '../../database/connect_db';
-
-interface TsysConfig {
-  FTSysCode: string| null;
-  FTSysStaUsrValue: string | null;
-}
+import { TsysConfig } from "@/models/tsys-config";
 
 export async function POST() {
   try {

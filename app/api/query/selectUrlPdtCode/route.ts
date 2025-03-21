@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 // import { C_CTDoConnectToDatabase } from '../../database/connect_db';
 import sql from 'mssql';
+import { PdtCode } from "@/models/url-pdtcode";
 
 const config = {
   user: process.env.USER_DB as string, // ชื่อผู้ใช้
@@ -13,12 +14,6 @@ const config = {
     trustServerCertificate: true // ใช้ true ถ้าใช้ self-signed certificate
   }
 };
-
-interface PdtCode {
-     FTPdtCode: string | null;
-     FTPdtName: string | null;
-     FTBarCode: string | null;
-}
 
 export async function POST(req: NextRequest) {
      try {
