@@ -6,54 +6,7 @@ import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import { C_PRCxOpenIndexedDB, C_GETxUserData } from "@/hooks/CIndexedDB";
 import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
-
-interface Price {
-  rtPdtCode: string;
-  rtPghDocNo: string;
-  rtPghDocType: string;
-  rtPunCode: string;
-  rcPrice: number;
-  rtPplCode: string;
-  rtPplName: string | null;
-  rdPghDStart: string;
-  rdPghDStop: string;
-  rtPghTStart: string;
-  rtPghTStop: string;
-}
-
-interface Promotion {
-  rtBchCode: string;
-  rtPmhDocNo: string;
-  rtPdtCode: string;
-  rtPunCode: string;
-  rdPmhDStart: string;
-  rdPmhTStart: string;
-  rdPmhDStop: string;
-  rdPmhTStop: string;
-  rtPplCode: string;
-  rtPmhName: string;
-}
-
-interface ProductData {
-  rtPdtCode: string;
-  rtPdtName: string;
-  aoPdtBar: {
-    rtPdtCode: string;
-    ptBarCode: string;
-    rtPunCode: string;
-    rtPunName: string;
-    rcUnitFact: number;
-  }[];
-  aoPdtStk: {
-    rtPdtCode: string;
-    rtBchCode: string;
-    rtWahCode: string;
-    rcStkQty: number;
-    rtWahName: string;
-  }[];
-  aoPdtPmt: Promotion[];
-  aoPdtPrice: Price[];
-}
+import { Price, Promotion, ProductData} from "@/models/price-check";
 
 const PricePromotionCheck = () => {
   useAuth();
@@ -197,20 +150,20 @@ const PricePromotionCheck = () => {
               <div className="md:col-span-2">
 
                 {/* ส่วนหัวข้อค้นหา */}
-                <div className="mb-1 text-sm font-medium text-gray-700">
+                <div className="block text-sm font-medium text-gray-700 mb-1">
                   ค้นหา
                 </div>
 
                 {/* ช่องค้นหาและปุ่ม */}
                 <div className="flex">
                   <input
-                    className="flex-1 px-4 py-2 border rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={
                       searchType === 'barcode'
-                        ? 'สแกนหรือป้อนบาร์โค้ด'
+                        ? 'ป้อนบาร์โค้ด'
                         : searchType === 'name'
                           ? 'ป้อนชื่อสินค้า'
                           : 'ป้อนรหัสสินค้า'
