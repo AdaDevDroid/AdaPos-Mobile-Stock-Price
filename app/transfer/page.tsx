@@ -30,6 +30,7 @@ export default function ReceiveGoods() {
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [tRefSeq, setRefSeq] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingScanAuto, setIsLoadingScanAuto] = useState(false);
   const [oDb, setDB] = useState<IDBDatabase | null>(null);
   const isNetworkOnline = useNetworkStatus();
   const [historyList, setHistoryList] = useState<History[]>([]);
@@ -82,25 +83,48 @@ export default function ReceiveGoods() {
 
 
   {/* สแกน BarCode */ }
-  const { C_PRCxStartScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning, oScannerRef } = CCameraScanner(
+  const { C_PRCxStartScanner, C_PRCxStopScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning, oScannerRef } = CCameraScanner(
     (ptDecodedText) => {
-      C_PRCxPauseScanner();
-      if (checkedRef.current) {
-        const bConfirmed = window.confirm(`เพิ่มข้อมูล: ${ptDecodedText} ?`);
-        if (bConfirmed) {
-          setBarcode(ptDecodedText);
-          C_ADDxProduct(ptDecodedText);
-        }
-      } else {
-        setBarcode(ptDecodedText);
-        alert(`ข้อความ: ${ptDecodedText}`);
-      }
-      // ✅ รอ 500ms ก่อนเปิดกล้องใหม่
-      setTimeout(() => {
-        C_PRCxResumeScanner();
-      }, 500);
+      C_PRCxScan(ptDecodedText)
     }
   );
+
+  const C_PRCxScan = (ptDecodedText: string) => {
+    C_PRCxPauseScanner();
+    setBarcode(ptDecodedText);
+
+    if (checkedRef.current) {
+      setIsLoadingScanAuto(true);
+      let countdown = 1;
+
+      const timer = setInterval(() => {
+        console.log(`⏳ กำลังเพิ่มข้อมูลใน ${countdown} วินาที...`);
+        countdown--;
+
+        if (countdown === 0) {
+          clearInterval(timer);
+          C_ADDxProduct(ptDecodedText);
+          setIsLoadingScanAuto(false);
+        }
+      }, 1000);
+
+      // Resume Scanner หลังจาก countdown วินาที
+      setTimeout(() => {
+        C_PRCxResumeScanner();
+      }, countdown * 1000);
+    } else {
+      setIsLoading(true);
+      setTimeout(() => {
+        C_PRCxResumeScanner();
+        setIsLoading(false);
+      }, 500);
+
+    }
+  };
+
+
+
+
   {/* ดึงข้อมูล History จาก IndexedDB */ }
   const C_PRCxFetchHistoryList = async () => {
     if (!oDb) {
@@ -202,7 +226,7 @@ export default function ReceiveGoods() {
     );
   };
 
-  
+
   const C_SETxViewHistoryProduct = (history: History) => {
     const oFiltered = oProductHistoryList?.filter((product) => product.FTRefSeq === history.FTRefSeq);
     setHistoryDate(history.FTDate);
@@ -335,7 +359,7 @@ export default function ReceiveGoods() {
     setIsRepeat(true);
     setProducts(oFiltered);
     setRefDoc(history.FTRefDoc);
-    
+
   };
   const C_PRCxRepeatSelect = async (option: string) => {
     try {
@@ -435,7 +459,7 @@ export default function ReceiveGoods() {
           onChange={setBarcode}
           icon={bScanning ? <FiCameraOff /> : <FiCamera />}
           placeholder="สแกนหรือป้อนบาร์โค้ด"
-          onClick={C_PRCxStartScanner}
+          onClick={bScanning ? C_PRCxStopScanner : C_PRCxStartScanner}
         />
 
 
@@ -508,6 +532,14 @@ export default function ReceiveGoods() {
         tDate={tHistoryDate}
         tRefDoc={tHistoryRefDoc}
       />
+
+      {isLoadingScanAuto && (
+        <div className="fixed top-0 left-0 w-full h-full flex flex-col justify-center items-center bg-gray-900 bg-opacity-50">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+          {/* ข้อความแจ้งเตือน */}
+          <p className="mt-4 text-white text-lg">กำลังเพิ่มข้อมูล...</p>
+        </div>
+      )}
 
       {isLoading && (
         <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50">
