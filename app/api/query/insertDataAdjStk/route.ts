@@ -1,19 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parse } from "cookie";
 import { C_CTDoConnectToDatabase } from '../../database/connect_db';
 import { Product } from "@/models/models";
 
 export async function POST(req: NextRequest) {
     try {
-        console.log("✅ API Running");
-        // ✅ ดึง Cookie จาก Request
-        const cookies = parse(req.headers.get("cookie") || "");
-        const token = cookies.session_token;
         let newFTXthDocSeq = 0;
-        if (!token) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
         // ✅ รับ JSON Data เป็น Array ของ Product[]
         const products: Product[] = await req.json();
 

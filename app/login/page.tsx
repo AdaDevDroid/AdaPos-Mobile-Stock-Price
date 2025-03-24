@@ -9,12 +9,22 @@ import { useNetworkStatus } from '@/hooks/NetworkStatusContext'
 
 export default function Login() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  const [tUsername, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [tError, setError] = useState("");
+  const [bLoading, setLoading] = useState(false);
   const isOnline = useNetworkStatus()
+  const [oDatabase, setODatabase] = useState<IDBDatabase | null>(null);
+  const EXP_LOGIN = 60;
+
+  useEffect(() => {
+    const openDB = async () => {
+      const db = await C_PRCxOpenIndexedDB();
+      setODatabase(db);
+    };
+    openDB();
+  }, []);
 
   useEffect(() => {
     // ✅ ดึง Cookie จาก Request
@@ -26,15 +36,22 @@ export default function Login() {
     }
 
     const cachedToken = localStorage.getItem("session_token");
+    const tokenExpiry = localStorage.getItem("session_expiry");
 
-        if (!cachedToken) {
-          console.log("ยังไม่ login");
-          //push หน้า login
-          return;
-        }
-        console.log("login แล้ว");
-        router.push("/main");
-      
+    if (!cachedToken) {
+      console.log("ยังไม่ login");
+      return;
+    }
+    if (tokenExpiry) {
+      const nowMinutes = Date.now() / (60 * 1000);
+      console.log(tokenExpiry, nowMinutes)
+      if (nowMinutes > Number(tokenExpiry)) {
+        return;
+      }
+    }
+    console.log("login แล้ว");
+    router.push("/main");
+
   }, []);
 
   useEffect(() => {
@@ -45,135 +62,122 @@ export default function Login() {
     }
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const C_SETxToken = (token: string) => {
+    const tokenExpiry = Date.now() + EXP_LOGIN * 60 * 1000; // Convert minutes to milliseconds
+    localStorage.setItem("session_token", token);
+    localStorage.setItem("session_expiry", tokenExpiry.toString());
+    console.log("✅ Token Stored with Expiry:", new Date(tokenExpiry).toLocaleString());
+  };
+  const C_PRCbCheckUser = async (username: string, password: string, isOnline: boolean) => {
+    if (!isOnline) {
+      console.log("🔴 Offline Mode: Validating User from IndexedDB");
+      if (!oDatabase) {
+        throw new Error("Database is not initialized");
+      }
+      const oUserData = await C_GETxUserData(oDatabase);
+      const encryptedPassword = new CEncrypt("2").C_PWDtASE128Encrypt(password);
+      return oUserData && oUserData.FTUsrLogin === username && oUserData.FTUsrPass === encryptedPassword;
+    }
+
+    console.log("🟢 Online Mode: Validating User via API");
+    const userResponse = await fetch("/api/query/selectUsrLogin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!userResponse.ok) return false;
+    const { user } = await userResponse.json();
+
+    if (oDatabase) {
+      await C_INSxUserToDB(oDatabase, {
+        FTUsrCode: user.FTUsrCode,
+        FTUsrLogin: user.FTUsrLogin,
+        FTUsrPass: user.FTUsrLoginPwd,
+        FTUsrName: user.FTUsrName,
+        FTBchCode: user.FTBchCode,
+        FTAgnCode: user.FTAgnCode,
+        FTMerCode: user.FTMerCode,
+      });
+    } else {
+      throw new Error("Database is not initialized");
+    }
+
+    console.log("✅ User validated & stored locally.");
+    return true;
+  };
+  const C_PRCxSyncConfig = async (oDatabase:IDBDatabase ) => {
+    try {
+      console.log("🔄 Syncing SysConfig...");
+      const response = await fetch("/api/query/selectSysConfig", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch SysConfig");
+      const oConfigData = await response.json();
+
+      await C_DELoSysConfigData(oDatabase);
+      if (Array.isArray(oConfigData.config)) {
+        for (const config of oConfigData.config) {
+          if (config.FTSysCode && config.FTSysStaUsrValue) {
+            await C_INSoSysConfigToDB(oDatabase, {
+              FTSysCode: config.FTSysCode,
+              FTSysStaUsrValue: config.FTSysStaUsrValue,
+            });
+          }
+        }
+        console.log("✅ SysConfig Sync Completed");
+      } else {
+        console.error("❌ Invalid SysConfig Data:", oConfigData);
+      }
+    } catch (error) {
+      console.error("⚠️ SysConfig Sync Failed:", error);
+    }
+  };
+  const C_PRCxClickLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
-      const oDatabase = await C_PRCxOpenIndexedDB();
+      const userValid = await C_PRCbCheckUser(tUsername, password, isOnline);
 
-      const validateUser = async () => {
-        if (!isOnline) {
-          console.log("เข้า login offline")
-          const oUserData = await C_GETxUserData(oDatabase);
-          const tEncryptedPassword = new CEncrypt("2").C_PWDtASE128Encrypt(password);
-          return oUserData && oUserData.FTUsrLogin === username && oUserData.FTUsrPass === tEncryptedPassword;
-        } else {
-          const userResponse = await fetch("/api/query/selectUsrLogin", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, password }),
-          });
-          if (userResponse.ok) {
-            const oData = await userResponse.json();
-            await C_INSxUserToDB(oDatabase, {
-              FTUsrCode: oData.user.FTUsrCode,
-              FTUsrLogin: oData.user.FTUsrLogin,
-              FTUsrPass: oData.user.FTUsrLoginPwd,
-              FTUsrName: oData.user.FTUsrName,
-              FTBchCode: oData.user.FTBchCode,
-              FTAgnCode: oData.user.FTAgnCode,
-              FTMerCode: oData.user.FTMerCode,
-            });
-
-            // Sync SysConfig
-            console.log("Process Sync SysConfig 1");
-            const rSysConfig = await fetch("/api/query/selectSysConfig", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-            });
-
-            const oConfigData = await rSysConfig.json();
-            console.log(oConfigData);
-
-            if (rSysConfig.ok) {
-
-              C_DELoSysConfigData(oDatabase);
-
-              if (oConfigData && Array.isArray(oConfigData.config)) {
-                for (const config of oConfigData.config) {
-                  const oSysConfig = {
-                    FTSysCode: config.FTSysCode,
-                    FTSysStaUsrValue: config.FTSysStaUsrValue,
-                  };
-                  if (oSysConfig.FTSysCode && oSysConfig.FTSysStaUsrValue) {
-                    await C_INSoSysConfigToDB(oDatabase, oSysConfig);
-                    console.log("Process Sync SysConfig 2");
-                  } else {
-                    console.error("Invalid SysConfig data:", oSysConfig);
-                  }
-                }
-              } else {
-                console.error("Invalid Config Data Structure:", oConfigData);
-              }
-            }
-
-            return true;
-          }
-        }
-        return false;
-      };
-
-      if (await validateUser()) {
-        if (!isOnline) {
-          // 🔴 กรณีออฟไลน์
-          console.log("🔴 Offline Mode: ใช้ Token จาก LocalStorage");
-          const token = await generateOfflineToken(username);
-          // 🔥 เก็บ Token ที่สร้างขึ้นไว้ใน LocalStorage
-          if (token) {
-            localStorage.setItem("session_token", token);
-            console.log("✅ Offline Token Created:", token);
-          } else {
-            console.error("❌ เกิดข้อผิดพลาดในการสร้าง Offline Token");
-          }
-
-          const cachedToken = localStorage.getItem("session_token");
-
-          if (cachedToken) {
-            console.log("✅ ใช้ Token ล่าสุด:", cachedToken);
-            router.push("/main"); // ✅ Redirect ไปหน้า Main
-          } else {
-            console.error("❌ ไม่มี Token ใน Cache, กรุณาเชื่อมต่ออินเทอร์เน็ต");
-          }
-          return;
-        }
-
-        // ✅ กรณีออนไลน์
-        const response = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username }),
-        });
-
-        if (!response.ok) throw new Error("❌ Login failed");
-
-        const data = await response.json();
-        console.log("✅ Login Success:", data);
-
-        // 🔥 เก็บ Token ไว้ใช้ใน Offline Mode
-        localStorage.setItem("session_token", data.token);
-
-        // ✅ Redirect ไปหน้า Main
-        router.push("/main");
-      } else {
+      if (!userValid) {
         setError("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+        return;
       }
 
-      document.cookie = serialize('rememberedUsername', rememberMe ? username : '', {
+      if (isOnline) {
+        if (oDatabase) {
+          await C_PRCxSyncConfig(oDatabase);
+        } else {
+          throw new Error("Database is not initialized");
+        }
+      }
+
+      console.log("🔓 Generating token...");
+      const token = await C_GETtGenToken(tUsername);
+      if (!token) {
+        throw new Error("❌ Token Generation Failed");
+      }
+
+      C_SETxToken(token);
+      router.push("/main");
+
+      document.cookie = serialize("rememberedUsername", rememberMe ? tUsername : "", {
         maxAge: rememberMe ? 7 * 24 * 60 * 60 : -1,
         path: "/",
       });
 
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error("⚠️ Login Error:", error);
       setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
     } finally {
       setLoading(false);
     }
   };
-
-  // 🔥 **ฟังก์ชันสร้าง Token ฝั่ง Client**
-  async function generateOfflineToken(username: string): Promise<string> {
+  async function C_GETtGenToken(username: string): Promise<string> {
     const encoder = new TextEncoder();
     const data = encoder.encode(`${username}-${Date.now()}`);
 
@@ -188,7 +192,6 @@ export default function Login() {
       return ""; // 🔴 กรณีเกิดข้อผิดพลาด return ค่าว่าง
     }
   }
-
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-gray-100">
       <div className="flex flex-col items-center text-center mb-6">
@@ -200,14 +203,14 @@ export default function Login() {
       </div>
 
       <div className="w-full max-w-md p-8 bg-white shadow-lg rounded-lg">
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={C_PRCxClickLogin} className="space-y-4">
           <p className="text-gray-500 text-sm ">ชื่อผู้ใช้งาน</p>
           <div className="relative ">
             <FaUser className="absolute left-3 top-3 text-gray-400" />
             <input
               type="text"
               placeholder="ระบุชื่อผู้ใช้งาน"
-              value={username}
+              value={tUsername}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full pl-10 pr-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-400"
               required
@@ -225,7 +228,7 @@ export default function Login() {
               required
             />
           </div>
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          {tError && <p className="text-red-500 text-sm text-center">{tError}</p>}
           <div className="flex items-center justify-between">
             <label className="flex items-center">
               <input type="checkbox" checked={rememberMe} onChange={() => setRememberMe(!rememberMe)} className="mr-2" />
@@ -236,9 +239,9 @@ export default function Login() {
           <button
             type="submit"
             className="w-full bg-blue-500 text-white py-2 rounded-md font-bold hover:bg-blue-600"
-            disabled={loading} // Disable button while loading
+            disabled={bLoading} // Disable button while loading
           >
-            {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+            {bLoading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
           </button>
         </form>
       </div>
