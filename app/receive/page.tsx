@@ -39,6 +39,7 @@ export default function Receive() {
 
   const isNetworkOnline = useNetworkStatus();
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingScanAuto, setIsLoadingScanAuto] = useState(false);
   const [bCheckAutoScan, setChecked] = useState(false);
   const bCheckedRef = useRef(bCheckAutoScan);
   const [bDropdownOpen, setIsOpen] = useState(false);
@@ -121,22 +122,43 @@ export default function Receive() {
   {/* สแกน BarCode */ }
   const { C_PRCxStartScanner, C_PRCxStopScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning, oScannerRef } = CCameraScanner(
     (ptDecodedText) => {
-      C_PRCxPauseScanner();
-      if (bCheckedRef.current) {
-        const bConfirmed = window.confirm(`เพิ่มข้อมูล: ${ptDecodedText} ?`);
-        if (bConfirmed) {
-          setBarcode(ptDecodedText);
-          C_ADDxProduct(ptDecodedText, tCostRef.current);
-        }
-      } else {
-        setBarcode(ptDecodedText);
-        alert(`ข้อความ: ${ptDecodedText}`);
-      }
-      setTimeout(() => {
-        C_PRCxResumeScanner();
-      }, 500);
+      C_PRCxScan(ptDecodedText)
     }
   );
+
+  const C_PRCxScan = (ptDecodedText: string) => {
+    C_PRCxPauseScanner();
+    setBarcode(ptDecodedText);
+  
+    if (bCheckedRef.current) {
+      setIsLoadingScanAuto(true);
+      let countdown = 1;
+  
+      const timer = setInterval(() => {
+        console.log(`⏳ กำลังเพิ่มข้อมูลใน ${countdown} วินาที...`);
+        countdown--;
+  
+        if (countdown === 0) {
+          clearInterval(timer);
+          C_ADDxProduct(ptDecodedText, tCostRef.current);
+          setIsLoadingScanAuto(false);
+        }
+      }, 1000);
+  
+      // Resume Scanner หลังจาก countdown วินาที
+      setTimeout(() => {
+        C_PRCxResumeScanner();
+      }, countdown * 1000);
+    } else {
+      setIsLoading(true);
+      setTimeout(() => {
+        C_PRCxResumeScanner();
+        setIsLoading(false);
+      }, 500);
+      
+    }
+  };
+  
   const C_PRCxFetchHistoryList = async () => {
     if (!oDb) {
       console.error("❌ Database is not initialized");
@@ -258,7 +280,7 @@ export default function Receive() {
       const newProduct = {
         FNId: newId,
         FTBarcode: ptBarcode,
-        FCCost: parseFloat(tCost),
+        FCCost: parseFloat(ptCost),
         FNQuantity: parseInt(tQty),
         FTRefDoc: tRefDoc,
         FTRefSeq: tRefSeq,
@@ -288,7 +310,7 @@ export default function Receive() {
   const exportProduct = () => {
     const formattedProducts = oProducts.map(oProducts => ({
       tBarcode: oProducts.FTBarcode,
-      tQTY: oProducts.FNQuantity.toString(),      
+      tQTY: oProducts.FNQuantity.toString(),
       tCost: oProducts.FCCost.toString()
     }));
     exportToExcel(formattedProducts);
@@ -404,7 +426,7 @@ export default function Receive() {
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
         <div className="flex flex-row w-full py-2">
           {/* หัวข้อ */}
-          <h1 className="text-2xl font-bold md:pb-0">รับสินค้าจากผู้จำหน่าย</h1>
+          <h1 className="text-2xl font-bold md:pb-0">รับสินค้าจากผู้จำหน่าย.1</h1>
           {/* ปุ่ม 3 จุด จอเล็ก */}
           <button
             className="md:hidden ml-2 p-2 rounded-md ml-auto text-gray-500 hover:text-gray-700 text-[18px]"
@@ -566,6 +588,14 @@ export default function Receive() {
         tDate={tHistoryDate}
         tRefDoc={tHistoryRefDoc}
       />
+
+      {isLoadingScanAuto && (
+        <div className="fixed top-0 left-0 w-full h-full flex flex-col justify-center items-center bg-gray-900 bg-opacity-50">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+          {/* ข้อความแจ้งเตือน */}
+          <p className="mt-4 text-white text-lg">กำลังเพิ่มข้อมูล...</p>
+        </div>
+      )}
 
       {isLoading && (
         <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50">

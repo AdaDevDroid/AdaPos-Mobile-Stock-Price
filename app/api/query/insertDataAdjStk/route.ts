@@ -37,11 +37,14 @@ export async function POST(req: NextRequest) {
             newFTXthDocSeq = 1;
           }
           console.log("🔍 res Data:", newFTXthDocSeq);
-        for (const product of products) {
+          for (let index = 0; index < products.length; index++) {
+            const product = products[index];
             const {
-                FNId, FTBarcode, FNQuantity, FTRefDoc,
+                FTBarcode, FNQuantity, FTRefDoc,
                 FTXthDocKey, FTBchCode, FTAgnCode, FTUsrName, FDCreateOn
             } = product;
+
+            const FNId = index + 1;
 
             const request = pool.request();
             request.input("FTBchCode", FTBchCode);
