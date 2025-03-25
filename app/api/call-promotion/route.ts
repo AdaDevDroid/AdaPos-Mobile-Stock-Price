@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
           return NextResponse.json(result, { status: 200 });
      } catch (error) {
-          console.error('Error fetching product data:', error);
+          console.log('Error fetching product data:', error);
           if (error instanceof Error) {
                return NextResponse.json({ message: `Error: ${error.message}` }, { status: 403 });
           } else {

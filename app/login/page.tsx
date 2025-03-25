@@ -57,7 +57,7 @@ export default function Login() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
         .then(reg => console.log('Service Worker registered:', reg))
-        .catch(err => console.error('Service Worker registration failed:', err));
+        .catch(err => console.log('Service Worker registration failed:', err));
     }
   }, []);
 
@@ -129,10 +129,10 @@ export default function Login() {
         }
         console.log("✅ SysConfig Sync Completed");
       } else {
-        console.error("❌ Invalid SysConfig Data:", oConfigData);
+        console.log("❌ Invalid SysConfig Data:", oConfigData);
       }
     } catch (error) {
-      console.error("⚠️ SysConfig Sync Failed:", error);
+      console.log("⚠️ SysConfig Sync Failed:", error);
     }
   };
   const C_PRCxClickLogin = async (e: React.FormEvent) => {
@@ -171,7 +171,7 @@ export default function Login() {
       });
 
     } catch (error) {
-      console.error("⚠️ Login Error:", error);
+      console.log("⚠️ Login Error:", error);
       setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
     } finally {
       setLoading(false);
@@ -188,7 +188,7 @@ export default function Login() {
 
       return token; // ✅ Return Token กลับไป
     } catch (error) {
-      console.error("❌ Error generating offline token:", error);
+      console.log("❌ Error generating offline token:", error);
       return ""; // 🔴 กรณีเกิดข้อผิดพลาด return ค่าว่าง
     }
   }

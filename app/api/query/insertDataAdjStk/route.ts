@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ message: "Insert Success", count: products.length }, { status: 201 });
 
     } catch (error) {
-        console.error("Insert Error:", error);
+        console.log("Insert Error:", error);
         return NextResponse.json({ message: "Insert Failed", error }, { status: 500 });
     }
 }

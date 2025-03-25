@@ -23,7 +23,7 @@ export async function C_CTDoConnectToDatabase() {
     const pool = await sql.connect(config);
     return pool;
   } catch (err) {
-    console.error('Database connection failed:', err);
+    console.log('Database connection failed:', err);
     throw err;
   }
 }

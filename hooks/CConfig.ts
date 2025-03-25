@@ -14,7 +14,7 @@ export const C_GetoUrlObject = async (): Promise<string> => {
       throw new Error("No URL found");
     }
   } catch (error) {
-    console.error('Error fetching URL object:', error);
+    console.log('Error fetching URL object:', error);
     throw error; // Rethrow the error to be handled by the caller
   }
 };

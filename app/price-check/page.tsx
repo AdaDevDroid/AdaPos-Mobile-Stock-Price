@@ -85,7 +85,7 @@ const PricePromotionCheck = () => {
       }
       setProductData(data.roItem);
     } catch (error) {
-      console.error('Error fetching product data:', error);
+      console.log('Error fetching product data:', error);
     } finally {
       setLoading(false);
     }
