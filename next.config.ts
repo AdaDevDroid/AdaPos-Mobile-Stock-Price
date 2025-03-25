@@ -13,6 +13,15 @@ const nextConfig: NextConfig = {
   reactStrictMode: false,
   devIndicators: false,
   ...pwaConfig,
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.devServer = config.devServer || {};
+      config.devServer.client = {
+        overlay: false, // 🔥 ปิด Error Overlay ของ Webpack
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
