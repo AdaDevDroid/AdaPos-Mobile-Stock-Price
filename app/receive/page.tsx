@@ -51,12 +51,8 @@ export default function Receive() {
 
   {/* เช็ค User */ }
   useAuth();
-
-  
   {/* Set init IndexedDB */ }
-  useEffect(() => {
-    
-    
+  useEffect(() => { 
     const initDB = async () => {
       setIsLoading(true);
 
@@ -124,6 +120,8 @@ export default function Receive() {
       setIsLoading(false);
     }
   }, [tCost]);
+
+
 
 
   {/* สแกน BarCode */ }
@@ -386,8 +384,6 @@ export default function Receive() {
       return;
     }
     C_DELxProductTmpByFNId(oDb,id,"TCNTProductReceiveTmp");
-
-
   };
   {/* export excel */ }
   const exportProduct = () => {
@@ -418,9 +414,7 @@ export default function Receive() {
       await C_INSxProductToIndexedDB();
 
 
-   
-
-
+  
       console.log("✅ เข้าลบข้อมูล History, Data ที่เกิน limit");
       if (!oDb) {
         console.error("❌ Database is not initialized");
@@ -473,8 +467,13 @@ export default function Receive() {
     // Save Data to IndexedDB
     C_PRCxSaveDB();
     
+    
     setIsLoading(false);
   };
+
+
+
+
 
   async function C_PRCxSaveTmp() {
     setIsLoading(true);

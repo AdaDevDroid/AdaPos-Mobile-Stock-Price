@@ -341,7 +341,6 @@ export default function ReceiveGoods() {
         
         console.log("✅ ลบข้อมูล Product Tmp");
         await C_DELoDataTmp(oDb,"TCNTProductStockTmp");
-
         console.log("✅ โหลดข้อมูล List ใหม่");
         await C_PRCxFetchHistoryList();
         await C_PRCxFetchProductHistoryList();
