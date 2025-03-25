@@ -6,7 +6,7 @@ import InputWithLabelAndButton from "@/components/InputWithLabelAndButton";
 import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
-import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory } from "react-icons/fa";
+import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory, FaRegSave } from "react-icons/fa";
 import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CProducttransferwahouseToExcel';
@@ -468,6 +468,20 @@ export default function ReceiveGoods() {
     // ปิด Modal หลังจากทำงานเสร็จ
     setIsRepeat(false);
   };
+
+
+  async function C_PRCxSaveClearTmpData() {
+ 
+    // Clear Tmp Data to IndexedDB
+    if (oDb) {
+      console.log("✅ ลบข้อมูล Product Tmp");
+      await C_DELoDataTmp(oDb,"TCNTProductTransferTmp");
+      setProducts([]);
+    } else {
+      console.error("❌ Database is not initialized");
+    }
+  
+  };
   return (
     <div className="p-4 ms-1 mx-auto bg-white">
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
@@ -580,7 +594,7 @@ export default function ReceiveGoods() {
         <tbody className="bg-white">
           {oProducts.map((product, index) => (
             <tr key={index} className="border text-center text-gray-500 text-[14px]">
-              <td className="p-2">{product.FNId}</td>
+              <td className="p-2">{index + 1}</td>
               <td className="p-2">{product.FTBarcode}</td>
               <td className="p-2">{product.FNQuantity}</td>
               <td className="p-2">
@@ -610,16 +624,21 @@ export default function ReceiveGoods() {
         </div>
       </div>
 
-              
-          {/* ปุ่มล่างขวา */} 
-          <div className="fixed right-4">
-            <button
-              className="bg-blue-500 text-white p-4 rounded-full shadow-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              onClick={C_PRCxSaveTmp}
-            >
-              บันทึก
+      <div className="flex w-full md:w-auto md:ml-auto pt-2 relative justify-start">
+        <div className=" mr-4 " >
+            <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
+                onClick={C_PRCxSaveClearTmpData}>
+                       ล้างข้อมูล
             </button>
-          </div>
+        </div>
+        <div >
+            <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
+                onClick={C_PRCxSaveTmp}>
+                  <FaRegSave className="mr-2" />
+                        บันทึก
+            </button>
+        </div>
+      </div> 
 
 
       {/* ประวัติการทำรายการ */}
