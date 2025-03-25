@@ -6,13 +6,11 @@ import { useEffect, useState } from "react";
 
 export default function MainPage() {
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   // เช็ค user login
   useAuth();
 
   useEffect(() => {
     const initDB = async () => {
-      setIsLoading(true);
 
       try {
         const database = await C_PRCxOpenIndexedDB();
@@ -25,9 +23,7 @@ export default function MainPage() {
         }
       } catch (error) {
         console.error("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
-      } finally {
-        setIsLoading(false);
-      }
+      } 
     };
 
     initDB();
@@ -38,12 +34,6 @@ export default function MainPage() {
       <div className="flex p-4 justify-between items-center shadow-sm text-gray-500">
         <span className="text-l ml-auto">ชื่อผู้ใช้งาน : {oUserInfo?.FTUsrName} </span>
       </div>
-      {isLoading && (
-        <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
-        </div>
-      )}
-
     </div>
   );
 }

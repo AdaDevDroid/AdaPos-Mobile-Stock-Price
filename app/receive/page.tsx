@@ -54,7 +54,6 @@ export default function Receive() {
   {/* Set init IndexedDB */ }
   useEffect(() => { 
     const initDB = async () => {
-      setIsLoading(true);
 
       try {
         const database = await C_PRCxOpenIndexedDB();
@@ -93,7 +92,6 @@ export default function Receive() {
       } catch (error) {
         console.error("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
       } finally {
-        setIsLoading(false);
       }
     };
 
@@ -114,10 +112,8 @@ export default function Receive() {
   }, [bCheckAutoScan, tCost]);
   useEffect(() => {
     if (oPendingBarcode !== null) {
-      setIsLoading(true);
       C_ADDxProduct(oPendingBarcode, tCost); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
       setPendingBarcode(null);
-      setIsLoading(false);
     }
   }, [tCost]);
 
@@ -543,7 +539,7 @@ export default function Receive() {
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
         <div className="flex flex-row w-full py-2">
           {/* หัวข้อ */}
-          <h1 className="text-2xl font-bold md:pb-0">รับสินค้าจากผู้จำหน่าย.1</h1>
+          <h1 className="text-2xl font-bold md:pb-0">รับสินค้าจากผู้จำหน่าย</h1>
           {/* ปุ่ม 3 จุด จอเล็ก */}
           <button
             className="md:hidden ml-2 p-2 rounded-md ml-auto text-gray-500 hover:text-gray-700 text-[18px]"
