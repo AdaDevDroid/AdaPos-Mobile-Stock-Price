@@ -51,12 +51,8 @@ export default function Receive() {
 
   {/* เช็ค User */ }
   useAuth();
-
-  
   {/* Set init IndexedDB */ }
-  useEffect(() => {
-    
-    
+  useEffect(() => { 
     const initDB = async () => {
 
       try {
@@ -120,6 +116,8 @@ export default function Receive() {
       setPendingBarcode(null);
     }
   }, [tCost]);
+
+
 
 
   {/* สแกน BarCode */ }
@@ -320,6 +318,7 @@ export default function Receive() {
         console.log("🔹 ข้อมูลที่ได้จาก TCNTProductReceiveTmp:", mappedData);
         if(mappedData.length > 0){
           setProducts(mappedData);
+          setRefDoc(mappedData[0].FTRefDoc);
         }
       }
     };
@@ -381,8 +380,6 @@ export default function Receive() {
       return;
     }
     C_DELxProductTmpByFNId(oDb,id,"TCNTProductReceiveTmp");
-
-
   };
   {/* export excel */ }
   const exportProduct = () => {
@@ -413,9 +410,7 @@ export default function Receive() {
       await C_INSxProductToIndexedDB();
 
 
-   
-
-
+  
       console.log("✅ เข้าลบข้อมูล History, Data ที่เกิน limit");
       if (!oDb) {
         console.error("❌ Database is not initialized");
@@ -468,8 +463,13 @@ export default function Receive() {
     // Save Data to IndexedDB
     C_PRCxSaveDB();
     
+    
     setIsLoading(false);
   };
+
+
+
+
 
   async function C_PRCxSaveTmp() {
     setIsLoading(true);
@@ -526,6 +526,7 @@ export default function Receive() {
       console.log("✅ ลบข้อมูล Product Tmp");
       await C_DELoDataTmp(oDb,"TCNTProductReceiveTmp");
       setProducts([]);
+      setRefDoc("");
     } else {
       console.error("❌ Database is not initialized");
     }
@@ -679,13 +680,13 @@ export default function Receive() {
               onChange={() => setChecked(!bCheckAutoScan)}
               className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
             />
-            <span className="ml-2">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด3</span>
+            <span className="ml-2">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>
           </label>
         </div>
       </div>
 
           
-      <div className="flex w-full md:w-auto md:ml-auto pt-2 relative justify-start">
+      <div className="flex w-full md:w-auto md:ml-auto pt-2 mb-10 relative justify-end">
         <div className=" mr-4 " >
             <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
                 onClick={C_PRCxSaveClearTmpData}>
