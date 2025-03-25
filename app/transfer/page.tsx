@@ -393,6 +393,7 @@ export default function ReceiveGoods() {
         console.log("🔹 ข้อมูลที่ได้จาก TCNTProductTransferTmp:", mappedData);
         if(mappedData.length > 0){
           setProducts(mappedData);
+          setRefDoc(mappedData[0].FTRefDoc);
         }
       
       }
@@ -477,6 +478,7 @@ export default function ReceiveGoods() {
       console.log("✅ ลบข้อมูล Product Tmp");
       await C_DELoDataTmp(oDb,"TCNTProductTransferTmp");
       setProducts([]);
+      setRefDoc("");
     } else {
       console.error("❌ Database is not initialized");
     }
@@ -624,7 +626,8 @@ export default function ReceiveGoods() {
         </div>
       </div>
 
-      <div className="flex w-full md:w-auto md:ml-auto pt-2 relative justify-start">
+          
+      <div className="flex w-full md:w-auto md:ml-auto pt-2 mb-10 relative justify-end">
         <div className=" mr-4 " >
             <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
                 onClick={C_PRCxSaveClearTmpData}>
