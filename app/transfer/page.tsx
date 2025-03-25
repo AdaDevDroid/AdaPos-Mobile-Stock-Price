@@ -47,7 +47,6 @@ export default function ReceiveGoods() {
   {/* เปิด IndexedDB */ }
   useEffect(() => {
     const initDB = async () => {
-      setIsLoading(true);
 
       try {
         const database = await C_PRCxOpenIndexedDB();
@@ -63,8 +62,6 @@ export default function ReceiveGoods() {
         setRefSeq(crypto.randomUUID());
       } catch (error) {
         console.error("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
-      } finally {
-        setIsLoading(false);
       }
     };
     initDB();

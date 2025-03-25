@@ -16,7 +16,6 @@ export default function Login() {
   const [bLoading, setLoading] = useState(false);
   const isOnline = useNetworkStatus()
   const [oDatabase, setODatabase] = useState<IDBDatabase | null>(null);
-  const EXP_LOGIN = 60;
 
   useEffect(() => {
     const openDB = async () => {
@@ -63,7 +62,8 @@ export default function Login() {
   }, []);
 
   const C_SETxToken = (token: string) => {
-    const tokenExpiry = Date.now() + EXP_LOGIN * 60 * 1000; // Convert minutes to milliseconds
+    const nExpToken = 60;
+    const tokenExpiry = Date.now() + nExpToken * 60 * 1000; // Convert minutes to milliseconds
     localStorage.setItem("session_token", token);
     localStorage.setItem("session_expiry", tokenExpiry.toString());
     console.log("✅ Token Stored with Expiry:", new Date(tokenExpiry).toLocaleString());
