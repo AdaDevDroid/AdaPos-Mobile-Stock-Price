@@ -1,22 +1,74 @@
 // นำเข้า Workbox
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.0.2/workbox-sw.js');
 
+const VERSION = "1.0.7"
 // ตรวจสอบว่า Workbox ถูกโหลดสำเร็จ
 if (workbox) {
   console.log('Workbox is loaded 🎉');
 
-  // Precache ไฟล์ที่กำหนดไว้ล่วงหน้า
-  workbox.precaching.precacheAndRoute([
-    { url: '/', revision: '1' },
-    { url: '/login', revision: '1' },
-    { url: '/main', revision: '1' },
-    { url: '/receive', revision: '1' },
-    { url: '/transfer', revision: '1' },
-    { url: '/stock', revision: '1' },
-    { url: '/price-check', revision: '1' },
-    { url: '/icons/icon-192x192.png', revision: '1' },
-    { url: '/icons/icon-512x512.png', revision: '1' },
-  ]);
+  // ตรวจสอบว่าไฟล์ใน cache มีการ precache และ revision ที่ตรงกับ VERSION หรือไม่
+  caches.open(workbox.core.cacheName).then((cache) => {
+    // ตรวจสอบว่าไฟล์มีอยู่ใน cache หรือไม่
+    cache.match('/').then((response) => {
+      if (response) {
+        response.text().then((cachedVersion) => {
+          console.log('Cached version:', cachedVersion);
+          console.log('Cached version New:', VERSION);
+
+          // เปรียบเทียบ VERSION ที่เก็บใน cache กับ VERSION ปัจจุบัน
+          if (cachedVersion !== VERSION) {
+            console.warn('Version mismatch, updating cache...');
+            // ลบ cache เก่าก่อน
+            cache.delete('/').then(() => {
+              // หลังจากลบ cache เก่าแล้ว, ทำการเพิ่มไฟล์ใหม่ที่มี VERSION ปัจจุบัน
+              updateCache(cache);
+            });
+          } else {
+            console.warn('Version matches, no update needed');
+          }
+        });
+      } else {
+        console.log('No cached version found, storing current VERSION...');
+        // หากไม่มีไฟล์ cached, ทำการเพิ่ม VERSION ใหม่
+        updateCache(cache);
+      }
+    });
+  });
+
+  // ฟังก์ชั่นในการอัพเดต cache หรือทำบางอย่าง
+  function updateCache() {
+    // ลบ cache ทั้งหมดก่อน
+    clearAllCaches();
+
+    // เก็บ VERSION ใหม่ใน cache
+    caches.open(workbox.core.cacheName).then((cache) => {
+      cache.put('/', new Response(VERSION)); // เก็บ VERSION ใหม่
+    });
+
+    // Precache ไฟล์ที่กำหนดไว้ล่วงหน้าใหม่
+    workbox.precaching.precacheAndRoute([
+      { url: '/', revision: VERSION },
+      { url: '/login', revision: VERSION },
+      { url: '/main', revision: VERSION },
+      { url: '/receive', revision: VERSION },
+      { url: '/transfer', revision: VERSION },
+      { url: '/stock', revision: VERSION },
+      { url: '/price-check', revision: VERSION },
+      { url: '/icons/icon-192x192.png', revision: VERSION },
+      { url: '/icons/icon-512x512.png', revision: VERSION },
+    ]);
+  }
+
+  // ฟังก์ชั่นในการลบ cache ทั้งหมด
+  function clearAllCaches() {
+    caches.keys().then((cacheNames) => {
+      cacheNames.forEach((cacheName) => {
+        caches.delete(cacheName).then(() => {
+          console.log(`Cache ${cacheName} has been deleted.`);
+        });
+      });
+    });
+  }
 
   // ใช้ Network First สำหรับ API /api/auth/
   workbox.routing.registerRoute(

@@ -19,9 +19,9 @@ export default function Home() {
         return;
       }
       if (tokenExpiry) {
-        const nowMinutes = Date.now() / (60 * 1000); // เวลาปัจจุบันเป็น "นาที"
+        const nowMinutes = Math.floor(Date.now() / 1000 / 60);
         console.log(tokenExpiry, nowMinutes)
-        if (nowMinutes > Number(tokenExpiry)) {
+        if (nowMinutes > parseInt(tokenExpiry)) {
           console.log("❌ Token หมดอายุ → Redirect ไปหน้า Login");
           localStorage.removeItem("session_token");
           localStorage.removeItem("session_expiry");
