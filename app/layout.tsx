@@ -7,20 +7,26 @@ import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname(); 
+  const pathname = usePathname();
   const showSidebarPages = ["/main", "/receive", "/transfer", "/stock", "/price-check"];
 
-  // 🔥 ใช้ useState โดยให้ค่าเริ่มต้นเป็น `null` แล้วใช้ useEffect โหลดค่าจาก localStorage
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // ✅ โหลดค่าจาก localStorage หลังจาก component mount
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => console.log("Service Worker registered:", reg))
+        .catch((err) => console.error("Service Worker registration failed:", err));
+    }
+  }, []);
+
+  useEffect(() => {
     const storedValue = localStorage.getItem("sidebarOpen");
     setIsSidebarOpen(storedValue === "false" ? false : true);
   }, []);
 
   useEffect(() => {
-    // ✅ อัปเดต localStorage เมื่อค่าของ isSidebarOpen เปลี่ยนแปลง
     if (isSidebarOpen !== null) {
       localStorage.setItem("sidebarOpen", JSON.stringify(isSidebarOpen));
     }
@@ -39,14 +45,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <NetworkStatusProvider>
           <div className="flex h-screen">
-            {/* แสดง Sidebar เฉพาะหน้าที่กำหนด */}
             {showSidebarPages.includes(pathname) && isSidebarOpen !== null && (
               <div className={`fixed h-full transition-width duration-300 ${isSidebarOpen ? 'w-64' : 'w-16'}`}>
                 <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
               </div>
             )}
 
-            {/* เนื้อหาหลักของแต่ละหน้า */}
             <main
               className="flex-1 transition-margin duration-300"
               style={{ marginLeft: showSidebarPages.includes(pathname) && isSidebarOpen !== null ? (isSidebarOpen ? '16rem' : '4rem') : 0 }}
