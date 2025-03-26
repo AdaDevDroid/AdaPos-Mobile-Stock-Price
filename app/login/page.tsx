@@ -53,14 +53,6 @@ export default function Login() {
 
   }, []);
 
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => console.log('Service Worker registered:', reg))
-        .catch(err => console.error('Service Worker registration failed:', err));
-    }
-  }, []);
-
   const C_SETxToken = (token: string) => {
     const nExpToken = 60; // เวลาหมดอายุในหน่วยนาที
     const tokenExpiry = Math.floor(Date.now() / 1000 / 60) + nExpToken; // แปลงเวลาปัจจุบันเป็นนาที และเพิ่มเวลาหมดอายุ 60 นาที
