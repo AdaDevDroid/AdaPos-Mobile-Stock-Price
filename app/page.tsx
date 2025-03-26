@@ -36,7 +36,7 @@ export default function Home() {
       return
 
     } catch (error) {
-      console.error("⚠️ Error เช็คสิทธิ์:", error);
+      console.log("⚠️ Error เช็คสิทธิ์:", error);
       setLoading(false)
       router.replace("/login");
     }
@@ -44,15 +44,6 @@ export default function Home() {
 
   checkAuth();
 }, [router]);
-
-useEffect(() => {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker
-      .register("/sw.js")
-      .then((reg) => console.log("Service Worker registered:", reg))
-      .catch((err) => console.error("Service Worker registration failed:", err));
-  }
-}, []);
 
 if (loading) {
   return (

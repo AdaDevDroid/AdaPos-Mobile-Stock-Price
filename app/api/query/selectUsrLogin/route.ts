@@ -60,7 +60,7 @@ export async function POST(req: Request) {
                { status: 200 }
           );
      } catch (error) {
-          console.error("Database error:", error);
+          console.log("Database error:", error);
           return new NextResponse(JSON.stringify({ message: "เกิดข้อผิดพลาด", error: (error as Error).message }), {
                status: 500,
           });

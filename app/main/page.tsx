@@ -22,7 +22,7 @@ export default function MainPage() {
           console.log("✅ ข้อมูลผู้ใช้ถูกตั้งค่า");
         }
       } catch (error) {
-        console.error("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
+        console.log("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
       } 
     };
 

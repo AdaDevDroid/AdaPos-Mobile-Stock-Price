@@ -90,7 +90,7 @@ export default function Receive() {
 
         setRefSeq(crypto.randomUUID());
       } catch (error) {
-        console.error("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
+        console.log("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
       } finally {
       }
     };
@@ -162,7 +162,7 @@ export default function Receive() {
   
   const C_PRCxFetchHistoryList = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
 
@@ -185,12 +185,12 @@ export default function Receive() {
     };
 
     request.onerror = () => {
-      console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
+      console.log("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
     };
   };
   const C_PRCxFetchProductHistoryList = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
 
@@ -220,12 +220,12 @@ export default function Receive() {
     };
 
     request.onerror = () => {
-      console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
+      console.log("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
     };
   };
   const C_INSxHistoryToIndexedDB = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
     const currentDate = new Date().toLocaleDateString("th-TH");
@@ -241,7 +241,7 @@ export default function Receive() {
   };
   const C_INSxProductToIndexedDB = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
     console.log("Products ก่อน insert ลง DB", oProducts)
@@ -265,7 +265,7 @@ export default function Receive() {
 {/* Save ขอมูล Tmp */ }
   const C_INSxProductTmpToIndexedDB = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
     await C_DELoDataTmp(oDb,"TCNTProductReceiveTmp");
@@ -291,7 +291,7 @@ export default function Receive() {
 {/* Select ขอมูล Tmp */ }
   const C_PRCxFetchProductTmpList = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
 
@@ -324,7 +324,7 @@ export default function Receive() {
     };
 
     request.onerror = () => {
-      console.error("❌ ไม่สามารถดึงข้อมูลจาก TCNTProductReceiveTmp ได้");
+      console.log("❌ ไม่สามารถดึงข้อมูลจาก TCNTProductReceiveTmp ได้");
     };
   };
 
@@ -376,7 +376,7 @@ export default function Receive() {
 
 
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
     C_DELxProductTmpByFNId(oDb,id,"TCNTProductReceiveTmp");
@@ -413,7 +413,7 @@ export default function Receive() {
   
       console.log("✅ เข้าลบข้อมูล History, Data ที่เกิน limit");
       if (!oDb) {
-        console.error("❌ Database is not initialized");
+        console.log("❌ Database is not initialized");
         return;
       }
       await C_DELxLimitData(oDb, "TCNTHistoryReceive", "TCNTProductReceive");
@@ -425,7 +425,7 @@ export default function Receive() {
       await C_PRCxFetchHistoryList();
       await C_PRCxFetchProductHistoryList();
     } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
+      console.log("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
     } finally {
       setRefDoc("");
       alert("✅ บันทึกข้อมูลสำเร็จ");
@@ -513,7 +513,7 @@ export default function Receive() {
         await C_PRCxExportExcel();
       }
     } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาดการทำซ้ำ:", error);
+      console.log("❌ เกิดข้อผิดพลาดการทำซ้ำ:", error);
     }
 
     // ปิด Modal หลังจากทำงานเสร็จ
@@ -528,7 +528,7 @@ export default function Receive() {
       setProducts([]);
       setRefDoc("");
     } else {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
     }
   
   };

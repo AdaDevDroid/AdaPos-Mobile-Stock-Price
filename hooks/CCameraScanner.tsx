@@ -34,7 +34,7 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
           try {
             onScan(decodedText);
           } catch (error) {
-            console.error("Error in scan callback:", error);
+            console.log("Error in scan callback:", error);
           }
         },
         (errorMessage) => {
@@ -46,7 +46,7 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
       oHtml5QrCode.current = qrScanner;
       setIsScanning(true);
     } catch (error) {
-      console.error("🚨 Error starting scanner:", error);
+      console.log("🚨 Error starting scanner:", error);
     }
   };
 
@@ -82,7 +82,7 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
             });
         });
   
-      }).catch((err) => console.error("Error stopping scanner:", err));
+      }).catch((err) => console.log("Error stopping scanner:", err));
     }
   };
 
