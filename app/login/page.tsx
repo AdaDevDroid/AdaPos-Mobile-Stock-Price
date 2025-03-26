@@ -53,21 +53,14 @@ export default function Login() {
 
   }, []);
 
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => console.log('Service Worker registered:', reg))
-        .catch(err => console.error('Service Worker registration failed:', err));
-    }
-  }, []);
-
   const C_SETxToken = (token: string) => {
-    const nExpToken = 60;
-    const tokenExpiry = Date.now() + nExpToken * 60 * 1000; // Convert minutes to milliseconds
+    const nExpToken = 60; // เวลาหมดอายุในหน่วยนาที
+    const tokenExpiry = Math.floor(Date.now() / 1000 / 60) + nExpToken; // แปลงเวลาปัจจุบันเป็นนาที และเพิ่มเวลาหมดอายุ 60 นาที
     localStorage.setItem("session_token", token);
-    localStorage.setItem("session_expiry", tokenExpiry.toString());
-    console.log("✅ Token Stored with Expiry:", new Date(tokenExpiry).toLocaleString());
+    localStorage.setItem("session_expiry", tokenExpiry.toString()); // เก็บเวลาในหน่วยนาที
+    console.log("✅ Token Stored with Expiry:", new Date(tokenExpiry * 60 * 1000).toLocaleString()); // แปลงกลับเป็นมิลลิวินาทีเพื่อแสดงผล
   };
+
   const C_PRCbCheckUser = async (username: string, password: string, isOnline: boolean) => {
     if (!isOnline) {
       console.log("🔴 Offline Mode: Validating User from IndexedDB");
@@ -245,7 +238,7 @@ export default function Login() {
           </button>
         </form>
       </div>
-      <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.0</p>
+      <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.7</p>
       <p className="text-center text-gray-400 text-xs">© 2025 AdaPos+. All rights reserved.</p>
     </div>
   );
