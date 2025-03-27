@@ -19,9 +19,9 @@ export default function Home() {
         return;
       }
       if (tokenExpiry) {
-        const nowMinutes = Date.now() / (60 * 1000); // เวลาปัจจุบันเป็น "นาที"
+        const nowMinutes = Math.floor(Date.now() / 1000 / 60);
         console.log(tokenExpiry, nowMinutes)
-        if (nowMinutes > Number(tokenExpiry)) {
+        if (nowMinutes > parseInt(tokenExpiry)) {
           console.log("❌ Token หมดอายุ → Redirect ไปหน้า Login");
           localStorage.removeItem("session_token");
           localStorage.removeItem("session_expiry");
@@ -36,7 +36,7 @@ export default function Home() {
       return
 
     } catch (error) {
-      console.error("⚠️ Error เช็คสิทธิ์:", error);
+      console.log("⚠️ Error เช็คสิทธิ์:", error);
       setLoading(false)
       router.replace("/login");
     }
@@ -44,15 +44,6 @@ export default function Home() {
 
   checkAuth();
 }, [router]);
-
-useEffect(() => {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker
-      .register("/sw.js")
-      .then((reg) => console.log("Service Worker registered:", reg))
-      .catch((err) => console.error("Service Worker registration failed:", err));
-  }
-}, []);
 
 if (loading) {
   return (

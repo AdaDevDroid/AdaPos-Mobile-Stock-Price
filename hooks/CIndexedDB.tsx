@@ -185,7 +185,7 @@ export const C_PRCxOpenIndexedDB = async () => {
     };
 
     request.onerror = () => {
-      console.error("❌ เกิดข้อผิดพลาดในการเปิดฐานข้อมูล", request.error);
+      console.log("❌ เกิดข้อผิดพลาดในการเปิดฐานข้อมูล", request.error);
       reject(request.error);
     };
   });
@@ -230,7 +230,7 @@ export const C_DELoDataTmp = async (oDb: IDBDatabase, storeName: string): Promis
     };
 
     clearRequest.onerror = (event) => {
-      console.error("❌ ไม่สามารถลบข้อมูลในตาราง 'TCNTProductReceiveTmp' ได้", event);
+      console.log("❌ ไม่สามารถลบข้อมูลในตาราง 'TCNTProductReceiveTmp' ได้", event);
       reject(event);
     };
   });
@@ -258,7 +258,7 @@ export const C_DELxProductTmpByFNId = async (oDb: IDBDatabase, fnId: number, sto
     };
 
     request.onerror = () => {
-      console.error(`❌ ไม่สามารถลบข้อมูลจาก 'TCNTProductReceiveTmp' ที่ FNId = ${fnId}`);
+      console.log(`❌ ไม่สามารถลบข้อมูลจาก 'TCNTProductReceiveTmp' ที่ FNId = ${fnId}`);
       reject();
     };
   });
@@ -292,11 +292,11 @@ export const C_GETxUserData = async (oDb: IDBDatabase): Promise<UserInfo | null>
       };
 
       request.onerror = () => {
-        console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB");
+        console.log("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB");
         reject(null);
       };
     } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:", error);
+      console.log("❌ เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:", error);
       reject(null);
     }
   });
@@ -326,11 +326,11 @@ export const C_GETxConfig = async (oDb: IDBDatabase): Promise<SysConfig[] | null
       };
 
       request.onerror = () => {
-        console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB");
+        console.log("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB");
         reject(null);
       };
     } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาดในการดึงข้อมูล:", error);
+      console.log("❌ เกิดข้อผิดพลาดในการดึงข้อมูล:", error);
       reject(null);
     }
   });
@@ -339,7 +339,7 @@ export const C_GETxConfig = async (oDb: IDBDatabase): Promise<SysConfig[] | null
 export const C_INSxUserToDB = async (oDb: IDBDatabase, userData: UserInfo): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       reject(false);
       return;
     }
@@ -362,13 +362,13 @@ export const C_INSxUserToDB = async (oDb: IDBDatabase, userData: UserInfo): Prom
       };
 
       addRequest.onerror = (event) => {
-        console.error("❌ ไม่สามารถเพิ่มข้อมูลผู้ใช้ได้", event);
+        console.log("❌ ไม่สามารถเพิ่มข้อมูลผู้ใช้ได้", event);
         reject(false);
       };
     };
 
     clearRequest.onerror = (event) => {
-      console.error("❌ ไม่สามารถลบข้อมูลในตาราง 'TCNTUserTmp' ได้", event);
+      console.log("❌ ไม่สามารถลบข้อมูลในตาราง 'TCNTUserTmp' ได้", event);
       reject(false);
     };
   });
@@ -377,7 +377,7 @@ export const C_INSxUserToDB = async (oDb: IDBDatabase, userData: UserInfo): Prom
 export const C_INSoSysConfigToDB = async (oDb: IDBDatabase, oSysConfig: SysConfig): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       reject(false);
       return;
     }
@@ -394,7 +394,7 @@ export const C_INSoSysConfigToDB = async (oDb: IDBDatabase, oSysConfig: SysConfi
     };
 
     addRequest.onerror = (event) => {
-      console.error("❌ ไม่สามารถเพิ่มข้อมูลในตาราง 'TsysConfig' ได้", event);
+      console.log("❌ ไม่สามารถเพิ่มข้อมูลในตาราง 'TsysConfig' ได้", event);
       reject(false);
     };
 
@@ -414,7 +414,7 @@ export const C_DELoSysConfigData = async (oDb: IDBDatabase): Promise<void> => {
     };
 
     clearRequest.onerror = (event) => {
-      console.error("❌ ไม่สามารถลบข้อมูลในตาราง 'TsysConfig' ได้", event);
+      console.log("❌ ไม่สามารถลบข้อมูลในตาราง 'TsysConfig' ได้", event);
       reject(event);
     };
   });
@@ -424,7 +424,7 @@ export const C_INSxDataIndexedDB = async (oDb: IDBDatabase, storeName: string, d
   try {
 
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
     const transaction = oDb.transaction(storeName, "readwrite");
@@ -432,7 +432,7 @@ export const C_INSxDataIndexedDB = async (oDb: IDBDatabase, storeName: string, d
 
     data.forEach((item) => {
       const addRequest = store.add(item);
-      addRequest.onerror = () => console.error(`❌ บันทึกไม่สำเร็จ`, addRequest.error);
+      addRequest.onerror = () => console.log(`❌ บันทึกไม่สำเร็จ`, addRequest.error);
     });
 
     transaction.oncomplete = () => {
@@ -440,10 +440,10 @@ export const C_INSxDataIndexedDB = async (oDb: IDBDatabase, storeName: string, d
     };
 
     transaction.onerror = () => {
-      console.error("❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล", transaction.error || "Unknown Error");
+      console.log("❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล", transaction.error || "Unknown Error");
     };
   } catch (error) {
-    console.error("❌ ข้อผิดพลาดในการใช้งาน IndexedDB", error);
+    console.log("❌ ข้อผิดพลาดในการใช้งาน IndexedDB", error);
   }
 };
 
@@ -483,11 +483,11 @@ const C_DELxHistoryData = async (oDb: IDBDatabase, ptTableName: string, pnLimitD
       };
 
       request.onerror = () => {
-        console.error(`❌ ไม่สามารถดึงข้อมูลจาก ${storeName}`);
+        console.log(`❌ ไม่สามารถดึงข้อมูลจาก ${storeName}`);
         reject([]);
       };
     } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาดในการลบข้อมูล:", error);
+      console.log("❌ เกิดข้อผิดพลาดในการลบข้อมูล:", error);
       reject([]);
     }
   });
@@ -515,8 +515,8 @@ const C_DELxProductsByRefDocs = async (oDb: IDBDatabase, refDocs: string[], ptTa
       };
 
       request.onerror = () => {
-        console.error(`❌ ไม่สามารถลบข้อมูลจาก ${storeName} ที่ FTRefSeq = ${refDoc}`);
-        console.error(`❌ ไม่สามารถลบข้อมูลจาก ${storeName} ที่ FTRefSeq = ${refDoc}`);
+        console.log(`❌ ไม่สามารถลบข้อมูลจาก ${storeName} ที่ FTRefSeq = ${refDoc}`);
+        console.log(`❌ ไม่สามารถลบข้อมูลจาก ${storeName} ที่ FTRefSeq = ${refDoc}`);
       };
     });
 
@@ -526,7 +526,7 @@ const C_DELxProductsByRefDocs = async (oDb: IDBDatabase, refDocs: string[], ptTa
     };
 
     transaction.onerror = () => {
-      console.error(`❌ ลบข้อมูลจาก ${storeName} ล้มเหลว`);
+      console.log(`❌ ลบข้อมูลจาก ${storeName} ล้มเหลว`);
       reject();
     };
   });
@@ -544,7 +544,7 @@ export const C_GETxCountFromdDB = async (oDB: IDBDatabase, storeName: string): P
     };
 
     request.onerror = () => {
-      console.error("❌ ไม่สามารถดึงจำนวนข้อมูลจาก IndexedDB ได้");
+      console.log("❌ ไม่สามารถดึงจำนวนข้อมูลจาก IndexedDB ได้");
       resolve(0);
     };
   });

@@ -26,7 +26,7 @@ export const C_INSxProducts = async (oProducts: Product[]) => {
       const data = await response.json();
       console.log("✅ Insert Success:", data);
     } catch (error) {
-      console.error("❌ Insert Failed:", error);
+      console.log("❌ Insert Failed:", error);
     }
 };
 
@@ -41,6 +41,6 @@ export const C_INSxStock = async (oProducts: Product[]) => {
     const data = await response.json();
     console.log("✅ Insert Success:", data);
   } catch (error) {
-    console.error("❌ Insert Failed:", error);
+    console.log("❌ Insert Failed:", error);
   }
 };

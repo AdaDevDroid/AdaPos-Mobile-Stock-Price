@@ -30,7 +30,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
         };
         console.log("✅ Logout ผ่าน API สำเร็จ");
       } catch (error) {
-        console.error("❌ ไม่สามารถ Logout:", error);
+        console.log("❌ ไม่สามารถ Logout:", error);
       }
     // 🔄 รีไดเรกต์ออกจากระบบ
     window.location.href = "/";

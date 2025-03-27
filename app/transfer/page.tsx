@@ -47,7 +47,6 @@ export default function ReceiveGoods() {
   {/* เปิด IndexedDB */ }
   useEffect(() => {
     const initDB = async () => {
-      setIsLoading(true);
 
       try {
         const database = await C_PRCxOpenIndexedDB();
@@ -62,9 +61,7 @@ export default function ReceiveGoods() {
 
         setRefSeq(crypto.randomUUID());
       } catch (error) {
-        console.error("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
-      } finally {
-        setIsLoading(false);
+        console.log("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
       }
     };
     initDB();
@@ -129,7 +126,7 @@ export default function ReceiveGoods() {
   {/* ดึงข้อมูล History จาก IndexedDB */ }
   const C_PRCxFetchHistoryList = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
 
@@ -152,12 +149,12 @@ export default function ReceiveGoods() {
     };
 
     request.onerror = () => {
-      console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
+      console.log("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
     };
   };
   const C_PRCxFetchProductHistoryList = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
 
@@ -187,7 +184,7 @@ export default function ReceiveGoods() {
     };
 
     request.onerror = () => {
-      console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
+      console.log("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
     };
   };
   {/* เพิ่มสินค้า */ }
@@ -227,7 +224,7 @@ export default function ReceiveGoods() {
     );
 
        if (!oDb) {
-          console.error("❌ Database is not initialized");
+          console.log("❌ Database is not initialized");
           return;
         }
         C_DELxProductTmpByFNId(oDb,id,"TCNTProductTransferTmp");
@@ -254,7 +251,7 @@ export default function ReceiveGoods() {
   };
   const C_INSxHistoryToIndexedDB = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
     const currentDate = new Date().toLocaleDateString("th-TH");
@@ -270,7 +267,7 @@ export default function ReceiveGoods() {
   };
   const C_INSxProductToIndexedDB = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
 
@@ -306,7 +303,7 @@ export default function ReceiveGoods() {
 
       console.log("✅ เข้าลบข้อมูล History, Data ที่เกิน limit");
       if (!oDb) {
-        console.error("❌ Database is not initialized");
+        console.log("❌ Database is not initialized");
         return;
       }
       await C_DELxLimitData(oDb, "TCNTHistoryTransfer", "TCNTProductTransfer");
@@ -319,7 +316,7 @@ export default function ReceiveGoods() {
       await C_PRCxFetchHistoryList();
       await C_PRCxFetchProductHistoryList();
     } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
+      console.log("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
     } finally {
       setRefDoc("");
       alert("✅ บันทึกข้อมูลสำเร็จ");
@@ -329,7 +326,7 @@ export default function ReceiveGoods() {
 
   const C_INSxProductTmpToIndexedDB = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
     await C_DELoDataTmp(oDb,"TCNTProductTransferTmp");
@@ -366,7 +363,7 @@ export default function ReceiveGoods() {
 
   const C_PRCxFetchProductTmpList = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
 
@@ -400,7 +397,7 @@ export default function ReceiveGoods() {
     };
 
     request.onerror = () => {
-      console.error("❌ ไม่สามารถดึงข้อมูลจาก TCNTProductTransferTmp ได้");
+      console.log("❌ ไม่สามารถดึงข้อมูลจาก TCNTProductTransferTmp ได้");
     };
   };
 
@@ -463,7 +460,7 @@ export default function ReceiveGoods() {
         await C_PRCxExportExcel();
       }
     } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาดการทำซ้ำ:", error);
+      console.log("❌ เกิดข้อผิดพลาดการทำซ้ำ:", error);
     }
 
     // ปิด Modal หลังจากทำงานเสร็จ
@@ -480,7 +477,7 @@ export default function ReceiveGoods() {
       setProducts([]);
       setRefDoc("");
     } else {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
     }
   
   };

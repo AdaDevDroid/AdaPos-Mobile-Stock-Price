@@ -16,7 +16,6 @@ export default function Login() {
   const [bLoading, setLoading] = useState(false);
   const isOnline = useNetworkStatus()
   const [oDatabase, setODatabase] = useState<IDBDatabase | null>(null);
-  const EXP_LOGIN = 60;
 
   useEffect(() => {
     const openDB = async () => {
@@ -54,20 +53,14 @@ export default function Login() {
 
   }, []);
 
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => console.log('Service Worker registered:', reg))
-        .catch(err => console.error('Service Worker registration failed:', err));
-    }
-  }, []);
-
   const C_SETxToken = (token: string) => {
-    const tokenExpiry = Date.now() + EXP_LOGIN * 60 * 1000; // Convert minutes to milliseconds
+    const nExpToken = 60; // เวลาหมดอายุในหน่วยนาที
+    const tokenExpiry = Math.floor(Date.now() / 1000 / 60) + nExpToken; // แปลงเวลาปัจจุบันเป็นนาที และเพิ่มเวลาหมดอายุ 60 นาที
     localStorage.setItem("session_token", token);
-    localStorage.setItem("session_expiry", tokenExpiry.toString());
-    console.log("✅ Token Stored with Expiry:", new Date(tokenExpiry).toLocaleString());
+    localStorage.setItem("session_expiry", tokenExpiry.toString()); // เก็บเวลาในหน่วยนาที
+    console.log("✅ Token Stored with Expiry:", new Date(tokenExpiry * 60 * 1000).toLocaleString()); // แปลงกลับเป็นมิลลิวินาทีเพื่อแสดงผล
   };
+
   const C_PRCbCheckUser = async (username: string, password: string, isOnline: boolean) => {
     if (!isOnline) {
       console.log("🔴 Offline Mode: Validating User from IndexedDB");
@@ -129,10 +122,10 @@ export default function Login() {
         }
         console.log("✅ SysConfig Sync Completed");
       } else {
-        console.error("❌ Invalid SysConfig Data:", oConfigData);
+        console.log("❌ Invalid SysConfig Data:", oConfigData);
       }
     } catch (error) {
-      console.error("⚠️ SysConfig Sync Failed:", error);
+      console.log("⚠️ SysConfig Sync Failed:", error);
     }
   };
   const C_PRCxClickLogin = async (e: React.FormEvent) => {
@@ -171,7 +164,7 @@ export default function Login() {
       });
 
     } catch (error) {
-      console.error("⚠️ Login Error:", error);
+      console.log("⚠️ Login Error:", error);
       setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
     } finally {
       setLoading(false);
@@ -188,7 +181,7 @@ export default function Login() {
 
       return token; // ✅ Return Token กลับไป
     } catch (error) {
-      console.error("❌ Error generating offline token:", error);
+      console.log("❌ Error generating offline token:", error);
       return ""; // 🔴 กรณีเกิดข้อผิดพลาด return ค่าว่าง
     }
   }
@@ -245,7 +238,7 @@ export default function Login() {
           </button>
         </form>
       </div>
-      <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.0</p>
+      <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.7</p>
       <p className="text-center text-gray-400 text-xs">© 2025 AdaPos+. All rights reserved.</p>
     </div>
   );

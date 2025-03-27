@@ -54,7 +54,6 @@ export default function Receive() {
   {/* Set init IndexedDB */ }
   useEffect(() => { 
     const initDB = async () => {
-      setIsLoading(true);
 
       try {
         const database = await C_PRCxOpenIndexedDB();
@@ -91,9 +90,8 @@ export default function Receive() {
 
         setRefSeq(crypto.randomUUID());
       } catch (error) {
-        console.error("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
+        console.log("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
       } finally {
-        setIsLoading(false);
       }
     };
 
@@ -114,10 +112,8 @@ export default function Receive() {
   }, [bCheckAutoScan, tCost]);
   useEffect(() => {
     if (oPendingBarcode !== null) {
-      setIsLoading(true);
       C_ADDxProduct(oPendingBarcode, tCost); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
       setPendingBarcode(null);
-      setIsLoading(false);
     }
   }, [tCost]);
 
@@ -166,7 +162,7 @@ export default function Receive() {
   
   const C_PRCxFetchHistoryList = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
 
@@ -189,12 +185,12 @@ export default function Receive() {
     };
 
     request.onerror = () => {
-      console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
+      console.log("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
     };
   };
   const C_PRCxFetchProductHistoryList = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
 
@@ -224,12 +220,12 @@ export default function Receive() {
     };
 
     request.onerror = () => {
-      console.error("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
+      console.log("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
     };
   };
   const C_INSxHistoryToIndexedDB = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
     const currentDate = new Date().toLocaleDateString("th-TH");
@@ -245,7 +241,7 @@ export default function Receive() {
   };
   const C_INSxProductToIndexedDB = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
     console.log("Products ก่อน insert ลง DB", oProducts)
@@ -269,7 +265,7 @@ export default function Receive() {
 {/* Save ขอมูล Tmp */ }
   const C_INSxProductTmpToIndexedDB = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
     await C_DELoDataTmp(oDb,"TCNTProductReceiveTmp");
@@ -295,7 +291,7 @@ export default function Receive() {
 {/* Select ขอมูล Tmp */ }
   const C_PRCxFetchProductTmpList = async () => {
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
 
@@ -328,7 +324,7 @@ export default function Receive() {
     };
 
     request.onerror = () => {
-      console.error("❌ ไม่สามารถดึงข้อมูลจาก TCNTProductReceiveTmp ได้");
+      console.log("❌ ไม่สามารถดึงข้อมูลจาก TCNTProductReceiveTmp ได้");
     };
   };
 
@@ -380,7 +376,7 @@ export default function Receive() {
 
 
     if (!oDb) {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
       return;
     }
     C_DELxProductTmpByFNId(oDb,id,"TCNTProductReceiveTmp");
@@ -417,7 +413,7 @@ export default function Receive() {
   
       console.log("✅ เข้าลบข้อมูล History, Data ที่เกิน limit");
       if (!oDb) {
-        console.error("❌ Database is not initialized");
+        console.log("❌ Database is not initialized");
         return;
       }
       await C_DELxLimitData(oDb, "TCNTHistoryReceive", "TCNTProductReceive");
@@ -429,7 +425,7 @@ export default function Receive() {
       await C_PRCxFetchHistoryList();
       await C_PRCxFetchProductHistoryList();
     } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
+      console.log("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
     } finally {
       setRefDoc("");
       alert("✅ บันทึกข้อมูลสำเร็จ");
@@ -517,7 +513,7 @@ export default function Receive() {
         await C_PRCxExportExcel();
       }
     } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาดการทำซ้ำ:", error);
+      console.log("❌ เกิดข้อผิดพลาดการทำซ้ำ:", error);
     }
 
     // ปิด Modal หลังจากทำงานเสร็จ
@@ -532,7 +528,7 @@ export default function Receive() {
       setProducts([]);
       setRefDoc("");
     } else {
-      console.error("❌ Database is not initialized");
+      console.log("❌ Database is not initialized");
     }
   
   };
@@ -543,7 +539,7 @@ export default function Receive() {
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
         <div className="flex flex-row w-full py-2">
           {/* หัวข้อ */}
-          <h1 className="text-2xl font-bold md:pb-0">รับสินค้าจากผู้จำหน่าย.1</h1>
+          <h1 className="text-2xl font-bold md:pb-0">รับสินค้าจากผู้จำหน่าย</h1>
           {/* ปุ่ม 3 จุด จอเล็ก */}
           <button
             className="md:hidden ml-2 p-2 rounded-md ml-auto text-gray-500 hover:text-gray-700 text-[18px]"
