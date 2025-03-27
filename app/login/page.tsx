@@ -22,7 +22,7 @@ export default function Login() {
       navigator.serviceWorker
         .register("/sw.js")
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
-        .catch((err) => console.error("Service Worker registration failed:", err));
+        .catch((err) => console.log("Service Worker registration failed:", err));
     }
   }, []);
 
