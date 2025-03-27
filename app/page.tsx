@@ -7,6 +7,11 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.error = () => {};
+  }, []);
+
+
+  useEffect(() => {
     const checkAuth = async () => {
     try {
       setLoading(true)
