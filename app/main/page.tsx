@@ -10,6 +10,15 @@ export default function MainPage() {
   useAuth();
 
   useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
+        .catch((err) => console.error("Service Worker registration failed:", err));
+    }
+  }, []);
+
+  useEffect(() => {
     const initDB = async () => {
 
       try {

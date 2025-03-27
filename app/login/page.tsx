@@ -18,6 +18,15 @@ export default function Login() {
   const [oDatabase, setODatabase] = useState<IDBDatabase | null>(null);
 
   useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
+        .catch((err) => console.error("Service Worker registration failed:", err));
+    }
+  }, []);
+
+  useEffect(() => {
     const openDB = async () => {
       const db = await C_PRCxOpenIndexedDB();
       setODatabase(db);
@@ -238,7 +247,7 @@ export default function Login() {
           </button>
         </form>
       </div>
-      <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.7</p>
+      <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.9</p>
       <p className="text-center text-gray-400 text-xs">© 2025 AdaPos+. All rights reserved.</p>
     </div>
   );

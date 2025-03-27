@@ -51,6 +51,16 @@ export default function Receive() {
 
   {/* เช็ค User */ }
   useAuth();
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
+        .catch((err) => console.error("Service Worker registration failed:", err));
+    }
+  }, []);
+
   {/* Set init IndexedDB */ }
   useEffect(() => { 
     const initDB = async () => {

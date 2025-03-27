@@ -48,6 +48,14 @@ export default function ReceiveGoods() {
   {/* เช็ค User*/ }
   useAuth();
 
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
+        .catch((err) => console.error("Service Worker registration failed:", err));
+    }
+  }, []);
 
   {/* เปิด IndexedDB */ }
   useEffect(() => {

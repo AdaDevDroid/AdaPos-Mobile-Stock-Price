@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/sw.js")
-        .then((reg) => console.log("Service Worker registered:", reg))
+        .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.error("Service Worker registration failed:", err));
     }
   }, []);
