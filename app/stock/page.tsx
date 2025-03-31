@@ -257,7 +257,7 @@ export default function ReceiveGoods() {
         FDCreateOn: C_SETxFormattedDate()
       };
 
-
+      C_INSxProductTmpToIndexedDB([newProduct]);
       return [...prevProducts, newProduct];
     });
 
@@ -422,44 +422,17 @@ export default function ReceiveGoods() {
     };
 
 
-    const C_INSxProductTmpToIndexedDB = async () => {
+    const C_INSxProductTmpToIndexedDB = async (data: Product[]) => {
       if (!oDb) {
         console.log("❌ Database is not initialized");
         return;
       }
+      await C_INSxDataIndexedDB(oDb, "TCNTProductStockTmp", data);
 
-      await C_DELoDataTmp(oDb,"TCNTProductStockTmp");
-
-      const productData = oProducts.map((oProducts) => ({
-        FNId: oProducts.FNId,
-        FTBarcode: oProducts.FTBarcode,
-        FCCost: 0,
-        FNQuantity: oProducts.FNQuantity,
-        FTRefDoc: oProducts.FTRefDoc,
-        FTRefSeq: oProducts.FTRefSeq,
-        FTXthDocKey: "TCNTDocDTTmpAdj",
-        FTBchCode: oUserInfo?.FTBchCode || "",
-        FTAgnCode: oUserInfo?.FTAgnCode || "",
-        FTUsrName: oUserInfo?.FTUsrName || "",
-        FDCreateOn: C_SETxFormattedDate()
-      }));
-  
-      await C_INSxDataIndexedDB(oDb, "TCNTProductStockTmp", productData);
-      alert("✅ บันทึกข้อมูลสำเร็จ");
     };
 
 
-    async function C_PRCxSaveTmp() {
-      setIsLoading(true);
-      if (!oProducts || oProducts.length === 0) {
-        setIsLoading(false);
-        alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
-        return;
-      }
-      // Save Tmp Data to IndexedDB
-      C_INSxProductTmpToIndexedDB();
-      setIsLoading(false);
-    };
+
 
     async function C_PRCxSaveClearTmpData() {
      
@@ -662,17 +635,7 @@ export default function ReceiveGoods() {
                        ล้างข้อมูล
             </button>
         </div>
-        <div >
-            <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
-                onClick={C_PRCxSaveTmp}>
-                  <FaRegSave className="mr-2" />
-                        บันทึก
-            </button>
-        </div>
-      </div> 
-    
-                 
-
+      </div>     
       {/* ประวัติการทำรายการ */}
       <HistoryModal
         isOpen={isHistoryOpen}
