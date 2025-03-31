@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
+import { useState } from "react";
 import { FaHome, FaBoxOpen, FaExchangeAlt, FaClipboardCheck, FaTags, FaSignOutAlt, FaBars } from "react-icons/fa";
 
 const menuItems = [
@@ -19,29 +20,38 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname(); // ✅ ดึง path ของหน้าปัจจุบัน
+  const tUrlImg = "";
 
   const handleLogout = async () => {
     console.log("logout");
-      try {
-        if (localStorage.getItem("session_token")) {
-          localStorage.removeItem("session_token");
-          localStorage.removeItem("session_expiry");
-          localStorage.removeItem("sidebarOpen");
-        };
-        console.log("✅ Logout ผ่าน API สำเร็จ");
-      } catch (error) {
-        console.log("❌ ไม่สามารถ Logout:", error);
-      }
+    try {
+      if (localStorage.getItem("session_token")) {
+        localStorage.removeItem("session_token");
+        localStorage.removeItem("session_expiry");
+        localStorage.removeItem("sidebarOpen");
+      };
+      console.log("✅ Logout ผ่าน API สำเร็จ");
+    } catch (error) {
+      console.log("❌ ไม่สามารถ Logout:", error);
+    }
     // 🔄 รีไดเรกต์ออกจากระบบ
     window.location.href = "/";
   };
   return (
     <div className={`h-full bg-white shadow-md text-white whitespace-nowrap ${isOpen ? "w-64" : "w-16"} transition-all duration-300 fixed`}>
       {/* ปุ่มเปิด-ปิด */}
-      <div className="flex p-4 bg-blue-600 justify-between items-center">
+      <div className={`flex ${isOpen ? "p-4" : "p-3"} justify-center items-center ${isOpen ? "bg-blue-600" : "bg-white"}`}>
         <span className={`text-l font-bold ${!isOpen && "hidden"}`}>AdaPos+ Stock & Price</span>
         <button onClick={toggleSidebar} className="text-white">
-          <FaBars className={`${isOpen ? "ms-4" : "ms-0"}`} size={24} />
+          {isOpen ? (
+            <FaBars className="ms-4" size={24} />
+          ) : (
+            <img
+              src={tUrlImg && tUrlImg !== "" ? tUrlImg : "/icons/logoAda.png"}
+              alt="Logo"
+              className="w-8 h-8"
+            />
+          )}
         </button>
       </div>
 
