@@ -273,29 +273,15 @@ export default function Receive() {
     setProducts([]);
   };
 {/* Save ขอมูล Tmp */ }
-  const C_INSxProductTmpToIndexedDB = async () => {
+  const C_INSxProductTmpToIndexedDB = async (data: Product[]) => {
     if (!oDb) {
       console.log("❌ Database is not initialized");
       return;
     }
-    await C_DELoDataTmp(oDb,"TCNTProductReceiveTmp");
-    console.log("Products ก่อน insert ลง DB", oProducts)
-    const productData = oProducts.map((oProducts) => ({
-      FNId: oProducts.FNId,
-      FTBarcode: oProducts.FTBarcode,
-      FCCost: oProducts.FCCost,
-      FNQuantity: oProducts.FNQuantity,
-      FTRefDoc: oProducts.FTRefDoc,
-      FTRefSeq: tRefSeq,
-      FTXthDocKey: "TCNTPdtTwiHD",
-      FTBchCode: oUserInfo?.FTBchCode || "",
-      FTAgnCode: oUserInfo?.FTAgnCode || "",
-      FTUsrName: oUserInfo?.FTUsrName || "",
-      FDCreateOn: C_SETxFormattedDate()
-    }));
-    console.log("Products ก่อน insert ลง DB 2", productData)
-    await C_INSxDataIndexedDB(oDb, "TCNTProductReceiveTmp", productData);
-    alert("✅ บันทึกข้อมูลสำเร็จ");
+
+   
+    await C_INSxDataIndexedDB(oDb, "TCNTProductReceiveTmp", data);
+
   };
 
 {/* Select ขอมูล Tmp */ }
@@ -368,7 +354,7 @@ export default function Receive() {
         FTUsrName: oUserInfo?.FTUsrName || "",
         FDCreateOn: C_SETxFormattedDate()
       };
-
+      C_INSxProductTmpToIndexedDB([newProduct])
       return [...prevProducts, newProduct];
     });
 
@@ -474,22 +460,6 @@ export default function Receive() {
     C_PRCxSaveDB();
     
     
-    setIsLoading(false);
-  };
-
-
-
-
-
-  async function C_PRCxSaveTmp() {
-    setIsLoading(true);
-    if (!oProducts || oProducts.length === 0) {
-      setIsLoading(false);
-      alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
-      return;
-    }
-    // Save Tmp Data to IndexedDB
-    C_INSxProductTmpToIndexedDB();
     setIsLoading(false);
   };
 
@@ -701,13 +671,6 @@ export default function Receive() {
             <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
                 onClick={C_PRCxSaveClearTmpData}>
                        ล้างข้อมูล
-            </button>
-        </div>
-        <div >
-            <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
-                onClick={C_PRCxSaveTmp}>
-                  <FaRegSave className="mr-2" />
-                        บันทึก
             </button>
         </div>
       </div> 

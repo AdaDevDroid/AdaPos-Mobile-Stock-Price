@@ -218,7 +218,7 @@ export default function ReceiveGoods() {
         FTUsrName: oUserInfo?.FTUsrName || "",
         FDCreateOn: C_SETxFormattedDate()
       };
-
+      C_INSxProductTmpToIndexedDB([newProduct]);
       return [...prevProducts, newProduct];
     });
 
@@ -334,42 +334,16 @@ export default function ReceiveGoods() {
   }
 
 
-  const C_INSxProductTmpToIndexedDB = async () => {
+  const C_INSxProductTmpToIndexedDB = async (data: Product[]) => {
     if (!oDb) {
       console.log("❌ Database is not initialized");
       return;
     }
-    await C_DELoDataTmp(oDb,"TCNTProductTransferTmp");
-    const productData = oProducts.map((oProducts) => ({
-      FNId: oProducts.FNId,
-      FTBarcode: oProducts.FTBarcode,
-      FCCost: 0,
-      FNQuantity: oProducts.FNQuantity,
-      FTRefDoc: oProducts.FTRefDoc,
-      FTRefSeq: oProducts.FTRefSeq,
-      FTXthDocKey: "TCNTPdtTwxHD",
-      FTBchCode: oUserInfo?.FTBchCode || "",
-      FTAgnCode: oUserInfo?.FTAgnCode || "",
-      FTUsrName: oUserInfo?.FTUsrName || "",
-      FDCreateOn: C_SETxFormattedDate()
-    }));
+    await C_INSxDataIndexedDB(oDb, "TCNTProductTransferTmp", data);
 
-    await C_INSxDataIndexedDB(oDb, "TCNTProductTransferTmp", productData);
-     alert("✅ บันทึกข้อมูลสำเร็จ");
-   
   };
 
-  async function C_PRCxSaveTmp() {
-    setIsLoading(true);
-    if (!oProducts || oProducts.length === 0) {
-      setIsLoading(false);
-      alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
-      return;
-    }
-    // Save Tmp Data to IndexedDB
-    C_INSxProductTmpToIndexedDB();
-    setIsLoading(false);
-  };
+
 
   const C_PRCxFetchProductTmpList = async () => {
     if (!oDb) {
@@ -639,13 +613,6 @@ export default function ReceiveGoods() {
             <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
                 onClick={C_PRCxSaveClearTmpData}>
                        ล้างข้อมูล
-            </button>
-        </div>
-        <div >
-            <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
-                onClick={C_PRCxSaveTmp}>
-                  <FaRegSave className="mr-2" />
-                        บันทึก
             </button>
         </div>
       </div> 
