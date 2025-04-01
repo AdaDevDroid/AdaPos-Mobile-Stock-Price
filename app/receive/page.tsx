@@ -6,7 +6,7 @@ import InputWithLabelAndButton from "@/components/InputWithLabelAndButton";
 import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
-import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory, FaRegSave } from "react-icons/fa";
+import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory } from "react-icons/fa";
 import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CTransferreceiptoutToExcel';
@@ -667,7 +667,7 @@ export default function Receive() {
 
           
       <div className="flex w-full md:w-auto md:ml-auto pt-2 mb-10 relative justify-end">
-        <div className=" mr-4 " >
+        <div>
             <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
                 onClick={C_PRCxSaveClearTmpData}>
                        ล้างข้อมูล

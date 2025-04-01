@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { useState } from "react";
 import { FaHome, FaBoxOpen, FaExchangeAlt, FaClipboardCheck, FaTags, FaSignOutAlt, FaBars } from "react-icons/fa";
 
 const menuItems = [
@@ -63,7 +62,10 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
           return (
             <div
               key={index}
-              onClick={() => router.push(item.path)}
+              onClick={
+                () => router.push(item.path)
+                //() => (window.location.href = item.path)
+              }
               className={`flex items-center p-4 cursor-pointer transition-all duration-200 
                 ${isActive ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100 text-gray-700"}`}
             >
