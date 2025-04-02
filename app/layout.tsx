@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     const storedValue = localStorage.getItem("sidebarOpen");
-    setIsSidebarOpen(storedValue === "false" ? false : true);
+    setIsSidebarOpen(storedValue ? JSON.parse(storedValue) : false);
   }, []);
 
   useEffect(() => {

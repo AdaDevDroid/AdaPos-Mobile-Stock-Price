@@ -199,7 +199,7 @@ export default function ReceiveGoods() {
     };
   };
 
-  const C_INSxHistoryToIndexedDB = async () => {
+  const C_INSxHistoryToIndexedDB = async (pnType: number) => {
     if (!oDb) {
       console.log("❌ Database is not initialized");
       return;
@@ -209,7 +209,7 @@ export default function ReceiveGoods() {
     const historyData: History = {
       FTDate: currentDate,
       FTRefDoc: tRefDoc,
-      FNStatus: 1,
+      FNStatus: pnType,
       FTRefSeq: tRefSeq
     };
 
@@ -317,7 +317,8 @@ export default function ReceiveGoods() {
   };
 
     {/* Upload */ }
-    async function C_PRCxSaveDB() {
+    async function C_PRCxSaveDB(pnType: number) {
+
       if (!isNetworkOnline) {
         alert("❌ ข้อความ: Internet Offline");
         return;
@@ -334,7 +335,7 @@ export default function ReceiveGoods() {
         console.log("✅ RefSeq = ",newRefSeq);
   
         console.log("✅ ข้อมูล History ถูกบันทึก");
-        await C_INSxHistoryToIndexedDB();
+        await C_INSxHistoryToIndexedDB(pnType);
   
         console.log("✅ ข้อมูล Product ถูกบันทึก");
         await C_INSxProductToIndexedDB();
@@ -364,6 +365,7 @@ export default function ReceiveGoods() {
 
 
   async function C_PRCxUploadeWebServices() {
+    //pnType 1 = Upload, 2 = Export, 0 = Upload Error
     setIsLoading(true);
     if (!oProducts || oProducts.length === 0) {
       setIsLoading(false);
@@ -371,8 +373,10 @@ export default function ReceiveGoods() {
       return;
     }
     if (!isNetworkOnline) {
+      C_PRCxSaveDB(0);
+      alert("❌ ข้อความ: Upload ไม่สำเร็จ");
       setIsLoading(false);
-      alert("❌ ข้อความ: Internet Offline ระบบยังไม่ Upload ขึ้น");
+      return;
     }
 
         // //  Upload ผ่าน Web Services
@@ -387,7 +391,7 @@ export default function ReceiveGoods() {
         }
     
     // Save Data to IndexedDB
-    C_PRCxSaveDB();
+    C_PRCxSaveDB(1);
 
     setIsLoading(false);
   }
@@ -403,7 +407,7 @@ export default function ReceiveGoods() {
     // ส่งออกเป็น Excel
     exportProduct();
     // Save Data to IndexedDB
-    C_PRCxSaveDB();
+    C_PRCxSaveDB(2);
 
     setIsLoading(false);
   }

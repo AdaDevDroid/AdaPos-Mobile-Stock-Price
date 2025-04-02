@@ -7,7 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { History, Product, UserInfo } from "@/models/models";
 import { useEffect, useState } from "react";
 import { FaCheckCircle, FaExclamationCircle, FaSyncAlt, FaRegCalendar } from "react-icons/fa";
-import { C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
+import { C_INSxProducts, C_INSxStock, C_SETxFormattedDate } from "@/hooks/CSP";
+import exportToExcel from "@/hooks/CTransferreceiptoutToExcel";
 
 
 export default function MainPage() {
@@ -237,7 +238,7 @@ export default function MainPage() {
         await C_PRCxUploadeWebServices();
         console.log("webService:", oProducts);
       } else if (option === "excel") {
-        // await C_PRCxExportExcel();
+        await C_PRCxExportExcel();
         console.log("excel:", tRefDoc);
       }
     } catch (error) {
@@ -248,6 +249,22 @@ export default function MainPage() {
     setIsRepeat(false);
   };
 
+  async function C_PRCxExportExcel() {
+    setIsLoading(true);
+    if (!oProducts || oProducts.length === 0) {
+      setIsLoading(false);
+      alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
+      return;
+    }
+
+    // ส่งออกเป็น Excel
+    exportProduct();
+    // Save Data to IndexedDB
+    C_PRCxSaveDB(2);
+
+    setIsLoading(false);
+  };
+
   async function C_PRCxUploadeWebServices() {
     setIsLoading(true);
     if (!oProducts || oProducts.length === 0) {
@@ -256,19 +273,42 @@ export default function MainPage() {
       return;
     }
     if (!isNetworkOnline) {
+      C_PRCxSaveDB(0);
+      alert("❌ ข้อความ: Upload ไม่สำเร็จ");
       setIsLoading(false);
-      alert("❌ ข้อความ: Internet Offline ระบบยังไม่ Upload ขึ้น");
+      return;
     }
-    console.log("Products ก่อนอัพโหลด", oProducts)
-    //  Upload ผ่าน Web Services
-    C_INSxProducts(oProducts);
+    try {
+      //  Upload ผ่าน Web Services
+      if (tType === "Stock") {
+        await C_INSxStock(oProducts);
+      } else {
+        await C_INSxProducts(oProducts);
+      }
+    } catch (error) {
+      console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
+      alert("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล");
+    } finally {
+      setIsLoading(false); // ปิด loading progress
+    }
     // Save Data to IndexedDB
-    C_PRCxSaveDB();
+    C_PRCxSaveDB(1);
 
     setIsLoading(false);
   };
 
-  async function C_PRCxSaveDB() {
+  {/* export excel */ }
+  const exportProduct = () => {
+    const formattedProducts = oProducts.map(oProducts => ({
+      tBarcode: oProducts.FTBarcode,
+      tQTY: oProducts.FNQuantity.toString(),
+      tCost: oProducts.FCCost.toString()
+    }));
+    exportToExcel(formattedProducts);
+  };
+
+  async function C_PRCxSaveDB(pnType: number) {
+    //pnType 1 = Upload, 2 = Export, 0 = Upload Error
     try {
       console.log("✅ หา RefSeq ใหม่");
       const newRefSeq = crypto.randomUUID();
@@ -295,7 +335,7 @@ export default function MainPage() {
       }
 
       console.log("✅ ข้อมูล History ถูกบันทึก");
-      await C_INSxHistoryToIndexedDB();
+      await C_INSxHistoryToIndexedDB(pnType);
 
       console.log("✅ ข้อมูล Product ถูกบันทึก");
       await C_INSxProductToIndexedDB();
@@ -353,7 +393,7 @@ export default function MainPage() {
     }
   };
 
-  const C_INSxHistoryToIndexedDB = async () => {
+  const C_INSxHistoryToIndexedDB = async (pnType: number) => {
     let tTaleName = "";
     switch (tType) {
       case "Recieve":
@@ -378,7 +418,7 @@ export default function MainPage() {
     const historyData: History = {
       FTDate: currentDate,
       FTRefDoc: tRefDoc,
-      FNStatus: isNetworkOnline ? 1 : 1,
+      FNStatus: pnType,
       FTRefSeq: tRefSeq
     };
 
@@ -434,8 +474,8 @@ export default function MainPage() {
       </div>
 
       <div className="container mx-auto p-2 space-y-2">
-        <h1 className="text-xl font-bold mb-4 text-gray-800">ประวัติการทำรายการล่าสุด</h1>
-        <h2 className="text-m mb-2 text-gray-600">รับสินค้าจากผู้จำหน่าย</h2>
+        <h1 className="text-xl font-bold mb-4 ps-2 text-gray-800">ประวัติการทำรายการล่าสุด</h1>
+        <h2 className="text-m mb-2 ps-2 text-gray-600">รับสินค้าจากผู้จำหน่าย</h2>
         {oReceiveDataHistory.length === 0 ? (
           <p className="text-center text-gray-500">ไม่มีประวัติการทำรายการ</p>
         ) : (
@@ -451,7 +491,11 @@ export default function MainPage() {
                   เลขที่อ้างอิง <span className="text-sm text-gray-500 font-normal">#{data.FTRefDoc}</span>
                 </p>
                 <p className="text-sm text-gray-500 mt-2">
-                  {data.FNStatus === 1 ? "อัพโหลดผ่าน Web Services สำเร็จ" : "อัพโหลดผ่าน Web Services ไม่สำเร็จ"}
+                  {data.FNStatus === 1
+                    ? "อัพโหลดผ่าน Web Services สำเร็จ"
+                    : data.FNStatus === 2
+                      ? "Export ไฟล์ Excel สำเร็จ"
+                      : "อัพโหลดผ่าน Web Services ไม่สำเร็จ"}
                 </p>
                 <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
                   <FaRegCalendar className="w-4 h-4 text-gray-400" /> {data.FTDate}
@@ -460,10 +504,10 @@ export default function MainPage() {
 
               {/* ขวา: สถานะ + ปุ่ม */}
               <div className="flex flex-col items-end gap-2 h-full">
-                {data.FNStatus === 1 ? (
-                  <FaCheckCircle className="w-5 h-5 text-green-500" />
-                ) : (
+                {data.FNStatus === 0 ? (
                   <FaExclamationCircle className="w-5 h-5 text-red-500" />
+                ) : (
+                  <FaCheckCircle className="w-5 h-5 text-green-500" />
                 )}
                 <div className="h-2"></div>
                 <button
@@ -483,7 +527,7 @@ export default function MainPage() {
 
 
       <div className="container mx-auto p-2 space-y-2">
-        <h2 className="text-m mb-2 text-gray-600">รับ / โอนสินค้าระหว่างสาขา</h2>
+        <h2 className="text-m ps-2 mb-2 text-gray-600">รับ / โอนสินค้าระหว่างสาขา</h2>
         {oTranferDataHistory.length === 0 ? (
           <p className="text-center text-gray-500">ไม่มีประวัติการทำรายการ</p>
         ) : (
@@ -499,7 +543,11 @@ export default function MainPage() {
                   เลขที่อ้างอิง <span className="text-sm text-gray-500 font-normal">#{data.FTRefDoc}</span>
                 </p>
                 <p className="text-sm text-gray-500 mt-2">
-                  {data.FNStatus === 1 ? "อัพโหลดผ่าน Web Services สำเร็จ" : "อัพโหลดผ่าน Web Services ไม่สำเร็จ"}
+                  {data.FNStatus === 1
+                    ? "อัพโหลดผ่าน Web Services สำเร็จ"
+                    : data.FNStatus === 2
+                      ? "Export ไฟล์ Excel สำเร็จ"
+                      : "อัพโหลดผ่าน Web Services ไม่สำเร็จ"}
                 </p>
                 <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
                   <FaRegCalendar className="w-4 h-4 text-gray-400" /> {data.FTDate}
@@ -508,10 +556,10 @@ export default function MainPage() {
 
               {/* ขวา: สถานะ + ปุ่ม */}
               <div className="flex flex-col items-end gap-2 h-full">
-                {data.FNStatus === 1 ? (
-                  <FaCheckCircle className="w-5 h-5 text-green-500" />
-                ) : (
+                {data.FNStatus === 0 ? (
                   <FaExclamationCircle className="w-5 h-5 text-red-500" />
+                ) : (
+                  <FaCheckCircle className="w-5 h-5 text-green-500" />
                 )}
                 <div className="h-2"></div>
                 <button
@@ -531,7 +579,7 @@ export default function MainPage() {
 
 
       <div className="container mx-auto p-2 space-y-2">
-        <h2 className="text-m mb-2 text-gray-600">ตรวจนับสต็อก</h2>
+        <h2 className="text-m ps-2 mb-2 text-gray-600">ตรวจนับสต็อก</h2>
         {oStockDataHistory.length === 0 ? (
           <p className="text-center text-gray-500">ไม่มีประวัติการทำรายการ</p>
         ) : (
@@ -547,7 +595,11 @@ export default function MainPage() {
                   เลขที่อ้างอิง <span className="text-sm text-gray-500 font-normal">#{data.FTRefDoc}</span>
                 </p>
                 <p className="text-sm text-gray-500 mt-2">
-                  {data.FNStatus === 1 ? "อัพโหลดผ่าน Web Services สำเร็จ" : "อัพโหลดผ่าน Web Services ไม่สำเร็จ"}
+                  {data.FNStatus === 1
+                    ? "อัพโหลดผ่าน Web Services สำเร็จ"
+                    : data.FNStatus === 2
+                      ? "Export ไฟล์ Excel สำเร็จ"
+                      : "อัพโหลดผ่าน Web Services ไม่สำเร็จ"}
                 </p>
                 <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
                   <FaRegCalendar className="w-4 h-4 text-gray-400" /> {data.FTDate}
@@ -556,10 +608,10 @@ export default function MainPage() {
 
               {/* ขวา: สถานะ + ปุ่ม */}
               <div className="flex flex-col items-end gap-2 h-full">
-                {data.FNStatus === 1 ? (
-                  <FaCheckCircle className="w-5 h-5 text-green-500" />
-                ) : (
+                {data.FNStatus === 0 ? (
                   <FaExclamationCircle className="w-5 h-5 text-red-500" />
+                ) : (
+                  <FaCheckCircle className="w-5 h-5 text-green-500" />
                 )}
                 <div className="h-2"></div>
                 <button
