@@ -719,7 +719,7 @@ export default function Receive() {
         <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50 z-[9999]">
           <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
         </div>
-      )}Í
+      )}
 
       {/* Repeat */}
       <RepeatModal

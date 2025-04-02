@@ -266,7 +266,7 @@ export default function ReceiveGoods() {
       return;
     }
     const currentDate = new Date().toLocaleDateString("th-TH");
-
+    console.log("✅ tRefSeq History:", tRefSeq);
     const historyData: History = {
       FTDate: currentDate,
       FTRefDoc: refDoc,
@@ -281,7 +281,7 @@ export default function ReceiveGoods() {
       console.log("❌ Database is not initialized");
       return;
     }
-
+    console.log("✅ tRefSeq Product:", tRefSeq);
     const productData = oProducts.map((oProducts) => ({
       FNId: oProducts.FNId,
       FTBarcode: oProducts.FTBarcode,
@@ -478,8 +478,15 @@ export default function ReceiveGoods() {
     }
 
   };
+
+  {/* ปิด Dropdown เมื่อคลิกข้างนอก */ }
+  const C_SETxCloseDropdown = () => {
+    if (isOpen) {
+      setIsOpen(false);
+    }
+  };
   return (
-    <div className="p-4 ms-1 mx-auto bg-white">
+    <div className="p-4 ms-1 mx-auto bg-white" onClick={C_SETxCloseDropdown}>
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
         <div className="flex flex-row w-full py-2">
           {/* หัวข้อ */}
