@@ -367,8 +367,18 @@ export default function ReceiveGoods() {
       alert("❌ ข้อความ: Internet Offline ระบบยังไม่ Upload ขึ้น");
     }
 
-    //  Upload ผ่าน Web Services
-    C_INSxStock(oProducts);
+        // //  Upload ผ่าน Web Services
+        // C_INSxProducts(oProducts);
+        try {
+          setIsLoading(true); // เปิด loading progress
+          await  C_INSxStock(oProducts); // รอให้ฟังก์ชันทำงานสำเร็จ
+        } catch (error) {
+          console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
+          alert("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล");
+        } finally {
+          setIsLoading(false); // ปิด loading progress
+        }
+    
     // Save Data to IndexedDB
     C_PRCxSaveDB();
 
