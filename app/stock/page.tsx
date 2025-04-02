@@ -292,7 +292,7 @@ export default function ReceiveGoods() {
   {/* export excel */ }
   const exportProduct = () => {
     const oDataProducts = oProducts.map(product => ({
-      tProductCode: "000001",
+      tProductCode: "",
       tBarcode: product.FTBarcode,
       tStockCode: "",
       tQTY: product.FNQuantity.toString(),
@@ -378,7 +378,6 @@ export default function ReceiveGoods() {
         // //  Upload ผ่าน Web Services
         // C_INSxProducts(oProducts);
         try {
-          setIsLoading(true); // เปิด loading progress
           await  C_INSxStock(oProducts); // รอให้ฟังก์ชันทำงานสำเร็จ
         } catch (error) {
           console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);

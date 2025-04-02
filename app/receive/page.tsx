@@ -443,7 +443,6 @@ export default function Receive() {
     // //  Upload ผ่าน Web Services
     // C_INSxProducts(oProducts);
     try {
-      setIsLoading(true); // เปิด loading progress
       await C_INSxProducts(oProducts); // รอให้ฟังก์ชันทำงานสำเร็จ
     } catch (error) {
       console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
