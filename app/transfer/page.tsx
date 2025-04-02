@@ -260,7 +260,7 @@ export default function ReceiveGoods() {
     }));
     exportToExcel(formattedProducts);
   };
-  const C_INSxHistoryToIndexedDB = async () => {
+  const C_INSxHistoryToIndexedDB = async (pnType: number) => {
     if (!oDb) {
       console.log("❌ Database is not initialized");
       return;
@@ -270,7 +270,7 @@ export default function ReceiveGoods() {
     const historyData: History = {
       FTDate: currentDate,
       FTRefDoc: refDoc,
-      FNStatus: 1,
+      FNStatus: pnType,
       FTRefSeq: tRefSeq
     };
 
@@ -299,7 +299,8 @@ export default function ReceiveGoods() {
     await C_INSxDataIndexedDB(oDb, "TCNTProductTransfer", productData);
     setProducts([]);
   };
-  async function C_PRCxSaveDB() {
+  async function C_PRCxSaveDB(pnType: number) {
+    //pnType 1 = Upload, 2 = Export, 0 = Upload Error
     try {
       console.log("✅ หา RefSeq ใหม่");
       const newRefSeq = crypto.randomUUID();
@@ -307,7 +308,7 @@ export default function ReceiveGoods() {
       console.log("✅ RefSeq = ", newRefSeq);
 
       console.log("✅ ข้อมูล History ถูกบันทึก");
-      await C_INSxHistoryToIndexedDB();
+      await C_INSxHistoryToIndexedDB(pnType);
 
       console.log("✅ ข้อมูล Product ถูกบันทึก");
       await C_INSxProductToIndexedDB();
@@ -396,8 +397,10 @@ export default function ReceiveGoods() {
       return;
     }
     if (!isNetworkOnline) {
+      C_PRCxSaveDB(0);
+      alert("❌ ข้อความ: Upload ไม่สำเร็จ");
       setIsLoading(false);
-      alert("❌ ข้อความ: Internet Offline ระบบยังไม่ Upload ขึ้น");
+      return;
     }
     // //  Upload ผ่าน Web Services
     // C_INSxProducts(oProducts);
@@ -410,7 +413,7 @@ export default function ReceiveGoods() {
       setIsLoading(false); // ปิด loading progress
     }
     // Save Data to IndexedDB
-    C_PRCxSaveDB();
+    C_PRCxSaveDB(1);
 
     setIsLoading(false);
   }
@@ -425,7 +428,7 @@ export default function ReceiveGoods() {
     // ส่งออกเป็น Excel
     exportProduct();
     // Save Data to IndexedDB
-    C_PRCxSaveDB();
+    C_PRCxSaveDB(2);
 
     setIsLoading(false);
   }

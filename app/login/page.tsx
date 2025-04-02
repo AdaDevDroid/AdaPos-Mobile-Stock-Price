@@ -6,6 +6,7 @@ import { C_PRCxOpenIndexedDB, C_INSxUserToDB, C_INSoSysConfigToDB, C_DELoSysConf
 import { CEncrypt } from '../../hooks/CEncrypt';
 import { serialize, parse } from "cookie";
 import { useNetworkStatus } from '@/hooks/NetworkStatusContext'
+import Image from "next/image";
 
 export default function Login() {
   const router = useRouter();
@@ -198,9 +199,11 @@ export default function Login() {
     <div className="flex flex-col min-h-screen items-center justify-center bg-gray-100">
       <div className="flex flex-col items-center text-center mb-6">
         <div className="text-white text-2xl font-bold flex items-center justify-center w-16 h-16 rounded-md">
-          <img
+          <Image
             src="/icons/logoAda.png"
             alt="Logo"
+            width={64}
+            height={64}
             className="h-16 text-center text-sm"
           />
         </div>
@@ -254,10 +257,12 @@ export default function Login() {
 
       <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.9</p>
       <p className="text-center text-gray-400 text-xs">© 2025 AdaPos+. All rights reserved.</p>
-      <img
+      <Image
         src="/icons/logoAdaLogin.png"
         alt="Logo"
-        className="h-8 text-center text-sm"
+        width={80}
+        height={80}
+        className="text-center"
       />
     </div>
   );

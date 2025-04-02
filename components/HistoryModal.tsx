@@ -41,12 +41,12 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, oDataHisto
                                     <td className="p-2">{data.FTRefDoc}</td>
                                     <td className="p-2">
                                         <span
-                                            className={`inline-flex items-center px-2 py-1 rounded-lg ${data.FNStatus === 1
+                                            className={`inline-flex items-center px-2 py-1 rounded-lg ${data.FNStatus !== 0
                                                 ? "bg-green-100 text-green-600"
                                                 : "bg-red-100 text-red-600"
                                                 }`}
                                         >
-                                            {data.FNStatus === 1 ? "บันทึกแล้ว" : "ยกเลิก"}
+                                            {data.FNStatus !== 0 ? "บันทึกแล้ว" : "ยกเลิก"}
                                         </span>
                                     </td>
                                     <td className="p-2">
