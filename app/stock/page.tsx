@@ -292,7 +292,7 @@ export default function ReceiveGoods() {
   {/* export excel */ }
   const exportProduct = () => {
     const oDataProducts = oProducts.map(product => ({
-      tProductCode: "000001",
+      tProductCode: "",
       tBarcode: product.FTBarcode,
       tStockCode: "",
       tQTY: product.FNQuantity.toString(),
@@ -379,8 +379,17 @@ export default function ReceiveGoods() {
       return;
     }
 
-    //  Upload ผ่าน Web Services
-    C_INSxStock(oProducts);
+        // //  Upload ผ่าน Web Services
+        // C_INSxProducts(oProducts);
+        try {
+          await  C_INSxStock(oProducts); // รอให้ฟังก์ชันทำงานสำเร็จ
+        } catch (error) {
+          console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
+          alert("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล");
+        } finally {
+          setIsLoading(false); // ปิด loading progress
+        }
+    
     // Save Data to IndexedDB
     C_PRCxSaveDB(1);
 

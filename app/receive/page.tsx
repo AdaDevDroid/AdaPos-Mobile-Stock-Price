@@ -338,6 +338,7 @@ export default function Receive() {
       return;
     }
 
+
     setProducts((prevProducts) => {
       const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
 
@@ -444,12 +445,23 @@ export default function Receive() {
       return;
     }
     console.log("Products ก่อนอัพโหลด", oProducts)
-    //  Upload ผ่าน Web Services
-    C_INSxProducts(oProducts);
+    // //  Upload ผ่าน Web Services
+    // C_INSxProducts(oProducts);
+    try {
+      await C_INSxProducts(oProducts); // รอให้ฟังก์ชันทำงานสำเร็จ
+    } catch (error) {
+      console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
+      alert("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล");
+    } finally {
+      setIsLoading(false); // ปิด loading progress
+    }
+
     // Save Data to IndexedDB
     C_PRCxSaveDB(1);
 
     setIsLoading(false);
+
+
   };
   async function C_PRCxExportExcel() {
     setIsLoading(true);
