@@ -202,6 +202,7 @@ export default function ReceiveGoods() {
 
     if (!barcode || !quantity) return;
 
+
     setProducts((prevProducts) => {
       const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
 
@@ -398,9 +399,16 @@ export default function ReceiveGoods() {
       setIsLoading(false);
       alert("❌ ข้อความ: Internet Offline ระบบยังไม่ Upload ขึ้น");
     }
-
-    //  Upload ผ่าน Web Services
-    C_INSxProducts(oProducts);
+    // //  Upload ผ่าน Web Services
+    // C_INSxProducts(oProducts);
+    try {
+    await  C_INSxProducts(oProducts); // รอให้ฟังก์ชันทำงานสำเร็จ
+    } catch (error) {
+      console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
+      alert("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล");
+    } finally {
+      setIsLoading(false); // ปิด loading progress
+    }
     // Save Data to IndexedDB
     C_PRCxSaveDB();
 
