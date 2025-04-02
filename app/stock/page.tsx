@@ -11,7 +11,7 @@ import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CAdjustStockToExcel';
 import { History, Product, UserInfo } from "@/models/models"
-import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB ,C_DELoDataTmp, C_DELxProductTmpByFNId} from "@/hooks/CIndexedDB";
+import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_DELoDataTmp, C_DELxProductTmpByFNId } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
@@ -76,14 +76,14 @@ export default function ReceiveGoods() {
   }, []);
 
 
-    {/* set HistoryList เมื่อ oDb ถูกเซ็ต  */ }
-    useEffect(() => {
-      if (oDb) {
-        C_PRCxFetchHistoryList();
-        C_PRCxFetchProductHistoryList();
-        C_PRCxFetchProductTmpList();
-      }
-    }, [oDb]);
+  {/* set HistoryList เมื่อ oDb ถูกเซ็ต  */ }
+  useEffect(() => {
+    if (oDb) {
+      C_PRCxFetchHistoryList();
+      C_PRCxFetchProductHistoryList();
+      C_PRCxFetchProductTmpList();
+    }
+  }, [oDb]);
 
   {/* ใช้ useEffect ในการเก็บค่า checked และ cost  */ }
   useEffect(() => {
@@ -227,7 +227,7 @@ export default function ReceiveGoods() {
       FCCost: 0,
       FNQuantity: oProducts.FNQuantity,
       FTRefDoc: oProducts.FTRefDoc,
-      FTRefSeq: oProducts.FTRefSeq,
+      FTRefSeq: tRefSeq,
       FTXthDocKey: "TCNTDocDTTmpAdj",
       FTBchCode: oUserInfo?.FTBchCode || "",
       FTAgnCode: oUserInfo?.FTAgnCode || "",
@@ -280,12 +280,12 @@ export default function ReceiveGoods() {
         .filter((product) => product.FNId !== id)
         .map((product, index) => ({ ...product, id: index + 1 })) //รีเซ็ต ID ใหม่
     );
-    
-        if (!oDb) {
-          console.log("❌ Database is not initialized");
-          return;
-        }
-        C_DELxProductTmpByFNId(oDb,id,"TCNTProductStockTmp");
+
+    if (!oDb) {
+      console.log("❌ Database is not initialized");
+      return;
+    }
+    C_DELxProductTmpByFNId(oDb, id, "TCNTProductStockTmp");
   };
 
 
@@ -309,63 +309,54 @@ export default function ReceiveGoods() {
     }
   };
   const C_SETxViewHistoryProduct = (history: History) => {
-    const oFiltered = oProductHistoryList?.filter((product) => product.FTRefDoc === history.FTRefDoc);
+    const oFiltered = oProductHistoryList?.filter((product) => product.FTRefSeq === history.FTRefSeq);
     setHistoryDate(history.FTDate);
     setHistoryRefDoc(history.FTRefDoc);
     setFilteredProduct(oFiltered || []);
     setIsProductOpen(true);
   };
 
-    {/* Upload */ }
-    async function C_PRCxSaveDB(pnType: number) {
+  {/* Upload */ }
+  async function C_PRCxSaveDB(pnType: number) {
+    //pnType 1 = Upload, 2 = Export, 0 = Upload Error
+    try {
+      console.log("✅ หา RefSeq ใหม่");
+      const newRefSeq = crypto.randomUUID();
+      setRefSeq(newRefSeq);
 
-      if (!isNetworkOnline) {
-        alert("❌ ข้อความ: Internet Offline");
+      console.log("✅ ข้อมูล History ถูกบันทึก");
+      await C_INSxHistoryToIndexedDB(pnType);
+
+      console.log("✅ ข้อมูล Product ถูกบันทึก");
+      await C_INSxProductToIndexedDB();
+
+
+
+      console.log("✅ เข้าลบข้อมูล History, Data ที่เกิน limit");
+      if (!oDb) {
+        console.log("❌ Database is not initialized");
         return;
       }
-      if (!oProducts || oProducts.length === 0) {
-        alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
-        return;
-      }
-      setIsLoading(true); // ✅ เริ่ม Loading
-      try {
-        console.log("✅ หา RefSeq ใหม่");
-        const newRefSeq = crypto.randomUUID();
-        setRefSeq(newRefSeq);
-        console.log("✅ RefSeq = ",newRefSeq);
-  
-        console.log("✅ ข้อมูล History ถูกบันทึก");
-        await C_INSxHistoryToIndexedDB(pnType);
-  
-        console.log("✅ ข้อมูล Product ถูกบันทึก");
-        await C_INSxProductToIndexedDB();
-  
-        console.log("✅ เข้าลบข้อมูล History, Data ที่เกิน limit");
-        if (!oDb) {
-          console.log("❌ Database is not initialized");
-          return;
-        }
-        await C_DELxLimitData(oDb, "TCNTHistoryStock", "TCNTProductStock");
-        
-        
-        console.log("✅ ลบข้อมูล Product Tmp");
-        await C_DELoDataTmp(oDb,"TCNTProductStockTmp");
-        console.log("✅ โหลดข้อมูล List ใหม่");
-        await C_PRCxFetchHistoryList();
-        await C_PRCxFetchProductHistoryList();
-      } catch (error) {
-        console.log("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
-      } finally {
-        setRefDoc("");
-        setIsLoading(false); // ✅ จบ Loading
+      await C_DELxLimitData(oDb, "TCNTHistoryStock", "TCNTProductStock");
+
+      console.log("✅ ลบข้อมูล Product Tmp");
+      await C_DELoDataTmp(oDb, "TCNTProductStockTmp");
+      console.log("✅ โหลดข้อมูล List ใหม่");
+      await C_PRCxFetchHistoryList();
+      await C_PRCxFetchProductHistoryList();
+    } catch (error) {
+      console.log("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
+    } finally {
+      setRefDoc("");
+      if (isNetworkOnline) {
         alert("✅ บันทึกข้อมูลสำเร็จ");
       }
     }
+  }
 
 
 
   async function C_PRCxUploadeWebServices() {
-    //pnType 1 = Upload, 2 = Export, 0 = Upload Error
     setIsLoading(true);
     if (!oProducts || oProducts.length === 0) {
       setIsLoading(false);
@@ -379,17 +370,17 @@ export default function ReceiveGoods() {
       return;
     }
 
-        // //  Upload ผ่าน Web Services
-        // C_INSxProducts(oProducts);
-        try {
-          await  C_INSxStock(oProducts); // รอให้ฟังก์ชันทำงานสำเร็จ
-        } catch (error) {
-          console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
-          alert("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล");
-        } finally {
-          setIsLoading(false); // ปิด loading progress
-        }
-    
+    // //  Upload ผ่าน Web Services
+    // C_INSxProducts(oProducts);
+    try {
+      await C_INSxStock(oProducts); // รอให้ฟังก์ชันทำงานสำเร็จ
+    } catch (error) {
+      console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
+      alert("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล");
+    } finally {
+      setIsLoading(false); // ปิด loading progress
+    }
+
     // Save Data to IndexedDB
     C_PRCxSaveDB(1);
 
@@ -427,88 +418,88 @@ export default function ReceiveGoods() {
     setIsRepeat(true);
   };
 
-    const C_PRCxRepeatSelect = async (option: string) => {
-      try {
-        if (option === "webService") {
-          await C_PRCxUploadeWebServices();
-        } else if (option === "excel") {
-          await C_PRCxExportExcel();
+  const C_PRCxRepeatSelect = async (option: string) => {
+    try {
+      if (option === "webService") {
+        await C_PRCxUploadeWebServices();
+      } else if (option === "excel") {
+        await C_PRCxExportExcel();
+      }
+    } catch (error) {
+      console.log("❌ เกิดข้อผิดพลาดการทำซ้ำ:", error);
+    }
+
+    // ปิด Modal หลังจากทำงานเสร็จ
+    setIsRepeat(false);
+  };
+
+
+  const C_INSxProductTmpToIndexedDB = async (data: Product[]) => {
+    if (!oDb) {
+      console.log("❌ Database is not initialized");
+      return;
+    }
+    await C_INSxDataIndexedDB(oDb, "TCNTProductStockTmp", data);
+
+  };
+
+
+
+
+  async function C_PRCxSaveClearTmpData() {
+
+    // Clear Tmp Data to IndexedDB
+    if (oDb) {
+      console.log("✅ ลบข้อมูล Product Tmp");
+      await C_DELoDataTmp(oDb, "TCNTProductStockTmp");
+      setProducts([]);
+      setRefDoc("");
+    } else {
+      console.log("❌ Database is not initialized");
+    }
+
+  };
+
+
+  const C_PRCxFetchProductTmpList = async () => {
+    if (!oDb) {
+      console.log("❌ Database is not initialized");
+      return;
+    }
+
+    const transaction = oDb.transaction("TCNTProductStockTmp", "readonly");
+    const store = transaction.objectStore("TCNTProductStockTmp");
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      if (request.result) {
+        const mappedData: Product[] = request.result.map((item: Product) => ({
+          FNId: item.FNId,
+          FTBarcode: item.FTBarcode,
+          FCCost: 0,
+          FNQuantity: item.FNQuantity,
+          FTRefDoc: item.FTRefDoc,
+          FTRefSeq: item.FTRefSeq,
+          FTXthDocKey: item.FTXthDocKey,
+          FTBchCode: item.FTBchCode,
+          FTAgnCode: item.FTAgnCode,
+          FTUsrName: item.FTUsrName,
+          FDCreateOn: item.FDCreateOn,
+        }));
+
+        console.log("🔹 ข้อมูลที่ได้จาก TCNTProductStockTmp:", mappedData);
+        if (mappedData.length > 0) {
+          setProducts(mappedData);
+          setRefDoc(mappedData[0].FTRefDoc);
         }
-      } catch (error) {
-        console.log("❌ เกิดข้อผิดพลาดการทำซ้ำ:", error);
+
       }
-  
-      // ปิด Modal หลังจากทำงานเสร็จ
-      setIsRepeat(false);
     };
 
-
-    const C_INSxProductTmpToIndexedDB = async (data: Product[]) => {
-      if (!oDb) {
-        console.log("❌ Database is not initialized");
-        return;
-      }
-      await C_INSxDataIndexedDB(oDb, "TCNTProductStockTmp", data);
-
+    request.onerror = () => {
+      console.log("❌ ไม่สามารถดึงข้อมูลจาก TCNTProductStockTmp ได้");
     };
-
-
-
-
-    async function C_PRCxSaveClearTmpData() {
-     
-      // Clear Tmp Data to IndexedDB
-      if (oDb) {
-        console.log("✅ ลบข้อมูล Product Tmp");
-        await C_DELoDataTmp(oDb,"TCNTProductStockTmp");
-        setProducts([]);
-        setRefDoc("");
-      } else {
-        console.log("❌ Database is not initialized");
-      }
- 
-    };
-
-    
-    const C_PRCxFetchProductTmpList = async () => {
-      if (!oDb) {
-        console.log("❌ Database is not initialized");
-        return;
-      }
-
-      const transaction = oDb.transaction("TCNTProductStockTmp", "readonly");
-      const store = transaction.objectStore("TCNTProductStockTmp");
-      const request = store.getAll();
-
-      request.onsuccess = () => {
-        if (request.result) {
-          const mappedData: Product[] = request.result.map((item: Product) => ({
-            FNId: item.FNId,
-            FTBarcode: item.FTBarcode,
-            FCCost: 0,
-            FNQuantity: item.FNQuantity,
-            FTRefDoc: item.FTRefDoc,
-            FTRefSeq: item.FTRefSeq,
-            FTXthDocKey: item.FTXthDocKey,
-            FTBchCode: item.FTBchCode,
-            FTAgnCode: item.FTAgnCode,
-            FTUsrName: item.FTUsrName,
-            FDCreateOn: item.FDCreateOn,
-          }));
-
-          console.log("🔹 ข้อมูลที่ได้จาก TCNTProductStockTmp:", mappedData);
-          if (mappedData.length > 0){
-            setProducts(mappedData);
-            setRefDoc(mappedData[0].FTRefDoc);
-          }
-          
-        }
-      };
-
-      request.onerror = () => {
-        console.log("❌ ไม่สามารถดึงข้อมูลจาก TCNTProductStockTmp ได้");
-      };
-    };
+  };
   return (
     <div className="p-4 ms-1 mx-auto bg-white" onClick={C_SETxCloseDropdown}>
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
@@ -648,15 +639,15 @@ export default function ReceiveGoods() {
           </label>
         </div>
       </div>
-          
+
       <div className="flex w-full md:w-auto md:ml-auto pt-2 mb-10 relative justify-end">
         <div>
-            <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
-                onClick={C_PRCxSaveClearTmpData}>
-                       ล้างข้อมูล
-            </button>
+          <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
+            onClick={C_PRCxSaveClearTmpData}>
+            ล้างข้อมูล
+          </button>
         </div>
-      </div>     
+      </div>
       {/* ประวัติการทำรายการ */}
       <HistoryModal
         isOpen={isHistoryOpen}
@@ -683,7 +674,7 @@ export default function ReceiveGoods() {
       )}
 
       {isLoading && (
-        <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50">
+        <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50 z-[9999]">
           <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
         </div>
       )}

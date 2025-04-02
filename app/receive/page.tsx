@@ -11,7 +11,7 @@ import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CTransferreceiptoutToExcel';
 import { History, Product, UserInfo } from "@/models/models"
-import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_GETxConfig,C_DELoDataTmp,C_DELxProductTmpByFNId } from "@/hooks/CIndexedDB";
+import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_GETxConfig, C_DELoDataTmp, C_DELxProductTmpByFNId } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
@@ -62,7 +62,7 @@ export default function Receive() {
   }, []);
 
   {/* Set init IndexedDB */ }
-  useEffect(() => { 
+  useEffect(() => {
     const initDB = async () => {
 
       try {
@@ -140,22 +140,22 @@ export default function Receive() {
   const C_PRCxScan = (ptDecodedText: string) => {
     C_PRCxPauseScanner();
     setBarcode(ptDecodedText);
-  
+
     if (bCheckedRef.current) {
       setIsLoadingScanAuto(true);
       let countdown = 1;
-  
+
       const timer = setInterval(() => {
         console.log(`⏳ กำลังเพิ่มข้อมูลใน ${countdown} วินาที...`);
         countdown--;
-  
+
         if (countdown === 0) {
           clearInterval(timer);
           C_ADDxProduct(ptDecodedText, tCostRef.current);
           setIsLoadingScanAuto(false);
         }
       }, 1000);
-  
+
       // Resume Scanner หลังจาก countdown วินาที
       setTimeout(() => {
         C_PRCxResumeScanner();
@@ -166,10 +166,10 @@ export default function Receive() {
         C_PRCxResumeScanner();
         setIsLoading(false);
       }, 500);
-      
+
     }
   };
-  
+
   const C_PRCxFetchHistoryList = async () => {
     if (!oDb) {
       console.log("❌ Database is not initialized");
@@ -272,19 +272,19 @@ export default function Receive() {
     await C_INSxDataIndexedDB(oDb, "TCNTProductReceive", productData);
     setProducts([]);
   };
-{/* Save ขอมูล Tmp */ }
+  {/* Save ขอมูล Tmp */ }
   const C_INSxProductTmpToIndexedDB = async (data: Product[]) => {
     if (!oDb) {
       console.log("❌ Database is not initialized");
       return;
     }
 
-   
+
     await C_INSxDataIndexedDB(oDb, "TCNTProductReceiveTmp", data);
 
   };
 
-{/* Select ขอมูล Tmp */ }
+  {/* Select ขอมูล Tmp */ }
   const C_PRCxFetchProductTmpList = async () => {
     if (!oDb) {
       console.log("❌ Database is not initialized");
@@ -312,7 +312,7 @@ export default function Receive() {
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก TCNTProductReceiveTmp:", mappedData);
-        if(mappedData.length > 0){
+        if (mappedData.length > 0) {
           setProducts(mappedData);
           setRefDoc(mappedData[0].FTRefDoc);
         }
@@ -376,7 +376,7 @@ export default function Receive() {
       console.log("❌ Database is not initialized");
       return;
     }
-    C_DELxProductTmpByFNId(oDb,id,"TCNTProductReceiveTmp");
+    C_DELxProductTmpByFNId(oDb, id, "TCNTProductReceiveTmp");
   };
   {/* export excel */ }
   const exportProduct = () => {
@@ -399,7 +399,6 @@ export default function Receive() {
       console.log("✅ หา RefSeq ใหม่");
       const newRefSeq = crypto.randomUUID();
       setRefSeq(newRefSeq);
-      console.log("✅ RefSeq = ", newRefSeq);
 
       console.log("✅ ข้อมูล History ถูกบันทึก");
       await C_INSxHistoryToIndexedDB(pnType);
@@ -408,7 +407,7 @@ export default function Receive() {
       await C_INSxProductToIndexedDB();
 
 
-  
+
       console.log("✅ เข้าลบข้อมูล History, Data ที่เกิน limit");
       if (!oDb) {
         console.log("❌ Database is not initialized");
@@ -417,8 +416,7 @@ export default function Receive() {
       await C_DELxLimitData(oDb, "TCNTHistoryReceive", "TCNTProductReceive");
 
       console.log("✅ ลบข้อมูล Product Tmp");
-      await C_DELoDataTmp(oDb,"TCNTProductReceiveTmp");
-
+      await C_DELoDataTmp(oDb, "TCNTProductReceiveTmp");
       console.log("✅ โหลดข้อมูล List ใหม่");
       await C_PRCxFetchHistoryList();
       await C_PRCxFetchProductHistoryList();
@@ -475,8 +473,8 @@ export default function Receive() {
     exportProduct();
     // Save Data to IndexedDB
     C_PRCxSaveDB(2);
-    
-    
+
+
     setIsLoading(false);
   };
 
@@ -517,17 +515,17 @@ export default function Receive() {
     setIsRepeat(false);
   };
   async function C_PRCxSaveClearTmpData() {
-   
+
     // Clear Tmp Data to IndexedDB
     if (oDb) {
       console.log("✅ ลบข้อมูล Product Tmp");
-      await C_DELoDataTmp(oDb,"TCNTProductReceiveTmp");
+      await C_DELoDataTmp(oDb, "TCNTProductReceiveTmp");
       setProducts([]);
       setRefDoc("");
     } else {
       console.log("❌ Database is not initialized");
     }
-  
+
   };
 
 
@@ -682,16 +680,16 @@ export default function Receive() {
         </div>
       </div>
 
-          
+
       <div className="flex w-full md:w-auto md:ml-auto pt-2 mb-10 relative justify-end">
         <div>
-            <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
-                onClick={C_PRCxSaveClearTmpData}>
-                       ล้างข้อมูล
-            </button>
+          <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
+            onClick={C_PRCxSaveClearTmpData}>
+            ล้างข้อมูล
+          </button>
         </div>
-      </div> 
-          
+      </div>
+
       {/* ประวัติการทำรายการ */}
       <HistoryModal
         isOpen={isHistoryOpen}
@@ -718,7 +716,7 @@ export default function Receive() {
       )}
 
       {isLoading && (
-        <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50">
+        <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50 z-[9999]">
           <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
         </div>
       )}
