@@ -8,8 +8,9 @@ import { History, Product, UserInfo } from "@/models/models";
 import { useEffect, useState } from "react";
 import { FaCheckCircle, FaExclamationCircle, FaSyncAlt, FaRegCalendar } from "react-icons/fa";
 import { C_INSxProducts, C_INSxStock, C_SETxFormattedDate } from "@/hooks/CSP";
-import exportToExcel from "@/hooks/CTransferreceiptoutToExcel";
-
+import exportPurcaseInvoiceToExcel from "@/hooks/CTransferreceiptoutToExcel";
+import exportjustStockToExcel from "@/hooks/CAdjustStockToExcel";
+import exportTransferbetweenbranchToExcel from "@/hooks/CProducttransferwahouseToExcel";
 
 export default function MainPage() {
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -299,12 +300,40 @@ export default function MainPage() {
 
   {/* export excel */ }
   const exportProduct = () => {
-    const formattedProducts = oProducts.map(oProducts => ({
-      tBarcode: oProducts.FTBarcode,
-      tQTY: oProducts.FNQuantity.toString(),
-      tCost: oProducts.FCCost.toString()
-    }));
-    exportToExcel(formattedProducts);
+    switch (tType) {
+      case "Recieve":
+        const formattedProducts = oProducts.map(oProducts => ({
+          tBarcode: oProducts.FTBarcode,
+          tQTY: oProducts.FNQuantity.toString(),
+          tCost: oProducts.FCCost.toString()
+        }));
+        exportPurcaseInvoiceToExcel(formattedProducts);
+        break;
+      case "Transfer":
+        const formattedTransfer = oProducts.map(oProducts => ({
+          tProductCode: "", // Corrected property name
+          tBarcode: oProducts.FTBarcode,
+          tQTY: oProducts.FNQuantity.toString(),
+          tCost: oProducts.FCCost.toString()
+        }));
+        exportTransferbetweenbranchToExcel(formattedTransfer);
+        break;
+      case "Stock":
+      const formattedStock = oProducts.map(oProducts => ({
+        tProductCode: "",
+        tBarcode: oProducts.FTBarcode,
+        tStockCode: "",
+        tQTY: oProducts.FNQuantity.toString(),
+        dCreateOn: C_SETxFormattedDate()
+      }));
+        exportjustStockToExcel(formattedStock);
+        break;
+      default:
+        console.warn(`❌ ptType: "${tType}" ไม่ตรงกับประเภทที่กำหนด`);
+    }
+
+
+
   };
 
   async function C_PRCxSaveDB(pnType: number) {
@@ -648,7 +677,7 @@ export default function MainPage() {
       />
 
       {isLoading && (
-        <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50">
+        <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50 z-[9999]">
           <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
         </div>
       )}
