@@ -11,7 +11,7 @@ import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CProducttransferwahouseToExcel';
 import { History, Product, UserInfo } from "@/models/models"
-import { C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_PRCxOpenIndexedDB,C_DELoDataTmp, C_DELxProductTmpByFNId } from "@/hooks/CIndexedDB";
+import { C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_PRCxOpenIndexedDB, C_DELoDataTmp, C_DELxProductTmpByFNId } from "@/hooks/CIndexedDB";
 import { C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
@@ -234,13 +234,13 @@ export default function ReceiveGoods() {
         .map((product, index) => ({ ...product, id: index + 1 })) //รีเซ็ต ID ใหม่
     );
 
-       if (!oDb) {
-          console.log("❌ Database is not initialized");
-          return;
-        }
-        C_DELxProductTmpByFNId(oDb,id,"TCNTProductTransferTmp");
-    
-    
+    if (!oDb) {
+      console.log("❌ Database is not initialized");
+      return;
+    }
+    C_DELxProductTmpByFNId(oDb, id, "TCNTProductTransferTmp");
+
+
   };
 
 
@@ -288,7 +288,7 @@ export default function ReceiveGoods() {
       FCCost: 0,
       FNQuantity: oProducts.FNQuantity,
       FTRefDoc: oProducts.FTRefDoc,
-      FTRefSeq: oProducts.FTRefSeq,
+      FTRefSeq: tRefSeq,
       FTXthDocKey: "TCNTPdtTwxHD",
       FTBchCode: oUserInfo?.FTBchCode || "",
       FTAgnCode: oUserInfo?.FTAgnCode || "",
@@ -321,7 +321,7 @@ export default function ReceiveGoods() {
       await C_DELxLimitData(oDb, "TCNTHistoryTransfer", "TCNTProductTransfer");
 
       console.log("✅ ลบข้อมูล Product Tmp");
-      await C_DELoDataTmp(oDb,"TCNTProductTransferTmp");
+      await C_DELoDataTmp(oDb, "TCNTProductTransferTmp");
 
 
       console.log("✅ โหลดข้อมูล List ใหม่");
@@ -331,7 +331,9 @@ export default function ReceiveGoods() {
       console.log("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
     } finally {
       setRefDoc("");
-      alert("✅ บันทึกข้อมูลสำเร็จ");
+      if (isNetworkOnline) {
+        alert("✅ บันทึกข้อมูลสำเร็จ");
+      }
     }
   }
 
@@ -374,11 +376,11 @@ export default function ReceiveGoods() {
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก TCNTProductTransferTmp:", mappedData);
-        if(mappedData.length > 0){
+        if (mappedData.length > 0) {
           setProducts(mappedData);
           setRefDoc(mappedData[0].FTRefDoc);
         }
-      
+
       }
     };
 
@@ -405,7 +407,7 @@ export default function ReceiveGoods() {
     // //  Upload ผ่าน Web Services
     // C_INSxProducts(oProducts);
     try {
-    await  C_INSxProducts(oProducts); // รอให้ฟังก์ชันทำงานสำเร็จ
+      await C_INSxProducts(oProducts); // รอให้ฟังก์ชันทำงานสำเร็จ
     } catch (error) {
       console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
       alert("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล");
@@ -464,17 +466,17 @@ export default function ReceiveGoods() {
 
 
   async function C_PRCxSaveClearTmpData() {
- 
+
     // Clear Tmp Data to IndexedDB
     if (oDb) {
       console.log("✅ ลบข้อมูล Product Tmp");
-      await C_DELoDataTmp(oDb,"TCNTProductTransferTmp");
+      await C_DELoDataTmp(oDb, "TCNTProductTransferTmp");
       setProducts([]);
       setRefDoc("");
     } else {
       console.log("❌ Database is not initialized");
     }
-  
+
   };
   return (
     <div className="p-4 ms-1 mx-auto bg-white">
@@ -618,15 +620,15 @@ export default function ReceiveGoods() {
         </div>
       </div>
 
-          
+
       <div className="flex w-full md:w-auto md:ml-auto pt-2 mb-10 relative justify-end">
         <div>
-            <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
-                onClick={C_PRCxSaveClearTmpData}>
-                       ล้างข้อมูล
-            </button>
+          <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
+            onClick={C_PRCxSaveClearTmpData}>
+            ล้างข้อมูล
+          </button>
         </div>
-      </div> 
+      </div>
 
 
       {/* ประวัติการทำรายการ */}
@@ -655,7 +657,7 @@ export default function ReceiveGoods() {
       )}
 
       {isLoading && (
-        <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50">
+        <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50 z-[9999]">
           <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
         </div>
       )}
