@@ -233,7 +233,7 @@ export default function Receive() {
       console.log("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
     };
   };
-  const C_INSxHistoryToIndexedDB = async () => {
+  const C_INSxHistoryToIndexedDB = async (pnType: number) => {
     if (!oDb) {
       console.log("❌ Database is not initialized");
       return;
@@ -243,7 +243,7 @@ export default function Receive() {
     const historyData: History = {
       FTDate: currentDate,
       FTRefDoc: tRefDoc,
-      FNStatus: isNetworkOnline ? 1 : 1,
+      FNStatus: pnType,
       FTRefSeq: tRefSeq
     };
 
@@ -392,7 +392,8 @@ export default function Receive() {
       setIsOpen(false);
     }
   };
-  async function C_PRCxSaveDB() {
+  async function C_PRCxSaveDB(pnType: number) {
+    //pnType 1 = Upload, 2 = Export, 0 = Upload Error
     try {
       console.log("✅ หา RefSeq ใหม่");
       const newRefSeq = crypto.randomUUID();
@@ -400,7 +401,7 @@ export default function Receive() {
       console.log("✅ RefSeq = ", newRefSeq);
 
       console.log("✅ ข้อมูล History ถูกบันทึก");
-      await C_INSxHistoryToIndexedDB();
+      await C_INSxHistoryToIndexedDB(pnType);
 
       console.log("✅ ข้อมูล Product ถูกบันทึก");
       await C_INSxProductToIndexedDB();
@@ -424,7 +425,9 @@ export default function Receive() {
       console.log("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
     } finally {
       setRefDoc("");
-      alert("✅ บันทึกข้อมูลสำเร็จ");
+      if (isNetworkOnline) {
+        alert("✅ บันทึกข้อมูลสำเร็จ");
+      }
     }
   };
   async function C_PRCxUploadeWebServices() {
@@ -435,14 +438,16 @@ export default function Receive() {
       return;
     }
     if (!isNetworkOnline) {
+      C_PRCxSaveDB(0);
+      alert("❌ ข้อความ: Upload ไม่สำเร็จ");
       setIsLoading(false);
-      alert("❌ ข้อความ: Internet Offline ระบบยังไม่ Upload ขึ้น");
+      return;
     }
     console.log("Products ก่อนอัพโหลด", oProducts)
     //  Upload ผ่าน Web Services
     C_INSxProducts(oProducts);
     // Save Data to IndexedDB
-    C_PRCxSaveDB();
+    C_PRCxSaveDB(1);
 
     setIsLoading(false);
   };
@@ -457,7 +462,7 @@ export default function Receive() {
     // ส่งออกเป็น Excel
     exportProduct();
     // Save Data to IndexedDB
-    C_PRCxSaveDB();
+    C_PRCxSaveDB(2);
     
     
     setIsLoading(false);
