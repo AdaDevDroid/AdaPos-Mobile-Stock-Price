@@ -44,3 +44,6 @@ next-env.d.ts
 .dockerignore
 docker-compose.yml
 Dockerfile
+
+# cert
+/cert
