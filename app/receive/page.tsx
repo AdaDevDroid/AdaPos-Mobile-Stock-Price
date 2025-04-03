@@ -21,6 +21,7 @@ import RepeatModal from "@/components/RepeatModal";
 
 export default function Receive() {
   const [tRefDoc, setRefDoc] = useState("");
+  const [isDisabledRefDoc, setIsDisabledRefDoc] = useState(false);
   const [oProducts, setProducts] = useState<Product[]>([]);
   const [tBarcode, setBarcode] = useState("");
   const [tCost, setCost] = useState("");
@@ -313,6 +314,7 @@ export default function Receive() {
 
         console.log("🔹 ข้อมูลที่ได้จาก TCNTProductReceiveTmp:", mappedData);
         if (mappedData.length > 0) {
+          setIsDisabledRefDoc(true);
           setProducts(mappedData);
           setRefDoc(mappedData[0].FTRefDoc);
         }
@@ -338,7 +340,7 @@ export default function Receive() {
       return;
     }
 
-
+    setIsDisabledRefDoc(true);
     setProducts((prevProducts) => {
       const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
 
@@ -424,6 +426,7 @@ export default function Receive() {
       console.log("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
     } finally {
       setRefDoc("");
+      setIsDisabledRefDoc(false);
       if (isNetworkOnline) {
         alert("✅ บันทึกข้อมูลสำเร็จ");
       }
@@ -522,6 +525,7 @@ export default function Receive() {
       await C_DELoDataTmp(oDb, "TCNTProductReceiveTmp");
       setProducts([]);
       setRefDoc("");
+      setIsDisabledRefDoc(false);
     } else {
       console.log("❌ Database is not initialized");
     }
@@ -594,6 +598,7 @@ export default function Receive() {
           icon={<FaRegCalendar />}
           value={tRefDoc}
           onChange={setRefDoc}
+          disabled={isDisabledRefDoc}
           placeholder="ระบุเลขที่อ้างอิงจาก Supplier"
         />
 

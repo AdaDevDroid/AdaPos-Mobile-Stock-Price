@@ -23,6 +23,7 @@ import RepeatModal from "@/components/RepeatModal";
 export default function ReceiveGoods() {
 
   const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
+  const [isDisabledRefDoc, setIsDisabledRefDoc] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isProductOpen, setIsProductOpen] = useState(false);
   const [bDropdownOpen, setIsOpen] = useState(false);
@@ -248,6 +249,7 @@ export default function ReceiveGoods() {
       return;
     }
 
+    setIsDisabledRefDoc(true);
     setProducts((prevProducts) => {
       const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
 
@@ -347,6 +349,7 @@ export default function ReceiveGoods() {
     } catch (error) {
       console.log("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
     } finally {
+      setIsDisabledRefDoc(false);
       setRefDoc("");
       if (isNetworkOnline) {
         alert("✅ บันทึกข้อมูลสำเร็จ");
@@ -454,6 +457,7 @@ export default function ReceiveGoods() {
       await C_DELoDataTmp(oDb, "TCNTProductStockTmp");
       setProducts([]);
       setRefDoc("");
+      setIsDisabledRefDoc(false);
     } else {
       console.log("❌ Database is not initialized");
     }
@@ -489,6 +493,7 @@ export default function ReceiveGoods() {
 
         console.log("🔹 ข้อมูลที่ได้จาก TCNTProductStockTmp:", mappedData);
         if (mappedData.length > 0) {
+          setIsDisabledRefDoc(true);
           setProducts(mappedData);
           setRefDoc(mappedData[0].FTRefDoc);
         }
@@ -565,6 +570,7 @@ export default function ReceiveGoods() {
           icon={<FaRegCalendar />}
           value={tRefDoc}
           onChange={setRefDoc}
+          disabled={isDisabledRefDoc}
           placeholder="ระบุจุดตรวจนับ เช่น ชั้นวาง A1, คลังหลัง"
         />
 
