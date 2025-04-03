@@ -16,13 +16,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/sw.js")
-        .then((reg) => console.log("Service Worker registered:", reg));
+        .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
+        .catch((err) => console.log("Service Worker registration failed:", err));
     }
   }, []);
 
   useEffect(() => {
     const storedValue = localStorage.getItem("sidebarOpen");
-    setIsSidebarOpen(storedValue === "false" ? false : true);
+    setIsSidebarOpen(storedValue ? JSON.parse(storedValue) : false);
   }, []);
 
   useEffect(() => {

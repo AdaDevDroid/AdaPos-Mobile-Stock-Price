@@ -1,8 +1,9 @@
 // นำเข้า Workbox
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.0.2/workbox-sw.js');
 
-const VERSION = "1.0.7"
+const VERSION = "1.0.1"
 // ตรวจสอบว่า Workbox ถูกโหลดสำเร็จ
+console.log('ตรวจสอบว่า Workbox ถูกโหลดสำเร็จ');
 if (workbox) {
   console.log('Workbox is loaded 🎉');
 
@@ -28,11 +29,15 @@ if (workbox) {
           }
         });
       } else {
+        console.log('Cached version:', cachedVersion);
+        console.log('Cached version New:', VERSION);
         console.log('No cached version found, storing current VERSION...');
         // หากไม่มีไฟล์ cached, ทำการเพิ่ม VERSION ใหม่
         updateCache(cache);
       }
     });
+    console.log('Cached ไม่มีไฟล์ cache โหลดใหม่');
+    updateCache(cache);
   });
 
   // ฟังก์ชั่นในการอัพเดต cache หรือทำบางอย่าง
@@ -70,20 +75,6 @@ if (workbox) {
     });
   }
 
-  // ใช้ Network First สำหรับ API /api/auth/
-  workbox.routing.registerRoute(
-    ({ url }) => url.pathname.startsWith('/api/auth/'),
-    new workbox.strategies.NetworkFirst({
-      cacheName: 'my-api-cache-v1',
-      plugins: [
-        new workbox.expiration.ExpirationPlugin({
-          maxEntries: 50, // เก็บได้สูงสุด 50 รายการ
-          maxAgeSeconds: 7 * 24 * 60 * 60, // เก็บข้อมูลในแคช 7 วัน
-        }),
-      ],
-    })
-  );
-
   // ใช้ Stale While Revalidate สำหรับไฟล์ CSS และ JS
   workbox.routing.registerRoute(
     ({ request }) =>
@@ -100,8 +91,8 @@ if (workbox) {
       cacheName: 'image-cache',
       plugins: [
         new workbox.expiration.ExpirationPlugin({
-          maxEntries: 100, // เก็บได้สูงสุด 100 รูป
-          maxAgeSeconds: 30 * 24 * 60 * 60, // เก็บข้อมูลในแคช 30 วัน
+          maxEntries: 100, 
+          maxAgeSeconds: 30 * 24 * 60 * 60, 
         }),
       ],
     })

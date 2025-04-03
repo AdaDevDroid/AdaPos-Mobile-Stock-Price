@@ -6,12 +6,12 @@ import InputWithLabelAndButton from "@/components/InputWithLabelAndButton";
 import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
-import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory, FaRegSave } from "react-icons/fa";
+import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory } from "react-icons/fa";
 import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CTransferreceiptoutToExcel';
 import { History, Product, UserInfo } from "@/models/models"
-import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_GETxConfig,C_DELoDataTmp,C_DELxProductTmpByFNId } from "@/hooks/CIndexedDB";
+import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_GETxConfig, C_DELoDataTmp, C_DELxProductTmpByFNId } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
@@ -51,8 +51,18 @@ export default function Receive() {
 
   {/* เช็ค User */ }
   useAuth();
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
+        .catch((err) => console.log("Service Worker registration failed:", err));
+    }
+  }, []);
+
   {/* Set init IndexedDB */ }
-  useEffect(() => { 
+  useEffect(() => {
     const initDB = async () => {
 
       try {
@@ -130,22 +140,22 @@ export default function Receive() {
   const C_PRCxScan = (ptDecodedText: string) => {
     C_PRCxPauseScanner();
     setBarcode(ptDecodedText);
-  
+
     if (bCheckedRef.current) {
       setIsLoadingScanAuto(true);
       let countdown = 1;
-  
+
       const timer = setInterval(() => {
         console.log(`⏳ กำลังเพิ่มข้อมูลใน ${countdown} วินาที...`);
         countdown--;
-  
+
         if (countdown === 0) {
           clearInterval(timer);
           C_ADDxProduct(ptDecodedText, tCostRef.current);
           setIsLoadingScanAuto(false);
         }
       }, 1000);
-  
+
       // Resume Scanner หลังจาก countdown วินาที
       setTimeout(() => {
         C_PRCxResumeScanner();
@@ -156,10 +166,10 @@ export default function Receive() {
         C_PRCxResumeScanner();
         setIsLoading(false);
       }, 500);
-      
+
     }
   };
-  
+
   const C_PRCxFetchHistoryList = async () => {
     if (!oDb) {
       console.log("❌ Database is not initialized");
@@ -223,7 +233,7 @@ export default function Receive() {
       console.log("❌ ไม่สามารถดึงข้อมูลจาก IndexedDB ได้");
     };
   };
-  const C_INSxHistoryToIndexedDB = async () => {
+  const C_INSxHistoryToIndexedDB = async (pnType: number) => {
     if (!oDb) {
       console.log("❌ Database is not initialized");
       return;
@@ -233,7 +243,7 @@ export default function Receive() {
     const historyData: History = {
       FTDate: currentDate,
       FTRefDoc: tRefDoc,
-      FNStatus: isNetworkOnline ? 1 : 1,
+      FNStatus: pnType,
       FTRefSeq: tRefSeq
     };
 
@@ -262,33 +272,19 @@ export default function Receive() {
     await C_INSxDataIndexedDB(oDb, "TCNTProductReceive", productData);
     setProducts([]);
   };
-{/* Save ขอมูล Tmp */ }
-  const C_INSxProductTmpToIndexedDB = async () => {
+  {/* Save ขอมูล Tmp */ }
+  const C_INSxProductTmpToIndexedDB = async (data: Product[]) => {
     if (!oDb) {
       console.log("❌ Database is not initialized");
       return;
     }
-    await C_DELoDataTmp(oDb,"TCNTProductReceiveTmp");
-    console.log("Products ก่อน insert ลง DB", oProducts)
-    const productData = oProducts.map((oProducts) => ({
-      FNId: oProducts.FNId,
-      FTBarcode: oProducts.FTBarcode,
-      FCCost: oProducts.FCCost,
-      FNQuantity: oProducts.FNQuantity,
-      FTRefDoc: oProducts.FTRefDoc,
-      FTRefSeq: tRefSeq,
-      FTXthDocKey: "TCNTPdtTwiHD",
-      FTBchCode: oUserInfo?.FTBchCode || "",
-      FTAgnCode: oUserInfo?.FTAgnCode || "",
-      FTUsrName: oUserInfo?.FTUsrName || "",
-      FDCreateOn: C_SETxFormattedDate()
-    }));
-    console.log("Products ก่อน insert ลง DB 2", productData)
-    await C_INSxDataIndexedDB(oDb, "TCNTProductReceiveTmp", productData);
-    alert("✅ บันทึกข้อมูลสำเร็จ");
+
+
+    await C_INSxDataIndexedDB(oDb, "TCNTProductReceiveTmp", data);
+
   };
 
-{/* Select ขอมูล Tmp */ }
+  {/* Select ขอมูล Tmp */ }
   const C_PRCxFetchProductTmpList = async () => {
     if (!oDb) {
       console.log("❌ Database is not initialized");
@@ -316,7 +312,7 @@ export default function Receive() {
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก TCNTProductReceiveTmp:", mappedData);
-        if(mappedData.length > 0){
+        if (mappedData.length > 0) {
           setProducts(mappedData);
           setRefDoc(mappedData[0].FTRefDoc);
         }
@@ -342,6 +338,7 @@ export default function Receive() {
       return;
     }
 
+
     setProducts((prevProducts) => {
       const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
 
@@ -358,7 +355,7 @@ export default function Receive() {
         FTUsrName: oUserInfo?.FTUsrName || "",
         FDCreateOn: C_SETxFormattedDate()
       };
-
+      C_INSxProductTmpToIndexedDB([newProduct])
       return [...prevProducts, newProduct];
     });
 
@@ -379,7 +376,7 @@ export default function Receive() {
       console.log("❌ Database is not initialized");
       return;
     }
-    C_DELxProductTmpByFNId(oDb,id,"TCNTProductReceiveTmp");
+    C_DELxProductTmpByFNId(oDb, id, "TCNTProductReceiveTmp");
   };
   {/* export excel */ }
   const exportProduct = () => {
@@ -396,21 +393,21 @@ export default function Receive() {
       setIsOpen(false);
     }
   };
-  async function C_PRCxSaveDB() {
+  async function C_PRCxSaveDB(pnType: number) {
+    //pnType 1 = Upload, 2 = Export, 0 = Upload Error
     try {
       console.log("✅ หา RefSeq ใหม่");
       const newRefSeq = crypto.randomUUID();
       setRefSeq(newRefSeq);
-      console.log("✅ RefSeq = ", newRefSeq);
 
       console.log("✅ ข้อมูล History ถูกบันทึก");
-      await C_INSxHistoryToIndexedDB();
+      await C_INSxHistoryToIndexedDB(pnType);
 
       console.log("✅ ข้อมูล Product ถูกบันทึก");
       await C_INSxProductToIndexedDB();
 
 
-  
+
       console.log("✅ เข้าลบข้อมูล History, Data ที่เกิน limit");
       if (!oDb) {
         console.log("❌ Database is not initialized");
@@ -419,8 +416,7 @@ export default function Receive() {
       await C_DELxLimitData(oDb, "TCNTHistoryReceive", "TCNTProductReceive");
 
       console.log("✅ ลบข้อมูล Product Tmp");
-      await C_DELoDataTmp(oDb,"TCNTProductReceiveTmp");
-
+      await C_DELoDataTmp(oDb, "TCNTProductReceiveTmp");
       console.log("✅ โหลดข้อมูล List ใหม่");
       await C_PRCxFetchHistoryList();
       await C_PRCxFetchProductHistoryList();
@@ -428,7 +424,9 @@ export default function Receive() {
       console.log("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
     } finally {
       setRefDoc("");
-      alert("✅ บันทึกข้อมูลสำเร็จ");
+      if (isNetworkOnline) {
+        alert("✅ บันทึกข้อมูลสำเร็จ");
+      }
     }
   };
   async function C_PRCxUploadeWebServices() {
@@ -439,16 +437,29 @@ export default function Receive() {
       return;
     }
     if (!isNetworkOnline) {
+      C_PRCxSaveDB(0);
+      alert("❌ ข้อความ: Upload ไม่สำเร็จ");
       setIsLoading(false);
-      alert("❌ ข้อความ: Internet Offline ระบบยังไม่ Upload ขึ้น");
+      return;
     }
     console.log("Products ก่อนอัพโหลด", oProducts)
-    //  Upload ผ่าน Web Services
-    C_INSxProducts(oProducts);
+    // //  Upload ผ่าน Web Services
+    // C_INSxProducts(oProducts);
+    try {
+      await C_INSxProducts(oProducts); // รอให้ฟังก์ชันทำงานสำเร็จ
+    } catch (error) {
+      console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
+      alert("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล");
+    } finally {
+      setIsLoading(false); // ปิด loading progress
+    }
+
     // Save Data to IndexedDB
-    C_PRCxSaveDB();
+    C_PRCxSaveDB(1);
 
     setIsLoading(false);
+
+
   };
   async function C_PRCxExportExcel() {
     setIsLoading(true);
@@ -461,25 +472,9 @@ export default function Receive() {
     // ส่งออกเป็น Excel
     exportProduct();
     // Save Data to IndexedDB
-    C_PRCxSaveDB();
-    
-    
-    setIsLoading(false);
-  };
+    C_PRCxSaveDB(2);
 
 
-
-
-
-  async function C_PRCxSaveTmp() {
-    setIsLoading(true);
-    if (!oProducts || oProducts.length === 0) {
-      setIsLoading(false);
-      alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
-      return;
-    }
-    // Save Tmp Data to IndexedDB
-    C_INSxProductTmpToIndexedDB();
     setIsLoading(false);
   };
 
@@ -520,17 +515,17 @@ export default function Receive() {
     setIsRepeat(false);
   };
   async function C_PRCxSaveClearTmpData() {
-   
+
     // Clear Tmp Data to IndexedDB
     if (oDb) {
       console.log("✅ ลบข้อมูล Product Tmp");
-      await C_DELoDataTmp(oDb,"TCNTProductReceiveTmp");
+      await C_DELoDataTmp(oDb, "TCNTProductReceiveTmp");
       setProducts([]);
       setRefDoc("");
     } else {
       console.log("❌ Database is not initialized");
     }
-  
+
   };
 
 
@@ -685,23 +680,16 @@ export default function Receive() {
         </div>
       </div>
 
-          
+
       <div className="flex w-full md:w-auto md:ml-auto pt-2 mb-10 relative justify-end">
-        <div className=" mr-4 " >
-            <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
-                onClick={C_PRCxSaveClearTmpData}>
-                       ล้างข้อมูล
-            </button>
+        <div>
+          <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
+            onClick={C_PRCxSaveClearTmpData}>
+            ล้างข้อมูล
+          </button>
         </div>
-        <div >
-            <button className="bg-blue-600 text-white px-6 py-2 flex items-center justify-center rounded-md"
-                onClick={C_PRCxSaveTmp}>
-                  <FaRegSave className="mr-2" />
-                        บันทึก
-            </button>
-        </div>
-      </div> 
-          
+      </div>
+
       {/* ประวัติการทำรายการ */}
       <HistoryModal
         isOpen={isHistoryOpen}
@@ -728,7 +716,7 @@ export default function Receive() {
       )}
 
       {isLoading && (
-        <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50">
+        <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50 z-[9999]">
           <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
         </div>
       )}

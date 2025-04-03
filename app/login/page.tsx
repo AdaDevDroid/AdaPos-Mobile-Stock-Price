@@ -6,6 +6,7 @@ import { C_PRCxOpenIndexedDB, C_INSxUserToDB, C_INSoSysConfigToDB, C_DELoSysConf
 import { CEncrypt } from '../../hooks/CEncrypt';
 import { serialize, parse } from "cookie";
 import { useNetworkStatus } from '@/hooks/NetworkStatusContext'
+import Image from "next/image";
 
 export default function Login() {
   const router = useRouter();
@@ -16,6 +17,15 @@ export default function Login() {
   const [bLoading, setLoading] = useState(false);
   const isOnline = useNetworkStatus()
   const [oDatabase, setODatabase] = useState<IDBDatabase | null>(null);
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
+        .catch((err) => console.log("Service Worker registration failed:", err));
+    }
+  }, []);
 
   useEffect(() => {
     const openDB = async () => {
@@ -99,7 +109,7 @@ export default function Login() {
     console.log("✅ User validated & stored locally.");
     return true;
   };
-  const C_PRCxSyncConfig = async (oDatabase:IDBDatabase ) => {
+  const C_PRCxSyncConfig = async (oDatabase: IDBDatabase) => {
     try {
       console.log("🔄 Syncing SysConfig...");
       const response = await fetch("/api/query/selectSysConfig", {
@@ -188,8 +198,14 @@ export default function Login() {
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-gray-100">
       <div className="flex flex-col items-center text-center mb-6">
-        <div className="bg-blue-500 text-white text-2xl font-bold flex items-center justify-center w-16 h-16 rounded-md">
-          Ada
+        <div className="text-white text-2xl font-bold flex items-center justify-center w-16 h-16 rounded-md">
+          <Image
+            src="/icons/logoAda.png"
+            alt="Logo"
+            width={64}
+            height={64}
+            className="h-16 text-center text-sm"
+          />
         </div>
         <h2 className="text-2xl font-bold mt-4">AdaPos+ Stock & Price</h2>
         <p className="text-gray-500">เข้าสู่ระบบเพื่อใช้งาน</p>
@@ -238,8 +254,16 @@ export default function Login() {
           </button>
         </form>
       </div>
-      <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.7</p>
+
+      <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.9</p>
       <p className="text-center text-gray-400 text-xs">© 2025 AdaPos+. All rights reserved.</p>
+      <Image
+        src="/icons/logoAdaLogin.png"
+        alt="Logo"
+        width={80}
+        height={80}
+        className="text-center"
+      />
     </div>
   );
 };
