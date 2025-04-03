@@ -254,7 +254,7 @@ export default function ReceiveGoods() {
   {/* export excel */ }
   const exportProduct = () => {
     const formattedProducts = oProducts.map(product => ({
-      tProductCode: "000001", // Corrected property name
+      tProductCode: "", // Corrected property name
       tBarcode: product.FTBarcode,
       tQTY: product.FNQuantity.toString()
     }));
@@ -414,6 +414,7 @@ export default function ReceiveGoods() {
     } finally {
       setIsLoading(false); // ปิด loading progress
     }
+
     // Save Data to IndexedDB
     C_PRCxSaveDB(1);
 
