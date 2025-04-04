@@ -22,7 +22,9 @@ export interface History {
 export interface UserInfo {
     FTUsrName: string;
     FTBchCode: string;
+    FTBchName: string,
     FTAgnCode: string;
+    FTAgnName: string
     FTMerCode: string;
     FTUsrLogin: string;
     FTUsrPass: string;  
@@ -32,4 +34,10 @@ export interface UserInfo {
   export interface SysConfig {
     FTSysCode: string;
     FTSysStaUsrValue: string;
+  }
+
+  
+  export interface BranchInfo {
+    FTBchCode: string;
+    FTBchName: string;
   }
