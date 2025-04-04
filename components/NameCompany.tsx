@@ -24,9 +24,12 @@ export default function NameCompany() {
   }, []);
 
   return (
-    <div className="bottom-4 left-16 flex items-center bg-transparent p-2 shadow-none rounded-md">
-      <span className="text-l ml-auto text-gray-400">
-        บริษัท : {oUserInfo?.FTUsrName ?? ""} | สาขา​ : {oUserInfo?.FTUsrName ?? ""}
+    <div className="bottom-2 flex flex-col items-start bg-transparent p-2 shadow-none rounded-md">
+      <span className="text-xs text-gray-400">
+        บริษัท : {oUserInfo?.FTAgnName ?? ""}
+      </span>
+      <span className="text-xs text-gray-400">
+        สาขา : {oUserInfo?.FTBchName ?? ""}
       </span>
     </div>
   );
