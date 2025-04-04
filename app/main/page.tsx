@@ -6,17 +6,25 @@ import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import { useAuth } from "@/hooks/useAuth";
 import { History, Product, UserInfo } from "@/models/models";
 import { useEffect, useState } from "react";
-import { FaCheckCircle, FaExclamationCircle, FaSyncAlt, FaRegCalendar } from "react-icons/fa";
+import { FaCheckCircle, FaExclamationCircle, FaSyncAlt, FaRegCalendar, FaExclamationTriangle, FaAngleRight } from "react-icons/fa";
 import { C_INSxProducts, C_INSxStock, C_SETxFormattedDate } from "@/hooks/CSP";
 import exportPurcaseInvoiceToExcel from "@/hooks/CTransferreceiptoutToExcel";
 import exportjustStockToExcel from "@/hooks/CAdjustStockToExcel";
 import exportTransferbetweenbranchToExcel from "@/hooks/CProducttransferwahouseToExcel";
+import { useRouter } from "next/navigation";
+
 
 export default function MainPage() {
+  const router = useRouter();
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [oReceiveDataHistory, setReceiveDataHistory] = useState<History[]>([]);
   const [oTranferDataHistory, setTranferDataHistory] = useState<History[]>([]);
   const [oStockDataHistory, setStockDataHistory] = useState<History[]>([]);
+
+  const [oReceiveDataProductTmp, setReceiveDataProductTmp] = useState<Product[]>([]);
+  const [oTranferDataProductTmp, setTranferDataProductTmp] = useState<Product[]>([]);
+  const [oStockDataProductTmp, setStockeDataProductTmp] = useState<Product[]>([]);
+
   const [oReceiveProductHistoryList, setReceiveProductHistoryList] = useState<Product[]>();
   const [oTranferProductHistoryList, setTranferProductHistoryList] = useState<Product[]>();
   const [oStockProductHistoryList, setStockProductHistoryList] = useState<Product[]>();
@@ -69,6 +77,19 @@ export default function MainPage() {
         const oStockData = await C_PRCxFetchHistoryList(database, "TCNTHistoryStock");
         if (oStockData) {
           setStockDataHistory(oStockData);
+        }
+
+        const oReceiveProductDataTmp = await C_PRCxFetchProductHistoryList(database, "TCNTProductReceiveTmp");
+        if (oReceiveProductDataTmp) {
+          setReceiveDataProductTmp(oReceiveProductDataTmp);
+        }
+        const oTranferProductDataTmp = await C_PRCxFetchProductHistoryList(database, "TCNTProductTransferTmp");
+        if (oTranferProductDataTmp) {
+          setTranferDataProductTmp(oTranferProductDataTmp);
+        }
+        const oStockProductDataTmp = await C_PRCxFetchProductHistoryList(database, "TCNTProductStockTmp");
+        if (oStockProductDataTmp) {
+          setStockeDataProductTmp(oStockProductDataTmp);
         }
 
         const oReceiveProductData = await C_PRCxFetchProductHistoryList(database, "TCNTProductReceive");
@@ -463,11 +484,11 @@ export default function MainPage() {
         tDocKey = "TCNTPdtTwiHD";
         break;
       case "Transfer":
-        tTaleName = "TCNTProducyTransfer";
+        tTaleName = "TCNTProductTransfer";
         tDocKey = "TCNTPdtTwxHD";
         break;
       case "Stock":
-        tTaleName = "TCNTProducStock";
+        tTaleName = "TCNTProductStock";
         tDocKey = "TCNTDocDTTmpAdj";
         break;
       default:
@@ -504,10 +525,52 @@ export default function MainPage() {
 
       <div className="container mx-auto p-2 space-y-2">
         <h1 className="text-xl font-bold mb-4 ps-2 text-gray-800">ประวัติการทำรายการล่าสุด</h1>
-        <h2 className="text-m mb-2 ps-2 text-gray-600">รับสินค้าจากผู้จำหน่าย</h2>
-        {oReceiveDataHistory.length === 0 ? (
-          <p className="text-center text-gray-500">ไม่มีประวัติการทำรายการ</p>
-        ) : (
+
+        {(oReceiveDataHistory.length === 0 && oTranferDataHistory.length === 0 && oStockDataHistory.length === 0 &&
+          oReceiveDataProductTmp.length === 0 && oTranferDataProductTmp.length === 0 && oStockDataProductTmp.length === 0
+        ) && (
+            <p className="text-center text-gray-500">ไม่มีประวัติการทำรายการ</p>
+          )}
+
+        {(oReceiveDataProductTmp.length > 0 || oReceiveDataHistory.length > 0) && (
+          <h2 className="text-m mb-2 ps-2 text-gray-600">
+            รับสินค้าจากผู้จำหน่าย
+          </h2>
+        )}
+        {oReceiveDataProductTmp.length > 0 &&
+          oReceiveDataProductTmp.map((data, index) => (
+            <div
+              key={index}
+              className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-start border cursor-pointer"
+              onClick={() => router.push("/receive")}
+            >
+              {/* ซ้าย: เนื้อหา */}
+              <div>
+                <p className="text-base font-semibold text-gray-800">
+                  เลขที่อ้างอิง <span className="text-sm text-gray-500 font-normal">#{data.FTRefDoc}</span>
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  ค้างทำรายการ
+                </p>
+                <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                  <FaRegCalendar className="w-4 h-4 text-gray-400" /> {data.FDCreateOn.split(" ")[0]}
+                </p>
+              </div>
+
+              {/* ขวา: สถานะ + ปุ่ม */}
+              <div className="flex flex-col items-end gap-2 h-full">
+                <FaExclamationTriangle className="w-5 h-5 text-[#FFD700]" />
+                <div className="h-2"></div>
+                <button
+                  className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1 mt-auto"
+                >ทำรายการต่อ
+                  <FaAngleRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+
+        {oReceiveDataHistory.length > 0 &&
           oReceiveDataHistory.map((data, index) => (
             <div
               key={index}
@@ -551,15 +614,52 @@ export default function MainPage() {
               </div>
             </div>
           ))
-        )}
+        }
+
       </div>
 
 
       <div className="container mx-auto p-2 space-y-2">
-        <h2 className="text-m ps-2 mb-2 text-gray-600">รับ / โอนสินค้าระหว่างสาขา</h2>
-        {oTranferDataHistory.length === 0 ? (
-          <p className="text-center text-gray-500">ไม่มีประวัติการทำรายการ</p>
-        ) : (
+        {(oTranferDataProductTmp.length > 0 || oTranferDataHistory.length > 0) && (
+          <h2 className="text-m mb-2 ps-2 text-gray-600">
+            รับ / โอนสินค้าระหว่างสาขา
+          </h2>
+        )}
+
+        {oTranferDataProductTmp.length > 0 &&
+          oTranferDataProductTmp.map((data, index) => (
+            <div
+              key={index}
+              className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-start border cursor-pointer"
+              onClick={() => router.push("/transfer")}
+            >
+              {/* ซ้าย: เนื้อหา */}
+              <div>
+                <p className="text-base font-semibold text-gray-800">
+                  เลขที่อ้างอิง <span className="text-sm text-gray-500 font-normal">#{data.FTRefDoc}</span>
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  ค้างทำรายการ
+                </p>
+                <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                  <FaRegCalendar className="w-4 h-4 text-gray-400" /> {data.FDCreateOn.split(" ")[0]}
+                </p>
+              </div>
+
+              {/* ขวา: สถานะ + ปุ่ม */}
+              <div className="flex flex-col items-end gap-2 h-full">
+                <FaExclamationTriangle className="w-5 h-5 text-[#FFD700]" />
+                <div className="h-2"></div>
+                <button
+                  className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1 mt-auto"
+                >ทำรายการต่อ
+                  <FaAngleRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+
+        {oTranferDataHistory.length > 0 &&
           oTranferDataHistory.map((data, index) => (
             <div
               key={index}
@@ -603,15 +703,51 @@ export default function MainPage() {
               </div>
             </div>
           ))
-        )}
+        }
       </div>
 
 
       <div className="container mx-auto p-2 space-y-2">
-        <h2 className="text-m ps-2 mb-2 text-gray-600">ตรวจนับสต็อก</h2>
-        {oStockDataHistory.length === 0 ? (
-          <p className="text-center text-gray-500">ไม่มีประวัติการทำรายการ</p>
-        ) : (
+        {(oStockDataProductTmp.length > 0 || oStockDataHistory.length > 0) && (
+          <h2 className="text-m mb-2 ps-2 text-gray-600">
+            ตรวจนับสต็อก
+          </h2>
+        )}
+
+        {oStockDataProductTmp.length > 0 &&
+          oStockDataProductTmp.map((data, index) => (
+            <div
+              key={index}
+              className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-start border cursor-pointer"
+              onClick={() => router.push("/stock")}
+            >
+              {/* ซ้าย: เนื้อหา */}
+              <div>
+                <p className="text-base font-semibold text-gray-800">
+                  เลขที่อ้างอิง <span className="text-sm text-gray-500 font-normal">#{data.FTRefDoc}</span>
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  ค้างทำรายการ
+                </p>
+                <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                  <FaRegCalendar className="w-4 h-4 text-gray-400" /> {data.FDCreateOn.split(" ")[0]}
+                </p>
+              </div>
+
+              {/* ขวา: สถานะ + ปุ่ม */}
+              <div className="flex flex-col items-end gap-2 h-full">
+                <FaExclamationTriangle className="w-5 h-5 text-[#FFD700]" />
+                <div className="h-2"></div>
+                <button
+                  className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1 mt-auto"
+                >ทำรายการต่อ
+                  <FaAngleRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+
+        {oStockDataHistory.length > 0 &&
           oStockDataHistory.map((data, index) => (
             <div
               key={index}
@@ -655,7 +791,7 @@ export default function MainPage() {
               </div>
             </div>
           ))
-        )}
+        }
       </div>
 
       <div className="h-16"></div>

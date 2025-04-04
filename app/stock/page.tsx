@@ -23,6 +23,7 @@ import RepeatModal from "@/components/RepeatModal";
 export default function ReceiveGoods() {
 
   const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
+  const [isDisabledRefDoc, setIsDisabledRefDoc] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isProductOpen, setIsProductOpen] = useState(false);
   const [bDropdownOpen, setIsOpen] = useState(false);
@@ -248,6 +249,7 @@ export default function ReceiveGoods() {
       return;
     }
 
+    setIsDisabledRefDoc(true);
     setProducts((prevProducts) => {
       const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
 
@@ -347,6 +349,7 @@ export default function ReceiveGoods() {
     } catch (error) {
       console.log("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
     } finally {
+      setIsDisabledRefDoc(false);
       setRefDoc("");
       if (isNetworkOnline) {
         alert("✅ บันทึกข้อมูลสำเร็จ");
@@ -454,6 +457,7 @@ export default function ReceiveGoods() {
       await C_DELoDataTmp(oDb, "TCNTProductStockTmp");
       setProducts([]);
       setRefDoc("");
+      setIsDisabledRefDoc(false);
     } else {
       console.log("❌ Database is not initialized");
     }
@@ -489,6 +493,7 @@ export default function ReceiveGoods() {
 
         console.log("🔹 ข้อมูลที่ได้จาก TCNTProductStockTmp:", mappedData);
         if (mappedData.length > 0) {
+          setIsDisabledRefDoc(true);
           setProducts(mappedData);
           setRefDoc(mappedData[0].FTRefDoc);
         }
@@ -502,31 +507,13 @@ export default function ReceiveGoods() {
   };
   return (
     <div className="p-4 ms-1 mx-auto bg-white" onClick={C_SETxCloseDropdown}>
-      <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center pb-2">
         <div className="flex flex-row w-full py-2">
           {/* หัวข้อ */}
-          <h1 className="text-2xl font-bold md:pb-0">ตรวจนับสต็อก</h1>
-          {/* ปุ่ม 3 จุด จอเล็ก */}
-          <button
-            className="md:hidden ml-2 p-2 rounded-md ml-auto text-gray-500 hover:text-gray-700 text-[18px]"
-            onClick={() => setIsOpen(!bDropdownOpen)}
-          >
-            <FaEllipsisV />
-          </button>
-        </div>
-        {/* ค้นหา PO และปุ่ม 3 จุด (สำหรับ desktop) */}
-        <div className="flex w-full md:w-80 md:ml-auto pt-2 relative">
-          <InputWithButton
-            type="text"
-            value={searchText}
-            onChange={setSearchText}
-            placeholder="ค้นหาใบ PO"
-            icon={<GrDocumentText />}
-            onClick={() => alert(`ข้อความ: ${searchText}`)}
-          />
+          <h1 className="text-xl font-bold">ตรวจนับสต็อก</h1>
           {/* ปุ่ม 3 จุด */}
           <button
-            className="hidden md:block ml-2 p-2 rounded-md text-gray-500 hover:text-gray-700 text-[18px]"
+            className="ml-2 p-2 rounded-md ml-auto text-gray-500 hover:text-gray-700 text-[18px"
             onClick={() => setIsOpen(!bDropdownOpen)}
           >
             <FaEllipsisV />
@@ -557,7 +544,7 @@ export default function ReceiveGoods() {
         )}
       </div>
       {/* กรอกข้อมูล */}
-      <div className="space-y-4 pt-4">
+      <div className="space-y-2 pt-4">
 
         <InputWithLabel
           type="text"
@@ -565,6 +552,7 @@ export default function ReceiveGoods() {
           icon={<FaRegCalendar />}
           value={tRefDoc}
           onChange={setRefDoc}
+          disabled={isDisabledRefDoc}
           placeholder="ระบุจุดตรวจนับ เช่น ชั้นวาง A1, คลังหลัง"
         />
 
