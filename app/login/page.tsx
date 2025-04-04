@@ -7,6 +7,8 @@ import { CEncrypt } from '../../hooks/CEncrypt';
 import { serialize, parse } from "cookie";
 import { useNetworkStatus } from '@/hooks/NetworkStatusContext'
 import Image from "next/image";
+import BrancheModal from "@/components/ฺBchModal";
+import { UserInfo,BranchInfo } from "@/models/models";
 
 export default function Login() {
   const router = useRouter();
@@ -17,7 +19,11 @@ export default function Login() {
   const [bLoading, setLoading] = useState(false);
   const isOnline = useNetworkStatus()
   const [oDatabase, setODatabase] = useState<IDBDatabase | null>(null);
-
+  const [isLoading, setIsLoading] = useState(false);
+  const [isBranchOpen, setIsBranchOpen] = useState(false);
+  const [oUserInfo, setUserInfo] = useState<UserInfo[]>([]);
+  const [oBranchInfo, setBranchInfo] = useState<BranchInfo[]>([]);
+  const [tCompName, setCompName] = useState("");
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
@@ -88,26 +94,81 @@ export default function Login() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
     });
-
     if (!userResponse.ok) return false;
     const { user } = await userResponse.json();
+    
+    if(user.length>1){
 
-    if (oDatabase) {
-      await C_INSxUserToDB(oDatabase, {
-        FTUsrCode: user.FTUsrCode,
-        FTUsrLogin: user.FTUsrLogin,
-        FTUsrPass: user.FTUsrLoginPwd,
-        FTUsrName: user.FTUsrName,
-        FTBchCode: user.FTBchCode,
-        FTAgnCode: user.FTAgnCode,
-        FTMerCode: user.FTMerCode,
-      });
-    } else {
-      throw new Error("Database is not initialized");
+      setUserInfo(user);
+      setBranchInfo(user);
+      setCompName(user[0].FTAgnName);
+      setIsBranchOpen(true);
+     
+    }else{
+      if (user[0].FTBchCode) {
+        if (oDatabase) {
+          await C_INSxUserToDB(oDatabase, {
+            FTUsrCode: user[0].FTUsrCode,
+            FTUsrLogin: user[0].FTUsrLogin,
+            FTUsrPass: user[0].FTUsrLoginPwd,
+            FTUsrName: user[0].FTUsrName,
+            FTBchCode: user[0].FTBchCode,
+            FTBchName: user[0].FTBchName,
+            FTAgnCode: user[0].FTAgnCode,
+            FTAgnName: user[0].FTAgnName,
+            FTMerCode: user[0].FTMerCode,
+          });
+        } 
+        console.log("✅ User validated & stored locally.");
+        return true;
+      } 
+      else{
+        if(user[0].FTAgnCode){
+          
+            console.log("🟢 Online Mode: Validating User via API");
+            const BchResponse = await fetch("/api/query/selectBchByAgn", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ FTAgnCode: user[0].FTAgnCode }), // ส่งค่า FTAgnCode ไปยัง API
+            });
+            if (!BchResponse.ok) return false;
+            const { bch } = await BchResponse.json();
+
+
+          setUserInfo(user);
+          setBranchInfo(bch);
+          setCompName(user[0].FTAgnName);
+          setIsBranchOpen(true);
+        }
+        else{
+          console.log("✅User 009 ");
+          console.log("🟢 Online Mode: Validating User via API");
+          const BchResponse = await fetch("/api/query/selectBchAll", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          });
+          if (!BchResponse.ok) return false;
+          const { bch } = await BchResponse.json();
+
+          const CompResponse = await fetch("/api/query/selectCompName", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            });
+            if (!CompResponse.ok) return false;
+            const { comp } = await CompResponse.json();
+
+        setUserInfo(user);
+        setCompName(comp);
+        setBranchInfo(bch);
+        setIsBranchOpen(true);
+        
+        }       
+       }
     }
 
-    console.log("✅ User validated & stored locally.");
-    return true;
+
+
+
   };
   const C_PRCxSyncConfig = async (oDatabase: IDBDatabase) => {
     try {
@@ -147,7 +208,7 @@ export default function Login() {
       const userValid = await C_PRCbCheckUser(tUsername, password, isOnline);
 
       if (!userValid) {
-        setError("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+        setError("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง2");
         return;
       }
 
@@ -180,6 +241,8 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+
   async function C_GETtGenToken(username: string): Promise<string> {
     const encoder = new TextEncoder();
     const data = encoder.encode(`${username}-${Date.now()}`);
@@ -195,6 +258,64 @@ export default function Login() {
       return ""; // 🔴 กรณีเกิดข้อผิดพลาด return ค่าว่าง
     }
   }
+
+
+
+  const C_PRCxBchSelect = async (FTBchCode: string,FTBchName: string) => {
+    // alert("FTBchCode: " + FTBchCode + " FTBchName: " + FTBchName);
+    setError(""); 
+    setIsLoading(true);
+
+
+    if (oDatabase) {
+      await C_INSxUserToDB(oDatabase, {
+        FTUsrCode: oUserInfo[0]?.FTUsrCode ,
+        FTUsrLogin: oUserInfo[0]?.FTUsrLogin ,
+        FTUsrPass: oUserInfo[0]?.FTUsrPass ,
+        FTUsrName: oUserInfo[0]?.FTUsrName ,
+        FTBchCode: FTBchCode,
+        FTBchName: FTBchName,
+        FTAgnName: tCompName ,
+        FTAgnCode: oUserInfo[0]?.FTAgnCode ,
+        FTMerCode: oUserInfo[0]?.FTMerCode ,
+      });
+    } 
+    console.log("✅ User validated & stored locally.2");
+ 
+
+    try {
+      if (isOnline) {
+        if (oDatabase) {
+          await C_PRCxSyncConfig(oDatabase);
+        } else {
+          throw new Error("Database is not initialized");
+        }
+      }
+
+      console.log("🔓 Generating token...");
+      const token = await C_GETtGenToken(tUsername);
+      if (!token) {
+        throw new Error("❌ Token Generation Failed");
+      }
+
+      C_SETxToken(token);
+      router.push("/main");
+
+      document.cookie = serialize("rememberedUsername", rememberMe ? tUsername : "", {
+        maxAge: rememberMe ? 7 * 24 * 60 * 60 : -1,
+        path: "/",
+      });
+
+    } catch (error) {
+      console.log("⚠️ Login Error:", error);
+      setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
+    } finally {
+      setError(""); 
+      setIsLoading(false);
+    }
+  };
+
+
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-gray-100">
       <div className="flex flex-col items-center text-center mb-6">
@@ -264,6 +385,19 @@ export default function Login() {
         height={80}
         className="text-center"
       />
+      <BrancheModal
+        isOpen={isBranchOpen}
+        onClose={() => { setIsBranchOpen(false); setError(""); }}
+        oData={oBranchInfo || []}
+        onOptionSelect={C_PRCxBchSelect}
+      />
+      
+
+      {isLoading && (
+        <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50 z-[9999]">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+        </div>
+      )}
     </div>
   );
 };
