@@ -7,20 +7,22 @@ interface InputWithLabelProps<T> {
   onChange: Dispatch<SetStateAction<T>>;
   placeholder?: string;
   icon?: ReactNode;
+  disabled?: boolean; // ✅ เพิ่ม props disabled
 }
 
 export default function InputWithLabel<T extends string | number>({
-  type,
+  type = "text",
   label,
   value,
   onChange,
   placeholder = "",
   icon,
+  disabled = false, // ✅ ค่า default เป็น false
 }: InputWithLabelProps<T>) {
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-x-1">
-        {icon && <span className="text-gray-500">{icon}</span>} {/* แสดง icon ถ้ามี */}
+        {icon && <span className="text-gray-500">{icon}</span>}
         <span className="text-[14px] text-gray-700">{label}</span>
       </div>
       <input
@@ -28,16 +30,18 @@ export default function InputWithLabel<T extends string | number>({
         placeholder={placeholder}
         value={value}
         onChange={(e) => {
-          let value = e.target.value;
-
-          if (type === "number") {
-            value = value.replace(/^0+(?=\d)/, "");
-            onChange(value as T);
-          } else {
-            onChange(value as T);
+          if (!disabled) { // ✅ ป้องกันการเปลี่ยนค่าเมื่อ disabled
+            let newValue = e.target.value;
+            if (type === "number") {
+              newValue = newValue.replace(/^0+(?=\d)/, "");
+            }
+            onChange(newValue as T);
           }
         }}
-        className="border w-full px-4 py-2 rounded-md"
+        disabled={disabled} // ✅ กำหนดค่า disabled
+        className={`border w-full px-4 py-2 rounded-md ${
+          disabled ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""
+        }`} // ✅ เปลี่ยน UI เมื่อถูกปิดการใช้งาน
       />
     </div>
   );

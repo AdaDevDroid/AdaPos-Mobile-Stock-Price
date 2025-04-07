@@ -5,6 +5,7 @@ import { NetworkStatusProvider } from "@/hooks/NetworkStatusContext";
 import NetworkStatus from "@/components/NetworkStatus";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import NameCompany from "@/components/NameCompany";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -44,19 +45,37 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <NetworkStatusProvider>
-          <div className="flex h-screen">
+          <div className="flex h-screen relative">
             {showSidebarPages.includes(pathname) && isSidebarOpen !== null && (
-              <div className={`fixed h-full transition-width duration-300 ${isSidebarOpen ? 'w-64' : 'w-16'}`}>
+              <div className={`fixed h-full transition-width duration-300 ${isSidebarOpen ? 'w-64' : 'w-16'} z-10`}>
                 <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
               </div>
             )}
 
             <main
               className="flex-1 transition-margin duration-300"
-              style={{ marginLeft: showSidebarPages.includes(pathname) && isSidebarOpen !== null ? (isSidebarOpen ? '16rem' : '4rem') : 0 }}
+              style={{
+                marginLeft: showSidebarPages.includes(pathname) && isSidebarOpen !== null
+                  ? (isSidebarOpen ? '16rem' : '4rem')
+                  : 0
+              }}
             >
               {children}
             </main>
+
+            {/* ใช้ margin-left เพื่อให้ NameCompany ขยับตาม Sidebar */}
+            {showSidebarPages.includes(pathname) && (
+              <div
+                className="fixed bottom-2 left-2 z-20"
+                style={{
+                  marginLeft: isSidebarOpen !== null
+                    ? (isSidebarOpen ? '16rem' : '4rem')
+                    : 0
+                }}
+              >
+                <NameCompany />
+              </div>
+            )}
           </div>
           <NetworkStatus />
         </NetworkStatusProvider>
