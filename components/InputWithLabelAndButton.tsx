@@ -10,6 +10,8 @@ interface InputWithLabelAndButtonProps<T> {
     icon: ReactNode;
     onClick?: () => void;
     placeholder?: string;
+    inputRef?: React.Ref<HTMLInputElement>;
+    onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export default function InputWithLabelAndButton<T extends string | number>({
@@ -20,6 +22,8 @@ export default function InputWithLabelAndButton<T extends string | number>({
     icon,
     onClick,
     placeholder = "",
+    inputRef,
+    onKeyDown
 }: InputWithLabelAndButtonProps<T>) {
     return (
         <div className="space-y-1">
@@ -31,6 +35,7 @@ export default function InputWithLabelAndButton<T extends string | number>({
                 {/* Input */}
                 <div className="flex items-center border rounded-l-md overflow-hidden flex-grow h-10">
                     <input
+                        ref={inputRef}
                         type={type}
                         value={value}
                         onChange={(e) => {
@@ -45,6 +50,7 @@ export default function InputWithLabelAndButton<T extends string | number>({
                         }}
                         placeholder={type === "text" ? placeholder : ""}
                         className="w-full px-4 outline-none h-full"
+                        onKeyDown={onKeyDown}
                     />
                 </div>
 
