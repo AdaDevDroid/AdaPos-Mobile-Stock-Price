@@ -8,6 +8,8 @@ const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
+const basePath = '/AdaCheckStockSTD';
+
 // --- กำหนดค่า SSL ---
 const httpsOptions = {
     key: fs.readFileSync(path.join(__dirname, 'cert', 'privatekey.key')), // เรียกจาก root ของโปรเจกต์
@@ -26,8 +28,8 @@ app.prepare().then(() => {
     }).listen(httpsPort, (err) => {
         if (err) throw err;
         // แนะนำให้แสดง Domain จริง หรือ localhost ถ้าทดสอบในเครื่อง
-        console.log(`> Ready on https://localhost:${httpsPort}`);
-        console.log(`> Or access via https://dev.ada-soft.com:${httpsPort} if DNS is configured`);
+        console.log(`> Ready on https://localhost:${httpsPort}${basePath}`);
+        console.log(`> Or access via https://dev.ada-soft.com:${httpsPort}${basePath} if DNS is configured`);
     });
 
 }).catch(err => {
