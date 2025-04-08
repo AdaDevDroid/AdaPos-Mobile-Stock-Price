@@ -42,7 +42,7 @@ const BrancheModal: React.FC<BranchModalProps> = ({
                 <tr
                   key={index}
                   className="border text-center text-gray-500 text-[14px] hover:bg-green-200"
-                  onClick={(e) => {
+                  onClick={() => {
                   onOptionSelect(user.FTBchCode, user.FTBchName);
                   (e.currentTarget as HTMLTableRowElement);
                   }}

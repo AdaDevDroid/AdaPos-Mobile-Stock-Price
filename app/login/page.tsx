@@ -67,7 +67,7 @@ export default function Login() {
     console.log("login แล้ว");
     router.push("/main");
 
-  }, []);
+  }, [router]);
 
   const C_SETxToken = (token: string) => {
     const nExpToken = 60; // เวลาหมดอายุในหน่วยนาที
