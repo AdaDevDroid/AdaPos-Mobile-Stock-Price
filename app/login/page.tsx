@@ -260,7 +260,6 @@ export default function Login() {
   }
 
 
-
   const C_PRCxBchSelect = async (FTBchCode: string,FTBchName: string) => {
     // alert("FTBchCode: " + FTBchCode + " FTBchName: " + FTBchName);
     setError(""); 

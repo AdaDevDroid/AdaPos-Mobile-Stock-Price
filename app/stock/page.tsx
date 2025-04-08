@@ -42,6 +42,7 @@ export default function ReceiveGoods() {
   const [tRefSeq, setRefSeq] = useState("");
   const isNetworkOnline = useNetworkStatus();
   const [isRepeat, setIsRepeat] = useState(false);
+  const oBarcodeRef = useRef<HTMLInputElement>(null);
 
   {/* เช็ค User*/ }
   useAuth();
@@ -53,6 +54,11 @@ export default function ReceiveGoods() {
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
     }
+  }, []);
+
+  useEffect(() => {
+    // Focus ไปที่ input เมื่อ component โหลด
+    oBarcodeRef.current?.focus();
   }, []);
 
   {/* เปิด IndexedDB */ }
@@ -184,7 +190,8 @@ export default function ReceiveGoods() {
           FTBchCode: item.FTBchCode,
           FTAgnCode: item.FTAgnCode,
           FTUsrName: item.FTUsrName,
-          FDCreateOn: item.FDCreateOn
+          FDCreateOn: item.FDCreateOn,
+          FTPORef: item.FTPORef,
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData);
@@ -230,7 +237,8 @@ export default function ReceiveGoods() {
       FTBchCode: oUserInfo?.FTBchCode || "",
       FTAgnCode: oUserInfo?.FTAgnCode || "",
       FTUsrName: oUserInfo?.FTUsrName || "",
-      FDCreateOn: C_SETxFormattedDate()
+      FDCreateOn: C_SETxFormattedDate(),
+      FTPORef: "",
     }));
 
     await C_INSxDataIndexedDB(oDb, "TCNTProductStock", productData);
@@ -261,7 +269,8 @@ export default function ReceiveGoods() {
         FTBchCode: oUserInfo?.FTBchCode || "",
         FTAgnCode: oUserInfo?.FTAgnCode || "",
         FTUsrName: oUserInfo?.FTUsrName || "",
-        FDCreateOn: C_SETxFormattedDate()
+        FDCreateOn: C_SETxFormattedDate(),
+        FTPORef: "",
       };
 
       C_INSxProductTmpToIndexedDB([newProduct]);
@@ -486,6 +495,7 @@ export default function ReceiveGoods() {
           FTAgnCode: item.FTAgnCode,
           FTUsrName: item.FTUsrName,
           FDCreateOn: item.FDCreateOn,
+          FTPORef: item.FTPORef,
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก TCNTProductStockTmp:", mappedData);
@@ -570,6 +580,14 @@ export default function ReceiveGoods() {
           icon={bScanning ? <FiCameraOff /> : <FiCamera />}
           placeholder="สแกนหรือป้อนบาร์โค้ด"
           onClick={bScanning ? C_PRCxStopScanner : C_PRCxStartScanner}
+          inputRef={oBarcodeRef}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              if(bCheckAutoScan){
+                C_ADDxProduct(barcode);
+              }
+            }
+          }}
         />
 
         <InputWithLabelAndButton

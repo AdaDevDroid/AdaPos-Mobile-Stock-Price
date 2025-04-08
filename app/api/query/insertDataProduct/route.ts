@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
             const product = products[index];
             const {
                 FTBarcode, FCCost, FNQuantity, FTRefDoc,
-                FTXthDocKey, FTBchCode, FTAgnCode, FTUsrName, FDCreateOn
+                FTXthDocKey, FTBchCode, FTAgnCode, FTUsrName, FDCreateOn, FTPORef
             } = product;
 
             const FNId = index + 1;
@@ -38,7 +38,8 @@ export async function POST(req: NextRequest) {
             request.input("FDCreateOn", convertToCE(FDCreateOn));
             request.input("FTLastUpdBy", FTUsrName);
             request.input("FTCreateBy", FTUsrName);
-            request.input("FTAgnCode", FTAgnCode)
+            request.input("FTAgnCode", FTAgnCode);
+            request.input("FTPORef", FTPORef);
 
             console.log("🔍 Insert Data:", product);
             // ✅ INSERT ข้อมูลลงใน `TCNTDocSPDTTmp`
@@ -46,11 +47,11 @@ export async function POST(req: NextRequest) {
             INSERT INTO dbo.TMBTDocDTTmp (
             FTBchCode, FTXthDocNo, FNXtdSeqNo, FTXthDocKey, FTXthDocType, 
             FTXtdBarCode, FCXtdQty, FCXtdQtyAll, FCXtdCostIn, FDLastUpdOn, 
-            FDCreateOn, FTLastUpdBy, FTCreateBy, FTAgnCode
+            FDCreateOn, FTLastUpdBy, FTCreateBy, FTAgnCode, FTPORef
             ) VALUES (
             @FTBchCode, @FTXthDocNo, @FNXtdSeqNo, @FTXthDocKey, @FTXthDocType, 
             @FTXtdBarCode, @FCXtdQty, @FCXtdQtyAll, @FCXtdCostIn, @FDLastUpdOn, 
-            @FDCreateOn, @FTLastUpdBy, @FTCreateBy, @FTAgnCode
+            @FDCreateOn, @FTLastUpdBy, @FTCreateBy, @FTAgnCode, @FTPORef
             );
       `);
         }

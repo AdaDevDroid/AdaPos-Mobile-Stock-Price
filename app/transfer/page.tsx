@@ -39,6 +39,7 @@ export default function ReceiveGoods() {
   const [isProductOpen, setIsProductOpen] = useState(false);
   const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
   const [isRepeat, setIsRepeat] = useState(false);
+  const oBarcodeRef = useRef<HTMLInputElement>(null);
 
   {/* เช็ค User*/ }
   useAuth();
@@ -50,6 +51,11 @@ export default function ReceiveGoods() {
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
     }
+  }, []);
+
+  useEffect(() => {
+    // Focus ไปที่ input เมื่อ component โหลด
+    oBarcodeRef.current?.focus();
   }, []);
 
   {/* เปิด IndexedDB */ }
@@ -183,7 +189,8 @@ export default function ReceiveGoods() {
           FTBchCode: item.FTBchCode,
           FTAgnCode: item.FTAgnCode,
           FTUsrName: item.FTUsrName,
-          FDCreateOn: item.FDCreateOn
+          FDCreateOn: item.FDCreateOn,
+          FTPORef: item.FTPORef
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData);
@@ -198,7 +205,10 @@ export default function ReceiveGoods() {
   {/* เพิ่มสินค้า */ }
   const C_ADDxProduct = (barcode: string) => {
 
-    if (!barcode || !quantity) return;
+    if (!barcode || !quantity) {
+      alert("กรุณากรอกบาร์โค้ด หรือจำนวนให้ครบถ้วน");
+      return;
+    }
 
     setIsDisabledRefDoc(true);
     setProducts((prevProducts) => {
@@ -215,7 +225,8 @@ export default function ReceiveGoods() {
         FTBchCode: oUserInfo?.FTBchCode || "",
         FTAgnCode: oUserInfo?.FTAgnCode || "",
         FTUsrName: oUserInfo?.FTUsrName || "",
-        FDCreateOn: C_SETxFormattedDate()
+        FDCreateOn: C_SETxFormattedDate(),
+        FTPORef: searchText
       };
       C_INSxProductTmpToIndexedDB([newProduct]);
       return [...prevProducts, newProduct];
@@ -291,7 +302,8 @@ export default function ReceiveGoods() {
       FTBchCode: oUserInfo?.FTBchCode || "",
       FTAgnCode: oUserInfo?.FTAgnCode || "",
       FTUsrName: oUserInfo?.FTUsrName || "",
-      FDCreateOn: C_SETxFormattedDate()
+      FDCreateOn: C_SETxFormattedDate(),
+      FTPORef: searchText
     }));
 
     await C_INSxDataIndexedDB(oDb, "TCNTProductTransfer", productData);
@@ -330,6 +342,7 @@ export default function ReceiveGoods() {
     } finally {
       setIsDisabledRefDoc(false);
       setRefDoc("");
+      setSearchText("");
       if (isNetworkOnline) {
         alert("✅ บันทึกข้อมูลสำเร็จ");
       }
@@ -371,7 +384,8 @@ export default function ReceiveGoods() {
           FTBchCode: item.FTBchCode,
           FTAgnCode: item.FTAgnCode,
           FTUsrName: item.FTUsrName,
-          FDCreateOn: item.FDCreateOn
+          FDCreateOn: item.FDCreateOn,
+          FTPORef: item.FTPORef
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก TCNTProductTransferTmp:", mappedData);
@@ -379,6 +393,7 @@ export default function ReceiveGoods() {
           setIsDisabledRefDoc(true);
           setProducts(mappedData);
           setRefDoc(mappedData[0].FTRefDoc);
+          setSearchText(mappedData[0].FTPORef);
         }
 
       }
@@ -573,6 +588,14 @@ export default function ReceiveGoods() {
           icon={bScanning ? <FiCameraOff /> : <FiCamera />}
           placeholder="สแกนหรือป้อนบาร์โค้ด"
           onClick={bScanning ? C_PRCxStopScanner : C_PRCxStartScanner}
+          inputRef={oBarcodeRef}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              if(checked){
+                C_ADDxProduct(barcode);
+              }
+            }
+          }}
         />
 
 
