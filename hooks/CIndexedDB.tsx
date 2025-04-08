@@ -2,7 +2,56 @@ import { History, Product, UserInfo, SysConfig } from "@/models/models"
 
 export const C_PRCxOpenIndexedDB = async () => {
   const DB_NAME = "AdaDB";
-  const DB_VERSION = 14;
+  const DB_VERSION = 17;
+
+  const shouldResetDB = async (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const request = indexedDB.open(DB_NAME);
+
+      request.onsuccess = () => {
+        const db = request.result;
+        const currentVersion = db.version;
+        db.close();
+        resolve(currentVersion !== DB_VERSION);
+      };
+
+      request.onerror = () => {
+        resolve(false); // ไม่สามารถเปิด DB ได้ — ไม่ต้องลบ
+      };
+
+      request.onupgradeneeded = () => {
+        // ยังไม่เคยเปิดมาก่อน ถือว่าไม่ต้องลบ
+        resolve(false);
+      };
+    });
+  };
+
+  const needReset = await shouldResetDB();
+
+  if (needReset) {
+    console.log("⚠️ ตรวจพบการเปลี่ยนแปลงเวอร์ชัน — กำลังลบ DB เดิม...");
+    await new Promise<void>((resolve, reject) => {
+      const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+      deleteRequest.onsuccess = () => {
+        console.log("🗑️ ลบฐานข้อมูลเดิมเรียบร้อย");
+        try {
+          if (localStorage.getItem("session_token")) {
+            localStorage.removeItem("session_token");
+            localStorage.removeItem("session_expiry");
+            localStorage.removeItem("sidebarOpen");
+          };
+          console.log("✅ Logout ผ่าน API สำเร็จ");
+        } catch (error) {
+          console.log("❌ ไม่สามารถ Logout:", error);
+        }
+        resolve();
+      };
+      deleteRequest.onerror = () => {
+        console.error("❌ ลบฐานข้อมูลไม่สำเร็จ", deleteRequest.error);
+        reject(deleteRequest.error);
+      };
+    });
+  }
 
   return new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -61,22 +110,6 @@ export const C_PRCxOpenIndexedDB = async () => {
         store.createIndex("FTPORef", "FTPORef", { unique: false });
         console.log("✅ สร้างตาราง 'TCNTProductReceive' สำเร็จ");
       }
-           // 🔹 สร้างตาราง TCNTProductReceive ถ้ายังไม่มี
-      if (!db.objectStoreNames.contains("TCNTProductReceive")) {
-        const store = db.createObjectStore("TCNTProductReceive", { autoIncrement: true });
-        store.createIndex("FNId", "FNId", { unique: false });
-        store.createIndex("FTBarcode", "FTBarcode", { unique: false });
-        store.createIndex("FCCost", "FCCost", { unique: false });
-        store.createIndex("FNQuantity", "FNQuantity", { unique: false });
-        store.createIndex("FTRefDoc", "FTRefDoc", { unique: false });
-        store.createIndex("FTRefSeq", "FTRefSeq", { unique: false });
-        store.createIndex("FTXthDocKey", "FTXthDocKey", { unique: false });
-        store.createIndex("FTBchCode", "FTBchCode", { unique: false });
-        store.createIndex("FTAgnCode", "FTAgnCode", { unique: false });
-        store.createIndex("FTUsrName", "FTUsrName", { unique: false });
-        store.createIndex("FDCreateOn", "FDCreateOn", { unique: false });
-        console.log("✅ สร้างตาราง 'TCNTProductReceive' สำเร็จ");
-      }
      // 🔹 สร้างตาราง TCNTProductReceiveTmp ถ้ายังไม่มี
      if (!db.objectStoreNames.contains("TCNTProductReceiveTmp")) {
       const store = db.createObjectStore("TCNTProductReceiveTmp", { autoIncrement: true });
@@ -120,6 +153,7 @@ export const C_PRCxOpenIndexedDB = async () => {
         store.createIndex("FTAgnCode", "FTAgnCode", { unique: false });
         store.createIndex("FTUsrName", "FTUsrName", { unique: false });
         store.createIndex("FDCreateOn", "FDCreateOn", { unique: false });
+        store.createIndex("FTPORef", "FTPORef", { unique: false });
         console.log("✅ สร้างตาราง 'TCNTProductTransfer' สำเร็จ");
       }
    // 🔹 สร้างตาราง TCNTProductTransferTmp ถ้ายังไม่มี
