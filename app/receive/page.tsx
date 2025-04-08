@@ -1,13 +1,10 @@
 "use client";
-
-import InputWithButton from "@/components/InputWithButton";
 import InputWithLabel from "@/components/InputWithLabel";
 import InputWithLabelAndButton from "@/components/InputWithLabelAndButton";
 import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
 import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory } from "react-icons/fa";
-import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CTransferreceiptoutToExcel';
 import { History, Product, UserInfo } from "@/models/models"
@@ -26,7 +23,7 @@ export default function Receive() {
   const [tBarcode, setBarcode] = useState("");
   const [tCost, setCost] = useState("");
   const [tQty, setQty] = useState("1");
-  const [tSearchPoText, setSearchText] = useState<string>(""); // string
+  const [tSearchPoText, setSearchText] = useState("");
   const [oPendingBarcode, setPendingBarcode] = useState<string | null>(null);
   const [oHistoryList, setHistoryList] = useState<History[]>([]);
   const [oProductHistoryList, setProductHistoryList] = useState<Product[]>();
@@ -549,13 +546,13 @@ export default function Receive() {
         </div>
         {/* ค้นหา PO และปุ่ม 3 จุด (สำหรับ desktop) */}
         <div className="flex w-full md:w-80 md:ml-auto pt-2 relative">
-          <InputWithButton
+          <InputWithLabel
             type="text"
+            label={""}
             value={tSearchPoText}
             onChange={setSearchText}
-            placeholder="ค้นหาใบ PO"
-            icon={<GrDocumentText />}
-            onClick={() => alert(`ค้นหาใบ PO`)}
+            disabled={isDisabledRefDoc}
+            placeholder="อ้างอิงใบ PO"
           />
           {/* ปุ่ม 3 จุด */}
           <button
@@ -599,7 +596,7 @@ export default function Receive() {
           value={tRefDoc}
           onChange={setRefDoc}
           disabled={isDisabledRefDoc}
-          placeholder="ระบุเลขที่อ้างอิงจาก Supplier"
+          placeholder="ระบุเลขที่อ้างอิงใบส่งของ"
         />
 
         {/* ตัวสแกน QR Code พร้อมกรอบ */}
