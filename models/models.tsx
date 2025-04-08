@@ -10,6 +10,7 @@ export interface Product {
     FTAgnCode: string;
     FTUsrName: string;
     FDCreateOn: string;
+    FTPORef: string;
 }
 
 export interface History {
