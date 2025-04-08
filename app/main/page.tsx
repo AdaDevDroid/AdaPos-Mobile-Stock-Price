@@ -80,16 +80,16 @@ export default function MainPage() {
         }
 
         const oReceiveProductDataTmp = await C_PRCxFetchProductHistoryList(database, "TCNTProductReceiveTmp");
-        if (oReceiveProductDataTmp) {
-          setReceiveDataProductTmp(oReceiveProductDataTmp);
+        if (oReceiveProductDataTmp && oReceiveProductDataTmp.length > 0) {
+          setReceiveDataProductTmp([oReceiveProductDataTmp[0]]);
         }
         const oTranferProductDataTmp = await C_PRCxFetchProductHistoryList(database, "TCNTProductTransferTmp");
-        if (oTranferProductDataTmp) {
-          setTranferDataProductTmp(oTranferProductDataTmp);
+        if (oTranferProductDataTmp && oTranferProductDataTmp.length > 0) {
+          setTranferDataProductTmp([oTranferProductDataTmp[0]]);
         }
         const oStockProductDataTmp = await C_PRCxFetchProductHistoryList(database, "TCNTProductStockTmp");
-        if (oStockProductDataTmp) {
-          setStockeDataProductTmp(oStockProductDataTmp);
+        if (oStockProductDataTmp && oStockProductDataTmp.length > 0) {
+          setStockeDataProductTmp([oStockProductDataTmp[0]]);
         }
 
         const oReceiveProductData = await C_PRCxFetchProductHistoryList(database, "TCNTProductReceive");
@@ -341,13 +341,13 @@ export default function MainPage() {
         exportTransferbetweenbranchToExcel(formattedTransfer);
         break;
       case "Stock":
-      const formattedStock = oProducts.map(oProducts => ({
-        tProductCode: "",
-        tBarcode: oProducts.FTBarcode,
-        tStockCode: "",
-        tQTY: oProducts.FNQuantity.toString(),
-        dCreateOn: C_SETxFormattedDate()
-      }));
+        const formattedStock = oProducts.map(oProducts => ({
+          tProductCode: "",
+          tBarcode: oProducts.FTBarcode,
+          tStockCode: "",
+          tQTY: oProducts.FNQuantity.toString(),
+          dCreateOn: C_SETxFormattedDate()
+        }));
         exportjustStockToExcel(formattedStock);
         break;
       default:
