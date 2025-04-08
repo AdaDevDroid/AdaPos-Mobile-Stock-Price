@@ -28,8 +28,10 @@ export interface UserInfo {
     FTAgnName: string
     FTMerCode: string;
     FTUsrLogin: string;
-    FTUsrPass: string;  
+    FTUsrLoginPwd: string | null;
     FTUsrCode: string;  
+
+
   }
 
   export interface SysConfig {
