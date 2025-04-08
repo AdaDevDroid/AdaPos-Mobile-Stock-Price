@@ -7,7 +7,7 @@ import { CEncrypt } from '../../hooks/CEncrypt';
 import { serialize, parse } from "cookie";
 import { useNetworkStatus } from '@/hooks/NetworkStatusContext'
 import Image from "next/image";
-import BrancheModal from "@/components/ฺBchModal";
+import BrancheModal from "@/components/BchModal";
 import { UserInfo,BranchInfo } from "@/models/models";
 
 export default function Login() {
