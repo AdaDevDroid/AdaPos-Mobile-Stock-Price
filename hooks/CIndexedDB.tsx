@@ -280,7 +280,7 @@ export const C_GETxUserData = async (oDb: IDBDatabase): Promise<UserInfo | null>
           const userInfo: UserInfo = {
             FTUsrCode: userData.FTUsrCode,
             FTUsrLogin: userData.FTUsrLogin,
-            FTUsrPass: userData.FTUsrPass,
+            FTUsrLoginPwd: userData.FTUsrLoginPwd,
             FTUsrName: userData.FTUsrName,
             FTBchCode: userData.FTBchCode,
             FTBchName: userData.FTBchName,

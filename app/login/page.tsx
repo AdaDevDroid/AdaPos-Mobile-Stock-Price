@@ -84,8 +84,11 @@ export default function Login() {
         throw new Error("Database is not initialized");
       }
       const oUserData = await C_GETxUserData(oDatabase);
+      console.log("oUserData:", oUserData);
+    
       const encryptedPassword = new CEncrypt("2").C_PWDtASE128Encrypt(password);
-      return oUserData && oUserData.FTUsrLogin === username && oUserData.FTUsrPass === encryptedPassword;
+      console.log("oUserData:", oUserData);
+      return oUserData && oUserData.FTUsrLogin === username && oUserData.FTUsrLoginPwd === encryptedPassword;
     }
 
     console.log("🟢 Online Mode: Validating User via API");
@@ -110,7 +113,7 @@ export default function Login() {
           await C_INSxUserToDB(oDatabase, {
             FTUsrCode: user[0].FTUsrCode,
             FTUsrLogin: user[0].FTUsrLogin,
-            FTUsrPass: user[0].FTUsrLoginPwd,
+            FTUsrLoginPwd: user[0].FTUsrLoginPwd,
             FTUsrName: user[0].FTUsrName,
             FTBchCode: user[0].FTBchCode,
             FTBchName: user[0].FTBchName,
@@ -271,7 +274,7 @@ export default function Login() {
       await C_INSxUserToDB(oDatabase, {
         FTUsrCode: oUserInfo[0]?.FTUsrCode ,
         FTUsrLogin: oUserInfo[0]?.FTUsrLogin ,
-        FTUsrPass: oUserInfo[0]?.FTUsrPass ,
+        FTUsrLoginPwd: oUserInfo[0]?.FTUsrLoginPwd ,
         FTUsrName: oUserInfo[0]?.FTUsrName ,
         FTBchCode: FTBchCode,
         FTBchName: FTBchName,
