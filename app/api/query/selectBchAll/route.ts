@@ -6,7 +6,7 @@ import { BranchInfo } from "@/models/models";
 
 
 
-export async function POST(req: Request) {
+export async function POST() {
      try {
           const oPool = await C_CTDoConnectToDatabase();
           const aResult = await oPool.request()

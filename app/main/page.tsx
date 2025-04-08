@@ -173,7 +173,8 @@ export default function MainPage() {
             FTBchCode: item.FTBchCode,
             FTAgnCode: item.FTAgnCode,
             FTUsrName: item.FTUsrName,
-            FDCreateOn: item.FDCreateOn
+            FDCreateOn: item.FDCreateOn,
+            FTPORef: item.FTPORef || "" // Provide a default value or extract from item
           }));
 
           console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData);
@@ -511,6 +512,7 @@ export default function MainPage() {
       FTBchCode: oUserInfo?.FTBchCode || "",
       FTAgnCode: oUserInfo?.FTAgnCode || "",
       FTUsrName: oUserInfo?.FTUsrName || "",
+      FTPORef: oProducts.FTPORef || "",
       FDCreateOn: C_SETxFormattedDate()
     }));
     await C_INSxDataIndexedDB(oDb, tTaleName, productData);

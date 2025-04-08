@@ -1,13 +1,10 @@
 "use client";
-
-import InputWithButton from "@/components/InputWithButton";
 import InputWithLabel from "@/components/InputWithLabel";
 import InputWithLabelAndButton from "@/components/InputWithLabelAndButton";
 import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
 import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory } from "react-icons/fa";
-import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CProducttransferwahouseToExcel';
 import { History, Product, UserInfo } from "@/models/models"
@@ -42,6 +39,7 @@ export default function ReceiveGoods() {
   const [isProductOpen, setIsProductOpen] = useState(false);
   const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
   const [isRepeat, setIsRepeat] = useState(false);
+  const oBarcodeRef = useRef<HTMLInputElement>(null);
 
   {/* เช็ค User*/ }
   useAuth();
@@ -53,6 +51,11 @@ export default function ReceiveGoods() {
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
     }
+  }, []);
+
+  useEffect(() => {
+    // Focus ไปที่ input เมื่อ component โหลด
+    oBarcodeRef.current?.focus();
   }, []);
 
   {/* เปิด IndexedDB */ }
@@ -186,7 +189,8 @@ export default function ReceiveGoods() {
           FTBchCode: item.FTBchCode,
           FTAgnCode: item.FTAgnCode,
           FTUsrName: item.FTUsrName,
-          FDCreateOn: item.FDCreateOn
+          FDCreateOn: item.FDCreateOn,
+          FTPORef: item.FTPORef
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData);
@@ -201,7 +205,10 @@ export default function ReceiveGoods() {
   {/* เพิ่มสินค้า */ }
   const C_ADDxProduct = (barcode: string) => {
 
-    if (!barcode || !quantity) return;
+    if (!barcode || !quantity) {
+      alert("กรุณากรอกบาร์โค้ด หรือจำนวนให้ครบถ้วน");
+      return;
+    }
 
     setIsDisabledRefDoc(true);
     setProducts((prevProducts) => {
@@ -218,7 +225,8 @@ export default function ReceiveGoods() {
         FTBchCode: oUserInfo?.FTBchCode || "",
         FTAgnCode: oUserInfo?.FTAgnCode || "",
         FTUsrName: oUserInfo?.FTUsrName || "",
-        FDCreateOn: C_SETxFormattedDate()
+        FDCreateOn: C_SETxFormattedDate(),
+        FTPORef: searchText
       };
       C_INSxProductTmpToIndexedDB([newProduct]);
       return [...prevProducts, newProduct];
@@ -294,7 +302,8 @@ export default function ReceiveGoods() {
       FTBchCode: oUserInfo?.FTBchCode || "",
       FTAgnCode: oUserInfo?.FTAgnCode || "",
       FTUsrName: oUserInfo?.FTUsrName || "",
-      FDCreateOn: C_SETxFormattedDate()
+      FDCreateOn: C_SETxFormattedDate(),
+      FTPORef: searchText
     }));
 
     await C_INSxDataIndexedDB(oDb, "TCNTProductTransfer", productData);
@@ -333,6 +342,7 @@ export default function ReceiveGoods() {
     } finally {
       setIsDisabledRefDoc(false);
       setRefDoc("");
+      setSearchText("");
       if (isNetworkOnline) {
         alert("✅ บันทึกข้อมูลสำเร็จ");
       }
@@ -374,7 +384,8 @@ export default function ReceiveGoods() {
           FTBchCode: item.FTBchCode,
           FTAgnCode: item.FTAgnCode,
           FTUsrName: item.FTUsrName,
-          FDCreateOn: item.FDCreateOn
+          FDCreateOn: item.FDCreateOn,
+          FTPORef: item.FTPORef
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก TCNTProductTransferTmp:", mappedData);
@@ -382,6 +393,7 @@ export default function ReceiveGoods() {
           setIsDisabledRefDoc(true);
           setProducts(mappedData);
           setRefDoc(mappedData[0].FTRefDoc);
+          setSearchText(mappedData[0].FTPORef);
         }
 
       }
@@ -506,13 +518,13 @@ export default function ReceiveGoods() {
         </div>
         {/* ค้นหา PO และปุ่ม 3 จุด (สำหรับ desktop) */}
         <div className="flex w-full md:w-80 md:ml-auto pt-2 relative">
-          <InputWithButton
+          <InputWithLabel
             type="text"
+            label={""}
             value={searchText}
             onChange={setSearchText}
-            placeholder="ค้นหาใบ PO"
-            icon={<GrDocumentText />}
-            onClick={() => alert(`ข้อความ: ${searchText}`)}
+            disabled={isDisabledRefDoc}
+            placeholder="อ้างอิงใบขอโอน"
           />
           {/* ปุ่ม 3 จุด */}
           <button
@@ -556,7 +568,7 @@ export default function ReceiveGoods() {
           value={refDoc}
           disabled={isDisabledRefDoc}
           onChange={setRefDoc}
-          placeholder="ระบุเลขที่อ้างอิงจาก Supplier"
+          placeholder="ระบุเลขที่อ้างอิงใบส่งของ"
         />
 
         {/* ตัวสแกน QR Code พร้อมกรอบ */}
@@ -576,6 +588,14 @@ export default function ReceiveGoods() {
           icon={bScanning ? <FiCameraOff /> : <FiCamera />}
           placeholder="สแกนหรือป้อนบาร์โค้ด"
           onClick={bScanning ? C_PRCxStopScanner : C_PRCxStartScanner}
+          inputRef={oBarcodeRef}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              if(checked){
+                C_ADDxProduct(barcode);
+              }
+            }
+          }}
         />
 
 
