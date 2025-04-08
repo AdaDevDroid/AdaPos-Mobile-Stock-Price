@@ -1,13 +1,11 @@
 "use client";
 
-import InputWithButton from "@/components/InputWithButton";
 import InputWithLabel from "@/components/InputWithLabel";
 import InputWithLabelAndButton from "@/components/InputWithLabelAndButton";
 import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
 import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory } from "react-icons/fa";
-import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CAdjustStockToExcel';
 import { History, Product, UserInfo } from "@/models/models"
@@ -34,7 +32,6 @@ export default function ReceiveGoods() {
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [bCheckAutoScan, setChecked] = useState(false);
-  const [searchText, setSearchText] = useState<string>(""); // string
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingScanAuto, setIsLoadingScanAuto] = useState(false);
   const checkedRef = useRef(bCheckAutoScan);
