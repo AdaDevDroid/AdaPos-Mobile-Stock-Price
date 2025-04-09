@@ -1,13 +1,13 @@
+
 "use client";
 
-import InputWithButton from "@/components/InputWithButton";
+
 import InputWithLabel from "@/components/InputWithLabel";
 import InputWithLabelAndButton from "@/components/InputWithLabelAndButton";
 import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
 import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory } from "react-icons/fa";
-import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CAdjustStockToExcel';
 import { History, Product, UserInfo } from "@/models/models"
@@ -23,6 +23,7 @@ import RepeatModal from "@/components/RepeatModal";
 export default function ReceiveGoods() {
 
   const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
+  const [isDisabledRefDoc, setIsDisabledRefDoc] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isProductOpen, setIsProductOpen] = useState(false);
   const [bDropdownOpen, setIsOpen] = useState(false);
@@ -32,8 +33,8 @@ export default function ReceiveGoods() {
   const [oProducts, setProducts] = useState<Product[]>([]);
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState("1");
-  const [bCheckAutoScan, setChecked] = useState(false);
-  const [searchText, setSearchText] = useState<string>(""); // string
+  const [bCheckAutoScan, setChecked] = useState(true);
+  const [bCheckKeyboard, setCheckKeyboard] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingScanAuto, setIsLoadingScanAuto] = useState(false);
   const checkedRef = useRef(bCheckAutoScan);
@@ -44,6 +45,7 @@ export default function ReceiveGoods() {
   const [tRefSeq, setRefSeq] = useState("");
   const isNetworkOnline = useNetworkStatus();
   const [isRepeat, setIsRepeat] = useState(false);
+  const oBarcodeRef = useRef<HTMLInputElement>(null);
 
   {/* เช็ค User*/ }
   useAuth();
@@ -55,6 +57,11 @@ export default function ReceiveGoods() {
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
     }
+  }, []);
+
+  useEffect(() => {
+    // Focus ไปที่ input เมื่อ component โหลด
+    oBarcodeRef.current?.focus();
   }, []);
 
   {/* เปิด IndexedDB */ }
@@ -69,12 +76,12 @@ export default function ReceiveGoods() {
         setUserInfo(data);
         console.log("✅ ข้อมูลผู้ใช้ถูกตั้งค่า:", data);
       }
-
-      setRefSeq(crypto.randomUUID());
+      const tRefSeq = generateRandomID();
+      setRefSeq(tRefSeq);
     };
     initDB();
   }, []);
-
+  
 
   {/* set HistoryList เมื่อ oDb ถูกเซ็ต  */ }
   useEffect(() => {
@@ -132,6 +139,40 @@ export default function ReceiveGoods() {
   };
 
 
+  const C_PRCxScanBar = (ptDecodedText: string) => {
+    setBarcode(ptDecodedText);
+
+    if (checkedRef.current) {
+      setIsLoadingScanAuto(true);
+      let countdown = 1;
+
+      const timer = setInterval(() => {
+        console.log(`⏳ กำลังเพิ่มข้อมูลใน ${countdown} วินาที...`);
+        countdown--;
+
+        if (countdown === 0) {
+          clearInterval(timer);
+          C_ADDxProduct(ptDecodedText);
+          setIsLoadingScanAuto(false);
+          setBarcode("");
+        }
+      }, 1000);
+    } else {
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 500);
+
+    }
+  };
+
+  const generateRandomID = () => {
+    const timestamp = Date.now(); // ใช้เวลาใน millisecond
+    const randomNum = Math.floor(Math.random() * 1000000); // สุ่มตัวเลข
+    return `${timestamp}-${randomNum}`;
+  };
+  
+
 
   {/* ดึงข้อมูล History จาก IndexedDB */ }
   const C_PRCxFetchHistoryList = async () => {
@@ -186,7 +227,8 @@ export default function ReceiveGoods() {
           FTBchCode: item.FTBchCode,
           FTAgnCode: item.FTAgnCode,
           FTUsrName: item.FTUsrName,
-          FDCreateOn: item.FDCreateOn
+          FDCreateOn: item.FDCreateOn,
+          FTPORef: item.FTPORef,
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData);
@@ -232,7 +274,8 @@ export default function ReceiveGoods() {
       FTBchCode: oUserInfo?.FTBchCode || "",
       FTAgnCode: oUserInfo?.FTAgnCode || "",
       FTUsrName: oUserInfo?.FTUsrName || "",
-      FDCreateOn: C_SETxFormattedDate()
+      FDCreateOn: C_SETxFormattedDate(),
+      FTPORef: "",
     }));
 
     await C_INSxDataIndexedDB(oDb, "TCNTProductStock", productData);
@@ -248,6 +291,7 @@ export default function ReceiveGoods() {
       return;
     }
 
+    setIsDisabledRefDoc(true);
     setProducts((prevProducts) => {
       const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
 
@@ -262,7 +306,8 @@ export default function ReceiveGoods() {
         FTBchCode: oUserInfo?.FTBchCode || "",
         FTAgnCode: oUserInfo?.FTAgnCode || "",
         FTUsrName: oUserInfo?.FTUsrName || "",
-        FDCreateOn: C_SETxFormattedDate()
+        FDCreateOn: C_SETxFormattedDate(),
+        FTPORef: "",
       };
 
       C_INSxProductTmpToIndexedDB([newProduct]);
@@ -347,6 +392,7 @@ export default function ReceiveGoods() {
     } catch (error) {
       console.log("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
     } finally {
+      setIsDisabledRefDoc(false);
       setRefDoc("");
       if (isNetworkOnline) {
         alert("✅ บันทึกข้อมูลสำเร็จ");
@@ -454,6 +500,7 @@ export default function ReceiveGoods() {
       await C_DELoDataTmp(oDb, "TCNTProductStockTmp");
       setProducts([]);
       setRefDoc("");
+      setIsDisabledRefDoc(false);
     } else {
       console.log("❌ Database is not initialized");
     }
@@ -485,10 +532,12 @@ export default function ReceiveGoods() {
           FTAgnCode: item.FTAgnCode,
           FTUsrName: item.FTUsrName,
           FDCreateOn: item.FDCreateOn,
+          FTPORef: item.FTPORef,
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก TCNTProductStockTmp:", mappedData);
         if (mappedData.length > 0) {
+          setIsDisabledRefDoc(true);
           setProducts(mappedData);
           setRefDoc(mappedData[0].FTRefDoc);
         }
@@ -502,31 +551,13 @@ export default function ReceiveGoods() {
   };
   return (
     <div className="p-4 ms-1 mx-auto bg-white" onClick={C_SETxCloseDropdown}>
-      <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center pb-2">
         <div className="flex flex-row w-full py-2">
           {/* หัวข้อ */}
-          <h1 className="text-2xl font-bold md:pb-0">ตรวจนับสต็อก</h1>
-          {/* ปุ่ม 3 จุด จอเล็ก */}
-          <button
-            className="md:hidden ml-2 p-2 rounded-md ml-auto text-gray-500 hover:text-gray-700 text-[18px]"
-            onClick={() => setIsOpen(!bDropdownOpen)}
-          >
-            <FaEllipsisV />
-          </button>
-        </div>
-        {/* ค้นหา PO และปุ่ม 3 จุด (สำหรับ desktop) */}
-        <div className="flex w-full md:w-80 md:ml-auto pt-2 relative">
-          <InputWithButton
-            type="text"
-            value={searchText}
-            onChange={setSearchText}
-            placeholder="ค้นหาใบ PO"
-            icon={<GrDocumentText />}
-            onClick={() => alert(`ข้อความ: ${searchText}`)}
-          />
+          <h1 className="text-xl font-bold">ตรวจนับสต็อก</h1>
           {/* ปุ่ม 3 จุด */}
           <button
-            className="hidden md:block ml-2 p-2 rounded-md text-gray-500 hover:text-gray-700 text-[18px]"
+            className="ml-2 p-2 rounded-md ml-auto text-gray-500 hover:text-gray-700 text-[18px"
             onClick={() => setIsOpen(!bDropdownOpen)}
           >
             <FaEllipsisV />
@@ -557,7 +588,7 @@ export default function ReceiveGoods() {
         )}
       </div>
       {/* กรอกข้อมูล */}
-      <div className="space-y-4 pt-4">
+      <div className="space-y-2 pt-4">
 
         <InputWithLabel
           type="text"
@@ -565,6 +596,7 @@ export default function ReceiveGoods() {
           icon={<FaRegCalendar />}
           value={tRefDoc}
           onChange={setRefDoc}
+          disabled={isDisabledRefDoc}
           placeholder="ระบุจุดตรวจนับ เช่น ชั้นวาง A1, คลังหลัง"
         />
 
@@ -585,6 +617,15 @@ export default function ReceiveGoods() {
           icon={bScanning ? <FiCameraOff /> : <FiCamera />}
           placeholder="สแกนหรือป้อนบาร์โค้ด"
           onClick={bScanning ? C_PRCxStopScanner : C_PRCxStartScanner}
+          inputRef={oBarcodeRef}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              if (bCheckAutoScan) {
+                C_PRCxScanBar(barcode);
+              }
+            }
+          }}
+          inputMode={bCheckKeyboard ? "none" : "numeric"}
         />
 
         <InputWithLabelAndButton
@@ -627,12 +668,28 @@ export default function ReceiveGoods() {
         {/* จำนวนรายการ */}
         <p className="text-gray-500 text-[14px]">จำนวนรายการ: {oProducts.length} รายการ</p>
 
-        <div className="flex w-full md:w-auto md:ml-auto pt-2 relative">
+        <div className="flex flex-col w-full md:w-auto md:ml-auto pt-2 relative">
           <label className="flex items-center text-gray-500 cursor-pointer">
             <input
               type="checkbox"
               checked={bCheckAutoScan}
-              onChange={() => setChecked(!bCheckAutoScan)}
+              onChange={() => {
+                setChecked(!bCheckAutoScan);
+                oBarcodeRef.current?.focus();
+              }}
+              className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="ml-2">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>
+          </label>
+
+          <label className="flex items-center text-gray-500 text-[14px] cursor-pointer pt-2">
+            <input
+              type="checkbox"
+              checked={bCheckKeyboard}
+              onChange={() => {
+                setCheckKeyboard(!bCheckKeyboard)
+                oBarcodeRef.current?.focus();
+              }}
               className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
             />
             <span className="ml-2 text-[14px]">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>

@@ -8,7 +8,9 @@ interface User {
      FTUsrLoginPwd: string | null;
      FTUsrName: string | null;
      FTBchCode: string | null;
+     FTBchName: string | null;
      FTAgnCode: string | null;
+     FTAgnName: string | null;
      FTMerCode: string | null;
 }
 
@@ -19,13 +21,15 @@ export async function POST(req: Request) {
           const aResult = await oPool.request()
                .input("username", username)
                .query(`
-               SELECT DISTINCT
+              SELECT DISTINCT
                     USRLI.FTUsrCode,
                     FTUsrLogin,
                     FTUsrLoginPwd,
                     USRL.FTUsrName,
                     USRG.FTBchCode,
+				BCHL.FTBchName,
                     USRL.FTAgnCode,
+				AGNL.FTAgnName,
                     USRG.FTMerCode
                FROM TCNMUsrLogin USRLI WITH (NOLOCK)
                INNER JOIN TCNMUser_L USRL
@@ -33,7 +37,11 @@ export async function POST(req: Request) {
                     AND USRL.FTAgnCode = USRLI.FTAgnCode
                INNER JOIN TCNTUsrGroup USRG
                     ON USRG.FTUsrCode = USRLI.FTUsrCode
-                    AND USRL.FTAgnCode = USRLI.FTAgnCode
+                    AND USRG.FTAgnCode = USRLI.FTAgnCode	
+			   LEFT JOIN TCNMBranch_L BCHL
+                    ON BCHL.FTBchCode = USRG.FTBchCode
+			   LEFT JOIN TCNMAgency_L AGNL
+                    ON AGNL.FTAgnCode = USRLI.FTAgnCode	
                WHERE
                     FTUsrStaActive = '1'
                     AND FTUsrLogType = '1'
@@ -42,14 +50,22 @@ export async function POST(req: Request) {
                     AND GETDATE() BETWEEN FDUsrPwdStart AND FDUsrPwdExpired
                ORDER BY FTUsrCode ASC;
                `);
-
+                 
           const aData = aResult.recordset;
+          console.log(" 🟢 aData:", aData);
           const oUserData = aData.map((user: User) => ({ ...user }));
+          console.log(" 🟢 oUserData:", oUserData);
+          
           const tEncryptedPassword = new CEncrypt("2").C_PWDtASE128Encrypt(password);
+        
+          console.log(" 🟢 tEncryptedPassword:", tEncryptedPassword);
 
-          const oUser = oUserData.find(
-               (oUserData) => oUserData.FTUsrLoginPwd === tEncryptedPassword
-          );
+            const oUser = oUserData.filter(
+                  (oUserData) => oUserData.FTUsrLoginPwd === tEncryptedPassword
+            );
+          console.log(" 🟢 oUser:", oUser);
+
+
 
           if (!oUser) {
                return new NextResponse(JSON.stringify({ message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }), { status: 401 });

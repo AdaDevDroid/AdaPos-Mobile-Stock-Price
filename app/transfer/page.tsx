@@ -1,13 +1,10 @@
 "use client";
-
-import InputWithButton from "@/components/InputWithButton";
 import InputWithLabel from "@/components/InputWithLabel";
 import InputWithLabelAndButton from "@/components/InputWithLabelAndButton";
 import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
 import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory } from "react-icons/fa";
-import { GrDocumentText } from "react-icons/gr";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CProducttransferwahouseToExcel';
 import { History, Product, UserInfo } from "@/models/models"
@@ -20,13 +17,15 @@ import RepeatModal from "@/components/RepeatModal";
 
 export default function ReceiveGoods() {
   const [refDoc, setRefDoc] = useState("");
+  const [isDisabledRefDoc, setIsDisabledRefDoc] = useState(false);
   const [oProducts, setProducts] = useState<Product[]>([]);
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [isOpen, setIsOpen] = useState(false);
-  const [checked, setChecked] = useState(false);
+  const [bCheckAutoScan, setChecked] = useState(true);
+  const [bCheckKeyboard, setCheckKeyboard] = useState(false);
   const [searchText, setSearchText] = useState<string>("");
-  const checkedRef = useRef(checked);
+  const checkedRef = useRef(bCheckAutoScan);
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [tRefSeq, setRefSeq] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -41,6 +40,7 @@ export default function ReceiveGoods() {
   const [isProductOpen, setIsProductOpen] = useState(false);
   const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
   const [isRepeat, setIsRepeat] = useState(false);
+  const oBarcodeRef = useRef<HTMLInputElement>(null);
 
   {/* เช็ค User*/ }
   useAuth();
@@ -52,6 +52,11 @@ export default function ReceiveGoods() {
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
     }
+  }, []);
+
+  useEffect(() => {
+    // Focus ไปที่ input เมื่อ component โหลด
+    oBarcodeRef.current?.focus();
   }, []);
 
   {/* เปิด IndexedDB */ }
@@ -86,8 +91,8 @@ export default function ReceiveGoods() {
   }, [oDb]);
   {/* ใช้ useEffect ในการเก็บค่า checked ไว้ */ }
   useEffect(() => {
-    checkedRef.current = checked;
-  }, [checked]);
+    checkedRef.current = bCheckAutoScan;
+  }, [bCheckAutoScan]);
 
 
   {/* สแกน BarCode */ }
@@ -130,6 +135,32 @@ export default function ReceiveGoods() {
     }
   };
 
+  const C_PRCxScanBar = (ptDecodedText: string) => {
+    setBarcode(ptDecodedText);
+
+    if (checkedRef.current) {
+      setIsLoadingScanAuto(true);
+      let countdown = 1;
+
+      const timer = setInterval(() => {
+        console.log(`⏳ กำลังเพิ่มข้อมูลใน ${countdown} วินาที...`);
+        countdown--;
+
+        if (countdown === 0) {
+          clearInterval(timer);
+          C_ADDxProduct(ptDecodedText);
+          setIsLoadingScanAuto(false);
+          setBarcode("");
+        }
+      }, 1000);
+    } else {
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 500);
+
+    }
+  };
 
 
 
@@ -185,7 +216,8 @@ export default function ReceiveGoods() {
           FTBchCode: item.FTBchCode,
           FTAgnCode: item.FTAgnCode,
           FTUsrName: item.FTUsrName,
-          FDCreateOn: item.FDCreateOn
+          FDCreateOn: item.FDCreateOn,
+          FTPORef: item.FTPORef
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData);
@@ -200,9 +232,12 @@ export default function ReceiveGoods() {
   {/* เพิ่มสินค้า */ }
   const C_ADDxProduct = (barcode: string) => {
 
-    if (!barcode || !quantity) return;
+    if (!barcode || !quantity) {
+      alert("กรุณากรอกบาร์โค้ด หรือจำนวนให้ครบถ้วน");
+      return;
+    }
 
-
+    setIsDisabledRefDoc(true);
     setProducts((prevProducts) => {
       const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
 
@@ -217,7 +252,8 @@ export default function ReceiveGoods() {
         FTBchCode: oUserInfo?.FTBchCode || "",
         FTAgnCode: oUserInfo?.FTAgnCode || "",
         FTUsrName: oUserInfo?.FTUsrName || "",
-        FDCreateOn: C_SETxFormattedDate()
+        FDCreateOn: C_SETxFormattedDate(),
+        FTPORef: searchText
       };
       C_INSxProductTmpToIndexedDB([newProduct]);
       return [...prevProducts, newProduct];
@@ -293,7 +329,8 @@ export default function ReceiveGoods() {
       FTBchCode: oUserInfo?.FTBchCode || "",
       FTAgnCode: oUserInfo?.FTAgnCode || "",
       FTUsrName: oUserInfo?.FTUsrName || "",
-      FDCreateOn: C_SETxFormattedDate()
+      FDCreateOn: C_SETxFormattedDate(),
+      FTPORef: searchText
     }));
 
     await C_INSxDataIndexedDB(oDb, "TCNTProductTransfer", productData);
@@ -330,7 +367,9 @@ export default function ReceiveGoods() {
     } catch (error) {
       console.log("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
     } finally {
+      setIsDisabledRefDoc(false);
       setRefDoc("");
+      setSearchText("");
       if (isNetworkOnline) {
         alert("✅ บันทึกข้อมูลสำเร็จ");
       }
@@ -372,13 +411,16 @@ export default function ReceiveGoods() {
           FTBchCode: item.FTBchCode,
           FTAgnCode: item.FTAgnCode,
           FTUsrName: item.FTUsrName,
-          FDCreateOn: item.FDCreateOn
+          FDCreateOn: item.FDCreateOn,
+          FTPORef: item.FTPORef
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก TCNTProductTransferTmp:", mappedData);
         if (mappedData.length > 0) {
+          setIsDisabledRefDoc(true);
           setProducts(mappedData);
           setRefDoc(mappedData[0].FTRefDoc);
+          setSearchText(mappedData[0].FTPORef);
         }
 
       }
@@ -474,6 +516,8 @@ export default function ReceiveGoods() {
       await C_DELoDataTmp(oDb, "TCNTProductTransferTmp");
       setProducts([]);
       setRefDoc("");
+      setSearchText("");
+      setIsDisabledRefDoc(false);
     } else {
       console.log("❌ Database is not initialized");
     }
@@ -491,7 +535,7 @@ export default function ReceiveGoods() {
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
         <div className="flex flex-row w-full py-2">
           {/* หัวข้อ */}
-          <h1 className="text-2xl font-bold md:pb-0">รับ / โอนสินค้าระหว่างสาขา</h1>
+          <h1 className="text-xl font-bold md:pb-0">รับ / โอนสินค้าระหว่างสาขา</h1>
           {/* ปุ่ม 3 จุด จอเล็ก */}
           <button
             className="md:hidden ml-2 p-2 rounded-md ml-auto text-gray-500 hover:text-gray-700 text-[18px]"
@@ -502,13 +546,13 @@ export default function ReceiveGoods() {
         </div>
         {/* ค้นหา PO และปุ่ม 3 จุด (สำหรับ desktop) */}
         <div className="flex w-full md:w-80 md:ml-auto pt-2 relative">
-          <InputWithButton
+          <InputWithLabel
             type="text"
+            label={""}
             value={searchText}
             onChange={setSearchText}
-            placeholder="ค้นหาใบ PO"
-            icon={<GrDocumentText />}
-            onClick={() => alert(`ข้อความ: ${searchText}`)}
+            disabled={isDisabledRefDoc}
+            placeholder="อ้างอิงใบขอโอน"
           />
           {/* ปุ่ม 3 จุด */}
           <button
@@ -550,8 +594,9 @@ export default function ReceiveGoods() {
           label={"เลขที่อ้างอิง"}
           icon={<FaRegCalendar />}
           value={refDoc}
+          disabled={isDisabledRefDoc}
           onChange={setRefDoc}
-          placeholder="ระบุเลขที่อ้างอิงจาก Supplier"
+          placeholder="ระบุเลขที่อ้างอิงใบส่งของ"
         />
 
         {/* ตัวสแกน QR Code พร้อมกรอบ */}
@@ -571,6 +616,15 @@ export default function ReceiveGoods() {
           icon={bScanning ? <FiCameraOff /> : <FiCamera />}
           placeholder="สแกนหรือป้อนบาร์โค้ด"
           onClick={bScanning ? C_PRCxStopScanner : C_PRCxStartScanner}
+          inputRef={oBarcodeRef}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              if (bCheckAutoScan) {
+                C_PRCxScanBar(barcode);
+              }
+            }
+          }}
+          inputMode={bCheckKeyboard ? "none" : "numeric"}
         />
 
 
@@ -615,12 +669,28 @@ export default function ReceiveGoods() {
         {/* จำนวนรายการ */}
         <p className="text-gray-500 text-[14px]">จำนวนรายการ: {oProducts.length} รายการ</p>
 
-        <div className="flex w-full md:w-auto md:ml-auto pt-2 relative">
+        <div className="flex flex-col w-full md:w-auto md:ml-auto pt-2 relative">
           <label className="flex items-center text-gray-500 cursor-pointer">
             <input
               type="checkbox"
-              checked={checked}
-              onChange={() => setChecked(!checked)}
+              checked={bCheckAutoScan}
+              onChange={() => {
+                setChecked(!bCheckAutoScan);
+                oBarcodeRef.current?.focus();
+              }}
+              className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="ml-2">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>
+          </label>
+
+          <label className="flex items-center text-gray-500 text-[14px] cursor-pointer pt-2">
+            <input
+              type="checkbox"
+              checked={bCheckKeyboard}
+              onChange={() => {
+                setCheckKeyboard(!bCheckKeyboard)
+                oBarcodeRef.current?.focus();
+              }}
               className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
             />
             <span className="ml-2 text-[14px]">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>
