@@ -489,6 +489,7 @@ export default function ReceiveGoods() {
       await C_DELoDataTmp(oDb, "TCNTProductTransferTmp");
       setProducts([]);
       setRefDoc("");
+      setSearchText("");
       setIsDisabledRefDoc(false);
     } else {
       console.log("❌ Database is not initialized");

@@ -534,6 +534,7 @@ export default function Receive() {
       await C_DELoDataTmp(oDb, "TCNTProductReceiveTmp");
       setProducts([]);
       setRefDoc("");
+      setSearchText("");
       setIsDisabledRefDoc(false);
     } else {
       console.log("❌ Database is not initialized");
