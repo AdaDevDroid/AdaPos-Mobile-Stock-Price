@@ -12,7 +12,8 @@ const pwaConfig = withPWA({
 const nextConfig: NextConfig = {
   reactStrictMode: false,
   devIndicators: false,
-  basePath: '/AdaCheckStockSTD',// ✅ เพิ่ม basePath เพื่อให้ Next.js ทำงานใน /AdaCheckStockSTD
+  // basePath: '/AdaCheckStockSTD',// ✅ เพิ่ม basePath เพื่อให้ Next.js ทำงานใน /AdaCheckStockSTD
+  basePath: `${process.env.NEXT_PUBLIC_BASE_PATH}`,// ✅ เพิ่ม basePath เพื่อให้ Next.js ทำงานใน /AdaCheckStockSTD
   ...pwaConfig,
   webpack: (config, { dev }) => {
     if (dev) {
