@@ -13,6 +13,7 @@ export async function POST() {
           .query(`
                SELECT FTBchCode, FTBchName 
                FROM TCNMBranch_L WITH (NOLOCK) 
+               WHERE FNLngID = 1
           `);
                  
           const aData = aResult.recordset;

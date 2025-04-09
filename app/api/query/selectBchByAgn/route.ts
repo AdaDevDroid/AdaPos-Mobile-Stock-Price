@@ -16,6 +16,7 @@ export async function POST(req: Request) {
                SELECT FTBchCode, FTBchName 
                FROM TCNMBranch_L WITH (NOLOCK) 
                WHERE FTAgnCode = @FTAgnCode
+               AND FNLngID = 1
           `);
                  
           const aData = aResult.recordset;
