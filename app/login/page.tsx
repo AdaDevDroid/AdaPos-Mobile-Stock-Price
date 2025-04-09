@@ -27,7 +27,8 @@ export default function Login() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
-        .register("/sw.js")
+        // .register("/sw.js")
+        .register(`${process.env.NEXT_PUBLIC_BASE_PATH}/sw.js`)
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
     }
@@ -92,7 +93,7 @@ export default function Login() {
     }
 
     console.log("🟢 Online Mode: Validating User via API");
-    const userResponse = await fetch("/api/query/selectUsrLogin", {
+    const userResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectUsrLogin`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -129,7 +130,7 @@ export default function Login() {
         if(user[0].FTAgnCode){
           
             console.log("🟢 Online Mode: Validating User via API");
-            const BchResponse = await fetch("/api/query/selectBchByAgn", {
+            const BchResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectBchByAgn`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ FTAgnCode: user[0].FTAgnCode }), // ส่งค่า FTAgnCode ไปยัง API
@@ -146,14 +147,14 @@ export default function Login() {
         else{
           console.log("✅User 009 ");
           console.log("🟢 Online Mode: Validating User via API");
-          const BchResponse = await fetch("/api/query/selectBchAll", {
+          const BchResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectBchAll`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           });
           if (!BchResponse.ok) return false;
           const { bch } = await BchResponse.json();
 
-          const CompResponse = await fetch("/api/query/selectCompName", {
+          const CompResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectCompName`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             });
@@ -176,7 +177,7 @@ export default function Login() {
   const C_PRCxSyncConfig = async (oDatabase: IDBDatabase) => {
     try {
       console.log("🔄 Syncing SysConfig...");
-      const response = await fetch("/api/query/selectSysConfig", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectSysConfig`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -323,7 +324,8 @@ export default function Login() {
       <div className="flex flex-col items-center text-center mb-6">
         <div className="text-white text-2xl font-bold flex items-center justify-center w-16 h-16 rounded-md">
           <Image
-            src="/icons/logoAda.png"
+            // src="/icons/logoAda.png"
+            src={`${process.env.NEXT_PUBLIC_BASE_PATH}/icons/logoAda.png`}
             alt="Logo"
             width={64}
             height={64}
@@ -381,7 +383,8 @@ export default function Login() {
       <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.9</p>
       <p className="text-center text-gray-400 text-xs">© 2025 AdaPos+. All rights reserved.</p>
       <Image
-        src="/icons/logoAdaLogin.png"
+        // src="/icons/logoAdaLogin.png"
+        src={`${process.env.NEXT_PUBLIC_BASE_PATH}/icons/logoAdaLogin.png`}
         alt="Logo"
         width={80}
         height={80}

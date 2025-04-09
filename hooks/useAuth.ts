@@ -10,7 +10,8 @@ export function useAuth() {
           const tokenExpiry = localStorage.getItem("session_expiry");
           if (!cachedToken) {
             console.log("❌ ไม่มี Token ใน Cache, Redirect ไปหน้า Login");
-            window.location.href = "/";
+            // window.location.href = "/";
+            window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH}/`;
             return;
           }
           if (tokenExpiry) {
@@ -20,7 +21,8 @@ export function useAuth() {
               console.log("❌ Token หมดอายุ → Redirect ไปหน้า Login");
               localStorage.removeItem("session_token");
               localStorage.removeItem("session_expiry");
-              window.location.href = "/";
+              // window.location.href = "/";
+              window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH}/`;
             }
           }
 
@@ -29,7 +31,8 @@ export function useAuth() {
 
       } catch (error) {
         console.log("⚠️ Error เช็คสิทธิ์:", error);
-        window.location.href = "/";
+        // window.location.href = "/";
+        window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH}/`;
       }
     };
 

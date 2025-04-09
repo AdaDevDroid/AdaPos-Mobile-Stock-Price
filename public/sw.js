@@ -52,15 +52,15 @@ if (workbox) {
 
     // Precache ไฟล์ที่กำหนดไว้ล่วงหน้าใหม่
     workbox.precaching.precacheAndRoute([
-      { url: '/', revision: VERSION },
-      { url: '/login', revision: VERSION },
-      { url: '/main', revision: VERSION },
-      { url: '/receive', revision: VERSION },
-      { url: '/transfer', revision: VERSION },
-      { url: '/stock', revision: VERSION },
-      { url: '/price-check', revision: VERSION },
-      { url: '/icons/icon-192x192.png', revision: VERSION },
-      { url: '/icons/icon-512x512.png', revision: VERSION },
+      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/`, revision: VERSION },
+      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/login`, revision: VERSION },
+      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/main`, revision: VERSION },
+      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/receive`, revision: VERSION },
+      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/transfer`, revision: VERSION },
+      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/stock`, revision: VERSION },
+      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/price-check`, revision: VERSION },
+      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/icons/icon-192x192.png`, revision: VERSION },
+      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/icons/icon-512x512.png`, revision: VERSION },
     ]);
   }
 
