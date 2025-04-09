@@ -12,6 +12,8 @@ interface InputWithLabelAndButtonProps<T> {
     placeholder?: string;
     inputRef?: React.Ref<HTMLInputElement>;
     onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+    inputMode?: "none" | "text" | "numeric" | "decimal" | "search";
+    readOnly?: boolean;
 }
 
 export default function InputWithLabelAndButton<T extends string | number>({
@@ -23,7 +25,9 @@ export default function InputWithLabelAndButton<T extends string | number>({
     onClick,
     placeholder = "",
     inputRef,
-    onKeyDown
+    onKeyDown,
+    inputMode = "text",
+    readOnly = false,
 }: InputWithLabelAndButtonProps<T>) {
     return (
         <div className="space-y-1">
@@ -51,6 +55,8 @@ export default function InputWithLabelAndButton<T extends string | number>({
                         placeholder={type === "text" ? placeholder : ""}
                         className="w-full px-4 outline-none h-full"
                         onKeyDown={onKeyDown}
+                        inputMode={inputMode}
+                        readOnly={readOnly}
                     />
                 </div>
 
