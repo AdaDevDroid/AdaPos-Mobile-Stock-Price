@@ -1,5 +1,5 @@
 
-"use client";                                      
+"use client";
 
 
 import InputWithLabel from "@/components/InputWithLabel";
@@ -33,7 +33,8 @@ export default function ReceiveGoods() {
   const [oProducts, setProducts] = useState<Product[]>([]);
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState("1");
-  const [bCheckAutoScan, setChecked] = useState(false);
+  const [bCheckAutoScan, setChecked] = useState(true);
+  const [bCheckKeyboard, setCheckKeyboard] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingScanAuto, setIsLoadingScanAuto] = useState(false);
   const checkedRef = useRef(bCheckAutoScan);
@@ -75,12 +76,12 @@ export default function ReceiveGoods() {
         setUserInfo(data);
         console.log("✅ ข้อมูลผู้ใช้ถูกตั้งค่า:", data);
       }
-
-      setRefSeq(crypto.randomUUID());
+      const tRefSeq = generateRandomID();
+      setRefSeq(tRefSeq);
     };
     initDB();
   }, []);
-
+  
 
   {/* set HistoryList เมื่อ oDb ถูกเซ็ต  */ }
   useEffect(() => {
@@ -137,6 +138,40 @@ export default function ReceiveGoods() {
     }
   };
 
+
+  const C_PRCxScanBar = (ptDecodedText: string) => {
+    setBarcode(ptDecodedText);
+
+    if (checkedRef.current) {
+      setIsLoadingScanAuto(true);
+      let countdown = 1;
+
+      const timer = setInterval(() => {
+        console.log(`⏳ กำลังเพิ่มข้อมูลใน ${countdown} วินาที...`);
+        countdown--;
+
+        if (countdown === 0) {
+          clearInterval(timer);
+          C_ADDxProduct(ptDecodedText);
+          setIsLoadingScanAuto(false);
+          setBarcode("");
+        }
+      }, 1000);
+    } else {
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 500);
+
+    }
+  };
+
+  const generateRandomID = () => {
+    const timestamp = Date.now(); // ใช้เวลาใน millisecond
+    const randomNum = Math.floor(Math.random() * 1000000); // สุ่มตัวเลข
+    return `${timestamp}-${randomNum}`;
+  };
+  
 
 
   {/* ดึงข้อมูล History จาก IndexedDB */ }
@@ -585,11 +620,12 @@ export default function ReceiveGoods() {
           inputRef={oBarcodeRef}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              if(bCheckAutoScan){
-                C_ADDxProduct(barcode);
+              if (bCheckAutoScan) {
+                C_PRCxScanBar(barcode);
               }
             }
           }}
+          inputMode={bCheckKeyboard ? "none" : "numeric"}
         />
 
         <InputWithLabelAndButton
@@ -632,12 +668,28 @@ export default function ReceiveGoods() {
         {/* จำนวนรายการ */}
         <p className="text-gray-500 text-[14px]">จำนวนรายการ: {oProducts.length} รายการ</p>
 
-        <div className="flex w-full md:w-auto md:ml-auto pt-2 relative">
+        <div className="flex flex-col w-full md:w-auto md:ml-auto pt-2 relative">
           <label className="flex items-center text-gray-500 cursor-pointer">
             <input
               type="checkbox"
               checked={bCheckAutoScan}
-              onChange={() => setChecked(!bCheckAutoScan)}
+              onChange={() => {
+                setChecked(!bCheckAutoScan);
+                oBarcodeRef.current?.focus();
+              }}
+              className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="ml-2">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>
+          </label>
+
+          <label className="flex items-center text-gray-500 text-[14px] cursor-pointer pt-2">
+            <input
+              type="checkbox"
+              checked={bCheckKeyboard}
+              onChange={() => {
+                setCheckKeyboard(!bCheckKeyboard)
+                oBarcodeRef.current?.focus();
+              }}
               className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
             />
             <span className="ml-2 text-[14px]">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>

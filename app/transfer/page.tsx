@@ -22,9 +22,10 @@ export default function ReceiveGoods() {
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [isOpen, setIsOpen] = useState(false);
-  const [checked, setChecked] = useState(false);
+  const [bCheckAutoScan, setChecked] = useState(true);
+  const [bCheckKeyboard, setCheckKeyboard] = useState(false);
   const [searchText, setSearchText] = useState<string>("");
-  const checkedRef = useRef(checked);
+  const checkedRef = useRef(bCheckAutoScan);
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [tRefSeq, setRefSeq] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -90,8 +91,8 @@ export default function ReceiveGoods() {
   }, [oDb]);
   {/* ใช้ useEffect ในการเก็บค่า checked ไว้ */ }
   useEffect(() => {
-    checkedRef.current = checked;
-  }, [checked]);
+    checkedRef.current = bCheckAutoScan;
+  }, [bCheckAutoScan]);
 
 
   {/* สแกน BarCode */ }
@@ -134,6 +135,32 @@ export default function ReceiveGoods() {
     }
   };
 
+  const C_PRCxScanBar = (ptDecodedText: string) => {
+    setBarcode(ptDecodedText);
+
+    if (checkedRef.current) {
+      setIsLoadingScanAuto(true);
+      let countdown = 1;
+
+      const timer = setInterval(() => {
+        console.log(`⏳ กำลังเพิ่มข้อมูลใน ${countdown} วินาที...`);
+        countdown--;
+
+        if (countdown === 0) {
+          clearInterval(timer);
+          C_ADDxProduct(ptDecodedText);
+          setIsLoadingScanAuto(false);
+          setBarcode("");
+        }
+      }, 1000);
+    } else {
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 500);
+
+    }
+  };
 
 
 
@@ -592,11 +619,12 @@ export default function ReceiveGoods() {
           inputRef={oBarcodeRef}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              if(checked){
-                C_ADDxProduct(barcode);
+              if (bCheckAutoScan) {
+                C_PRCxScanBar(barcode);
               }
             }
           }}
+          inputMode={bCheckKeyboard ? "none" : "numeric"}
         />
 
 
@@ -641,12 +669,28 @@ export default function ReceiveGoods() {
         {/* จำนวนรายการ */}
         <p className="text-gray-500 text-[14px]">จำนวนรายการ: {oProducts.length} รายการ</p>
 
-        <div className="flex w-full md:w-auto md:ml-auto pt-2 relative">
+        <div className="flex flex-col w-full md:w-auto md:ml-auto pt-2 relative">
           <label className="flex items-center text-gray-500 cursor-pointer">
             <input
               type="checkbox"
-              checked={checked}
-              onChange={() => setChecked(!checked)}
+              checked={bCheckAutoScan}
+              onChange={() => {
+                setChecked(!bCheckAutoScan);
+                oBarcodeRef.current?.focus();
+              }}
+              className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="ml-2">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>
+          </label>
+
+          <label className="flex items-center text-gray-500 text-[14px] cursor-pointer pt-2">
+            <input
+              type="checkbox"
+              checked={bCheckKeyboard}
+              onChange={() => {
+                setCheckKeyboard(!bCheckKeyboard)
+                oBarcodeRef.current?.focus();
+              }}
               className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
             />
             <span className="ml-2 text-[14px]">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>

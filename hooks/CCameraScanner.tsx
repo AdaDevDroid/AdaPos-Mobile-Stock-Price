@@ -1,10 +1,23 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
+
 
 export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
   const [bScanning, setIsScanning] = useState(false);
   const oHtml5QrCode = useRef<Html5Qrcode | null>(null);
   const oScannerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (oHtml5QrCode.current) {
+        oHtml5QrCode.current.stop().then(() => {
+          console.log("📴 Scanner auto-stopped from hook cleanup");
+          setIsScanning(false);
+          oHtml5QrCode.current = null;
+        }).catch((err) => console.log("🚨 Failed to auto-stop:", err));
+      }
+    };
+  }, []);
 
   const C_GETxQrBoxSize = () => {
     const screenWidth = window.innerWidth;
