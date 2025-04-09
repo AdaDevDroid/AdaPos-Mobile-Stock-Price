@@ -8,7 +8,7 @@ import { serialize, parse } from "cookie";
 import { useNetworkStatus } from '@/hooks/NetworkStatusContext'
 import Image from "next/image";
 import BrancheModal from "@/components/BchModal";
-import { UserInfo,BranchInfo } from "@/models/models";
+import { UserInfo, BranchInfo } from "@/models/models";
 
 export default function Login() {
   const router = useRouter();
@@ -122,21 +122,21 @@ export default function Login() {
             FTAgnName: user[0].FTAgnName,
             FTMerCode: user[0].FTMerCode,
           });
-        } 
+        }
         console.log("✅ User validated & stored locally.");
         return true;
       } 
       else{
         if(user[0].FTAgnCode){
-          
             console.log("🟢 Online Mode: Validating User via API");
+          // const BchResponse = await fetch("/api/query/selectBchByAgn", {
             const BchResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectBchByAgn`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ FTAgnCode: user[0].FTAgnCode }), // ส่งค่า FTAgnCode ไปยัง API
-            });
-            if (!BchResponse.ok) return false;
-            const { bch } = await BchResponse.json();
+          });
+          if (!BchResponse.ok) return false;
+          const { bch } = await BchResponse.json();
 
 
           setUserInfo(user);
@@ -144,30 +144,32 @@ export default function Login() {
           setCompName(user[0].FTAgnName);
           setIsBranchOpen(true);
         }
-        else{
+        else {
           console.log("✅User 009 ");
           console.log("🟢 Online Mode: Validating User via API");
+          // const BchResponse = await fetch("/api/query/selectBchAll", {
           const BchResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectBchAll`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           });
+
           if (!BchResponse.ok) return false;
           const { bch } = await BchResponse.json();
 
           const CompResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectCompName`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            });
-            if (!CompResponse.ok) return false;
-            const { comp } = await CompResponse.json();
+          });
+          if (!CompResponse.ok) return false;
+          const { comp } = await CompResponse.json();
 
-        setUserInfo(user);
-        setCompName(comp);
-        setBranchInfo(bch);
-        setIsBranchOpen(true);
-        
-        }       
-       }
+          setUserInfo(user);
+          setCompName(comp);
+          setBranchInfo(bch);
+          setIsBranchOpen(true);
+
+        }
+      }
     }
 
 
@@ -248,43 +250,49 @@ export default function Login() {
 
 
   async function C_GETtGenToken(username: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(`${username}-${Date.now()}`);
-
     try {
-      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const token = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-
-      return token; // ✅ Return Token กลับไป
+      // ✅ ตรวจสอบว่า crypto.subtle รองรับหรือไม่
+      if (window.crypto?.subtle && typeof TextEncoder !== "undefined") {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(`${username}-${Date.now()}`);
+        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const token = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+        return token;
+      } else {
+        // ⚠️ Fallback: ใช้วิธีแบบพื้นฐานที่รองรับทั่วไป
+        const fallbackToken = `${username}-${Date.now()}-${Math.floor(Math.random() * 1e8)}`;
+        console.warn("⚠️ ใช้ fallback token เนื่องจาก crypto.subtle ไม่รองรับ:", fallbackToken);
+        return fallbackToken;
+      }
     } catch (error) {
-      console.log("❌ Error generating offline token:", error);
-      return ""; // 🔴 กรณีเกิดข้อผิดพลาด return ค่าว่าง
+      console.error("❌ Error generating offline token:", error);
+      alert("❌ Error generating offline token: " + error);
+      return "";
     }
   }
 
-
-  const C_PRCxBchSelect = async (FTBchCode: string,FTBchName: string) => {
+  const C_PRCxBchSelect = async (FTBchCode: string, FTBchName: string) => {
     // alert("FTBchCode: " + FTBchCode + " FTBchName: " + FTBchName);
-    setError(""); 
+    setError("");
     setIsLoading(true);
 
 
     if (oDatabase) {
       await C_INSxUserToDB(oDatabase, {
-        FTUsrCode: oUserInfo[0]?.FTUsrCode ,
-        FTUsrLogin: oUserInfo[0]?.FTUsrLogin ,
-        FTUsrLoginPwd: oUserInfo[0]?.FTUsrLoginPwd ,
-        FTUsrName: oUserInfo[0]?.FTUsrName ,
+        FTUsrCode: oUserInfo[0]?.FTUsrCode,
+        FTUsrLogin: oUserInfo[0]?.FTUsrLogin,
+        FTUsrLoginPwd: oUserInfo[0]?.FTUsrLoginPwd,
+        FTUsrName: oUserInfo[0]?.FTUsrName,
         FTBchCode: FTBchCode,
         FTBchName: FTBchName,
-        FTAgnName: tCompName ,
-        FTAgnCode: oUserInfo[0]?.FTAgnCode ,
-        FTMerCode: oUserInfo[0]?.FTMerCode ,
+        FTAgnName: tCompName,
+        FTAgnCode: oUserInfo[0]?.FTAgnCode,
+        FTMerCode: oUserInfo[0]?.FTMerCode,
       });
-    } 
+    }
     console.log("✅ User validated & stored locally.2");
- 
+
 
     try {
       if (isOnline) {
