@@ -44,3 +44,9 @@ export const C_INSxStock = async (oProducts: Product[]) => {
     console.log("❌ Insert Failed:", error);
   }
 };
+
+export const C_GETtGenerateRandomID = () => {
+  const timestamp = Date.now(); 
+  const randomNum = Math.floor(Math.random() * 1000000);
+  return `${timestamp}-${randomNum}`;
+};

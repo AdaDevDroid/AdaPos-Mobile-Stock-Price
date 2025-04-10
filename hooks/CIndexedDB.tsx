@@ -262,11 +262,13 @@ export const C_DELoDataTmp = async (oDb: IDBDatabase, storeName: string): Promis
     const clearRequest = store.clear();
 
     clearRequest.onsuccess = () => {
+      alert("✅ ลบข้อมูลในตาราง 'Tmp' สำเร็จ");
       console.log("✅ ลบข้อมูลในตาราง 'Tmp' สำเร็จ");
       resolve();
     };
 
     clearRequest.onerror = (event) => {
+      alert("❌ ไม่สามารถลบข้อมูลในตาราง 'TCNTProductReceiveTmp' ได้" + event);
       console.log("❌ ไม่สามารถลบข้อมูลในตาราง 'TCNTProductReceiveTmp' ได้", event);
       reject(event);
     };

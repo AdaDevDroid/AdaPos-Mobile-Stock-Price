@@ -66,7 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* ใช้ margin-left เพื่อให้ NameCompany ขยับตาม Sidebar */}
             {showSidebarPages.includes(pathname) && (
               <div
-                className="fixed bottom-2 left-2 z-20"
+                className="fixed bottom-2 left-2 z-20 bg-white"
                 style={{
                   marginLeft: isSidebarOpen !== null
                     ? (isSidebarOpen ? '16rem' : '4rem')
