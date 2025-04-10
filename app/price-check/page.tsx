@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Search, Tag, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
@@ -17,6 +17,12 @@ const PricePromotionCheck = () => {
   const [productData, setProductData] = useState<ProductData | null>(null);
   const [loading, setLoading] = useState(false);
   const isNetworkOnline = useNetworkStatus();
+  const oBarcodeRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Focus ไปที่ input เมื่อ component โหลด
+    oBarcodeRef.current?.focus();
+  }, []);
 
   const handleSearch = async () => {
 
@@ -157,10 +163,11 @@ const PricePromotionCheck = () => {
                 {/* ช่องค้นหาและปุ่ม */}
                 <div className="flex">
                   <input
-                    className="w-full px-4 py-2 border rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border rounded-l-md"
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    ref={oBarcodeRef}
                     placeholder={
                       searchType === 'barcode'
                         ? 'ป้อนบาร์โค้ด'
@@ -168,6 +175,11 @@ const PricePromotionCheck = () => {
                           ? 'ป้อนชื่อสินค้า'
                           : 'ป้อนรหัสสินค้า'
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSearch();
+                      }
+                    }}
                   />
 
                   {/* ปุ่มกล้อง */}
