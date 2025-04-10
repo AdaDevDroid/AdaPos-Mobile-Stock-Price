@@ -12,7 +12,7 @@ import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexed
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
-import { C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
+import { C_GETtGenerateRandomID, C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
 import RepeatModal from "@/components/RepeatModal";
 
 
@@ -38,6 +38,7 @@ export default function Receive() {
   const isNetworkOnline = useNetworkStatus();
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingScanAuto, setIsLoadingScanAuto] = useState(false);
+  const [isAddScan, setAddScan] = useState(false);
   const [bCheckAutoScan, setChecked] = useState(true);
   const [bCheckKeyboard, setCheckKeyboard] = useState(false);
   const bCheckedRef = useRef(bCheckAutoScan);
@@ -104,7 +105,7 @@ export default function Receive() {
           console.warn("⚠️ ไม่มีข้อมูลจาก IndexedDB");
         }
 
-        setRefSeq(crypto.randomUUID());
+        setRefSeq(C_GETtGenerateRandomID());
       } catch (error) {
         console.log("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
       } finally {
@@ -178,29 +179,10 @@ export default function Receive() {
 
   const C_PRCxScanBar = (ptDecodedText: string) => {
     setBarcode(ptDecodedText);
-
-    if (bCheckedRef.current) {
-      setIsLoadingScanAuto(true);
-      let countdown = 1;
-
-      const timer = setInterval(() => {
-        console.log(`⏳ กำลังเพิ่มข้อมูลใน ${countdown} วินาที...`);
-        countdown--;
-
-        if (countdown === 0) {
-          clearInterval(timer);
-          C_ADDxProduct(ptDecodedText, tCostRef.current);
-          setIsLoadingScanAuto(false);
-          setBarcode("");
-        }
-      }, 1000);
-    } else {
-      setIsLoading(true);
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 500);
-
-    }
+    setAddScan(true);
+    C_ADDxProduct(ptDecodedText, tCostRef.current);
+    setAddScan(false);
+    setBarcode("");
   };
 
 
@@ -437,9 +419,8 @@ export default function Receive() {
     //pnType 1 = Upload, 2 = Export, 0 = Upload Error
     try {
       console.log("✅ หา RefSeq ใหม่");
-      const newRefSeq = crypto.randomUUID();
+      const newRefSeq = C_GETtGenerateRandomID();
       setRefSeq(newRefSeq);
-
       console.log("✅ ข้อมูล History ถูกบันทึก");
       await C_INSxHistoryToIndexedDB(pnType);
 
@@ -588,18 +569,20 @@ export default function Receive() {
           </button>
         </div>
         {/* ค้นหา PO และปุ่ม 3 จุด (สำหรับ desktop) */}
-        <div className="flex w-full md:w-80 md:ml-auto pt-2 relative">
-          <InputWithLabel
-            type="text"
-            label={""}
-            value={tSearchPoText}
-            onChange={setSearchText}
-            disabled={isDisabledRefDoc}
-            placeholder="อ้างอิงใบ PO"
-          />
+        <div className="w-full md:w-80 md:ml-auto pt-2 relative flex flex-row items-center gap-2">
+          <div className="w-full">
+            <InputWithLabel
+              type="text"
+              label={""}
+              value={tSearchPoText}
+              onChange={setSearchText}
+              disabled={isDisabledRefDoc}
+              placeholder="อ้างอิงใบ PO"
+            />
+          </div>
           {/* ปุ่ม 3 จุด */}
           <button
-            className="hidden md:block ml-2 p-2 rounded-md text-gray-500 hover:text-gray-700 text-[18px]"
+            className="hidden md:block p-2 rounded-md text-gray-500 hover:text-gray-700 text-[18px]"
             onClick={() => setIsOpen(!bDropdownOpen)}
           >
             <FaEllipsisV />
@@ -630,7 +613,7 @@ export default function Receive() {
         )}
       </div>
       {/* กรอกข้อมูล */}
-      <div className="space-y-4 pt-4">
+      <div className="space-y-4 pt-2">
 
         <InputWithLabel
           type="text"
@@ -662,13 +645,13 @@ export default function Receive() {
           inputRef={oBarcodeRef}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              if(bCheckAutoScan){
+              if (bCheckAutoScan) {
                 C_PRCxScanBar(tBarcode);
               }
             }
           }}
           inputMode={bCheckKeyboard ? "none" : "numeric"}
-          // readOnly={isLoadingScanAuto}
+          readOnly={isAddScan}
         />
 
         <InputWithLabel
@@ -701,14 +684,14 @@ export default function Receive() {
           </tr>
         </thead>
         <tbody className="bg-white">
-          {oProducts.map((oProducts, index) => (
-            <tr key={index} className="border text-center text-gray-500 text-[14px]">
-              <td className="p-2">{index + 1}</td>
-              <td className="p-2">{oProducts.FTBarcode}</td>
-              <td className="p-2">{oProducts.FCCost.toFixed(nFixPntShow)}</td>
-              <td className="p-2">{oProducts.FNQuantity}</td>
+          {oProducts.slice().reverse().map((oProduct, index) => (
+            <tr key={oProduct.FNId} className="border text-center text-gray-500 text-[14px]">
+              <td className="p-2">{oProducts.length - index}</td>
+              <td className="p-2">{oProduct.FTBarcode}</td>
+              <td className="p-2">{oProduct.FCCost.toFixed(nFixPntShow)}</td>
+              <td className="p-2">{oProduct.FNQuantity}</td>
               <td className="p-2">
-                <button onClick={() => C_DELxProduct(oProducts.FNId)} className="text-red-500">
+                <button onClick={() => C_DELxProduct(oProduct.FNId)} className="text-red-500">
                   <FaTrash />
                 </button>
               </td>
@@ -728,8 +711,8 @@ export default function Receive() {
               type="checkbox"
               checked={bCheckAutoScan}
               onChange={() => {
-                setChecked(!bCheckAutoScan); 
-                oBarcodeRef.current?.focus(); 
+                setChecked(!bCheckAutoScan);
+                oBarcodeRef.current?.focus();
               }}
               className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
             />
@@ -742,7 +725,7 @@ export default function Receive() {
               checked={bCheckKeyboard}
               onChange={() => {
                 setCheckKeyboard(!bCheckKeyboard)
-                oBarcodeRef.current?.focus(); 
+                oBarcodeRef.current?.focus();
               }}
               className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
             />
