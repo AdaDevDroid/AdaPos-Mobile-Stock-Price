@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { History, Product, UserInfo } from "@/models/models";
 import { useEffect, useState } from "react";
 import { FaCheckCircle, FaExclamationCircle, FaSyncAlt, FaRegCalendar, FaExclamationTriangle, FaAngleRight } from "react-icons/fa";
-import { C_INSxProducts, C_INSxStock, C_SETxFormattedDate } from "@/hooks/CSP";
+import { C_GETtGenerateRandomID, C_INSxProducts, C_INSxStock, C_SETxFormattedDate } from "@/hooks/CSP";
 import exportPurcaseInvoiceToExcel from "@/hooks/CTransferreceiptoutToExcel";
 import exportjustStockToExcel from "@/hooks/CAdjustStockToExcel";
 import exportTransferbetweenbranchToExcel from "@/hooks/CProducttransferwahouseToExcel";
@@ -105,7 +105,7 @@ export default function MainPage() {
           setStockProductHistoryList(oStockProductData);
         }
 
-        setRefSeq(crypto.randomUUID());
+        setRefSeq(C_GETtGenerateRandomID());
 
       } catch (error) {
         console.log("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
@@ -362,7 +362,7 @@ export default function MainPage() {
     //pnType 1 = Upload, 2 = Export, 0 = Upload Error
     try {
       console.log("✅ หา RefSeq ใหม่");
-      const newRefSeq = crypto.randomUUID();
+      const newRefSeq = C_GETtGenerateRandomID();
       setRefSeq(newRefSeq);
 
       let tTaleHistoryName = "";

@@ -12,7 +12,7 @@ import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexed
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
-import { C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
+import { C_GETtGenerateRandomID, C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
 import RepeatModal from "@/components/RepeatModal";
 
 
@@ -38,7 +38,9 @@ export default function Receive() {
   const isNetworkOnline = useNetworkStatus();
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingScanAuto, setIsLoadingScanAuto] = useState(false);
-  const [bCheckAutoScan, setChecked] = useState(false);
+  const [isAddScan, setAddScan] = useState(false);
+  const [bCheckAutoScan, setChecked] = useState(true);
+  const [bCheckKeyboard, setCheckKeyboard] = useState(false);
   const bCheckedRef = useRef(bCheckAutoScan);
   const [bDropdownOpen, setIsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -102,7 +104,7 @@ export default function Receive() {
           console.warn("⚠️ ไม่มีข้อมูลจาก IndexedDB");
         }
 
-        setRefSeq(crypto.randomUUID());
+        setRefSeq(C_GETtGenerateRandomID());
       } catch (error) {
         console.log("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
       } finally {
@@ -173,6 +175,15 @@ export default function Receive() {
 
     }
   };
+
+  const C_PRCxScanBar = (ptDecodedText: string) => {
+    setBarcode(ptDecodedText);
+    setAddScan(true);
+    C_ADDxProduct(ptDecodedText, tCostRef.current);
+    setAddScan(false);
+    setBarcode("");
+  };
+
 
   const C_PRCxFetchHistoryList = async () => {
     if (!oDb) {
@@ -407,9 +418,8 @@ export default function Receive() {
     //pnType 1 = Upload, 2 = Export, 0 = Upload Error
     try {
       console.log("✅ หา RefSeq ใหม่");
-      const newRefSeq = crypto.randomUUID();
+      const newRefSeq = C_GETtGenerateRandomID();
       setRefSeq(newRefSeq);
-
       console.log("✅ ข้อมูล History ถูกบันทึก");
       await C_INSxHistoryToIndexedDB(pnType);
 
@@ -558,18 +568,20 @@ export default function Receive() {
           </button>
         </div>
         {/* ค้นหา PO และปุ่ม 3 จุด (สำหรับ desktop) */}
-        <div className="flex w-full md:w-80 md:ml-auto pt-2 relative">
-          <InputWithLabel
-            type="text"
-            label={""}
-            value={tSearchPoText}
-            onChange={setSearchText}
-            disabled={isDisabledRefDoc}
-            placeholder="อ้างอิงใบ PO"
-          />
+        <div className="w-full md:w-80 md:ml-auto pt-2 relative flex flex-row items-center gap-2">
+          <div className="w-full">
+            <InputWithLabel
+              type="text"
+              label={""}
+              value={tSearchPoText}
+              onChange={setSearchText}
+              disabled={isDisabledRefDoc}
+              placeholder="อ้างอิงใบ PO"
+            />
+          </div>
           {/* ปุ่ม 3 จุด */}
           <button
-            className="hidden md:block ml-2 p-2 rounded-md text-gray-500 hover:text-gray-700 text-[18px]"
+            className="hidden md:block p-2 rounded-md text-gray-500 hover:text-gray-700 text-[18px]"
             onClick={() => setIsOpen(!bDropdownOpen)}
           >
             <FaEllipsisV />
@@ -600,7 +612,7 @@ export default function Receive() {
         )}
       </div>
       {/* กรอกข้อมูล */}
-      <div className="space-y-4 pt-4">
+      <div className="space-y-4 pt-2">
 
         <InputWithLabel
           type="text"
@@ -632,11 +644,13 @@ export default function Receive() {
           inputRef={oBarcodeRef}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              if(bCheckAutoScan){
-                C_ADDxProduct(tBarcode, tCost);
+              if (bCheckAutoScan) {
+                C_PRCxScanBar(tBarcode);
               }
             }
           }}
+          inputMode={bCheckKeyboard ? "none" : "numeric"}
+          readOnly={isAddScan}
         />
 
         <InputWithLabel
@@ -669,14 +683,14 @@ export default function Receive() {
           </tr>
         </thead>
         <tbody className="bg-white">
-          {oProducts.map((oProducts, index) => (
-            <tr key={index} className="border text-center text-gray-500 text-[14px]">
-              <td className="p-2">{index + 1}</td>
-              <td className="p-2">{oProducts.FTBarcode}</td>
-              <td className="p-2">{oProducts.FCCost.toFixed(nFixPntShow)}</td>
-              <td className="p-2">{oProducts.FNQuantity}</td>
+          {oProducts.slice().reverse().map((oProduct, index) => (
+            <tr key={oProduct.FNId} className="border text-center text-gray-500 text-[14px]">
+              <td className="p-2">{oProducts.length - index}</td>
+              <td className="p-2">{oProduct.FTBarcode}</td>
+              <td className="p-2">{oProduct.FCCost.toFixed(nFixPntShow)}</td>
+              <td className="p-2">{oProduct.FNQuantity}</td>
               <td className="p-2">
-                <button onClick={() => C_DELxProduct(oProducts.FNId)} className="text-red-500">
+                <button onClick={() => C_DELxProduct(oProduct.FNId)} className="text-red-500">
                   <FaTrash />
                 </button>
               </td>
@@ -690,15 +704,31 @@ export default function Receive() {
         {/* จำนวนรายการ */}
         <p className="text-gray-500 text-[14px]">จำนวนรายการ: {oProducts.length} รายการ</p>
 
-        <div className="flex w-full md:w-auto md:ml-auto pt-2 relative">
+        <div className="flex flex-col w-full md:w-auto md:ml-auto pt-2 relative">
           <label className="flex items-center text-gray-500 text-[14px] cursor-pointer">
             <input
               type="checkbox"
               checked={bCheckAutoScan}
-              onChange={() => setChecked(!bCheckAutoScan)}
+              onChange={() => {
+                setChecked(!bCheckAutoScan);
+                oBarcodeRef.current?.focus();
+              }}
               className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
             />
             <span className="ml-2">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>
+          </label>
+
+          <label className="flex items-center text-gray-500 text-[14px] cursor-pointer pt-2">
+            <input
+              type="checkbox"
+              checked={bCheckKeyboard}
+              onChange={() => {
+                setCheckKeyboard(!bCheckKeyboard)
+                oBarcodeRef.current?.focus();
+              }}
+              className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="ml-2">ปิดคีย์บอร์ดสำหรับสแกนบาร์โค้ด</span>
           </label>
         </div>
       </div>

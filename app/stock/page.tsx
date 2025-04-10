@@ -1,5 +1,5 @@
 
-"use client";                                      
+"use client";
 
 
 import InputWithLabel from "@/components/InputWithLabel";
@@ -15,12 +15,12 @@ import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexed
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
-import { C_INSxStock, C_SETxFormattedDate } from "@/hooks/CSP";
+import { C_GETtGenerateRandomID, C_INSxStock, C_SETxFormattedDate } from "@/hooks/CSP";
 import RepeatModal from "@/components/RepeatModal";
 
 
 
-export default function ReceiveGoods() {
+export default function Stock() {
 
   const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
   const [isDisabledRefDoc, setIsDisabledRefDoc] = useState(false);
@@ -33,9 +33,11 @@ export default function ReceiveGoods() {
   const [oProducts, setProducts] = useState<Product[]>([]);
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState("1");
-  const [bCheckAutoScan, setChecked] = useState(false);
+  const [bCheckAutoScan, setChecked] = useState(true);
+  const [bCheckKeyboard, setCheckKeyboard] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingScanAuto, setIsLoadingScanAuto] = useState(false);
+  const [isAddScan, setAddScan] = useState(false);
   const checkedRef = useRef(bCheckAutoScan);
   const [oProductHistoryList, setProductHistoryList] = useState<Product[]>();
   const [historyList, setHistoryList] = useState<History[]>([]);
@@ -75,8 +77,8 @@ export default function ReceiveGoods() {
         setUserInfo(data);
         console.log("✅ ข้อมูลผู้ใช้ถูกตั้งค่า:", data);
       }
-
-      setRefSeq(crypto.randomUUID());
+      const tRefSeq = C_GETtGenerateRandomID();
+      setRefSeq(tRefSeq);
     };
     initDB();
   }, []);
@@ -138,6 +140,13 @@ export default function ReceiveGoods() {
   };
 
 
+  const C_PRCxScanBar = (ptDecodedText: string) => {
+    setBarcode(ptDecodedText);
+    setAddScan(true);
+    C_ADDxProduct(ptDecodedText);
+    setAddScan(false);
+    setBarcode("");
+  };
 
   {/* ดึงข้อมูล History จาก IndexedDB */ }
   const C_PRCxFetchHistoryList = async () => {
@@ -331,7 +340,7 @@ export default function ReceiveGoods() {
     //pnType 1 = Upload, 2 = Export, 0 = Upload Error
     try {
       console.log("✅ หา RefSeq ใหม่");
-      const newRefSeq = crypto.randomUUID();
+      const newRefSeq = C_GETtGenerateRandomID();
       setRefSeq(newRefSeq);
 
       console.log("✅ ข้อมูล History ถูกบันทึก");
@@ -562,7 +571,7 @@ export default function ReceiveGoods() {
           value={tRefDoc}
           onChange={setRefDoc}
           disabled={isDisabledRefDoc}
-          placeholder="ระบุจุดตรวจนับ เช่น ชั้นวาง A1, คลังหลัง"
+          placeholder="ระบุจุดตรวจนับ เช่น ชั้นวาง A1, คลังหลัก"
         />
 
         {/* ตัวสแกน QR Code พร้อมกรอบ */}
@@ -585,11 +594,13 @@ export default function ReceiveGoods() {
           inputRef={oBarcodeRef}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              if(bCheckAutoScan){
-                C_ADDxProduct(barcode);
+              if (bCheckAutoScan) {
+                C_PRCxScanBar(barcode);
               }
             }
           }}
+          inputMode={bCheckKeyboard ? "none" : "numeric"}
+          readOnly={isAddScan}
         />
 
         <InputWithLabelAndButton
@@ -613,13 +624,13 @@ export default function ReceiveGoods() {
           </tr>
         </thead>
         <tbody className="bg-white">
-          {oProducts.map((product, index) => (
-            <tr key={product.FNId} className="border text-center text-gray-500 text-[14px]">
-              <td className="p-2">{index + 1}</td>
-              <td className="p-2">{product.FTBarcode}</td>
-              <td className="p-2">{product.FNQuantity}</td>
+          {oProducts.slice().reverse().map((oProduct, index) => (
+            <tr key={oProduct.FNId} className="border text-center text-gray-500 text-[14px]">
+              <td className="p-2">{oProducts.length - index}</td>
+              <td className="p-2">{oProduct.FTBarcode}</td>
+              <td className="p-2">{oProduct.FNQuantity}</td>
               <td className="p-2">
-                <button onClick={() => C_DELxProduct(product.FNId)} className="text-red-500">
+                <button onClick={() => C_DELxProduct(oProduct.FNId)} className="text-red-500">
                   <FaTrash />
                 </button>
               </td>
@@ -632,15 +643,31 @@ export default function ReceiveGoods() {
         {/* จำนวนรายการ */}
         <p className="text-gray-500 text-[14px]">จำนวนรายการ: {oProducts.length} รายการ</p>
 
-        <div className="flex w-full md:w-auto md:ml-auto pt-2 relative">
-          <label className="flex items-center text-gray-500 cursor-pointer">
+        <div className="flex flex-col w-full md:w-auto md:ml-auto pt-2 relative">
+          <label className="flex items-center text-gray-500 text-[14px] cursor-pointer">
             <input
               type="checkbox"
               checked={bCheckAutoScan}
-              onChange={() => setChecked(!bCheckAutoScan)}
+              onChange={() => {
+                setChecked(!bCheckAutoScan);
+                oBarcodeRef.current?.focus();
+              }}
               className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
             />
-            <span className="ml-2 text-[14px]">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>
+            <span className="ml-2">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>
+          </label>
+
+          <label className="flex items-center text-gray-500 text-[14px] cursor-pointer pt-2">
+            <input
+              type="checkbox"
+              checked={bCheckKeyboard}
+              onChange={() => {
+                setCheckKeyboard(!bCheckKeyboard)
+                oBarcodeRef.current?.focus();
+              }}
+              className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="ml-2">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>
           </label>
         </div>
       </div>

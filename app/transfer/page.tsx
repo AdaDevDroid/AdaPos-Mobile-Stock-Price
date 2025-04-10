@@ -9,26 +9,28 @@ import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CProducttransferwahouseToExcel';
 import { History, Product, UserInfo } from "@/models/models"
 import { C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_PRCxOpenIndexedDB, C_DELoDataTmp, C_DELxProductTmpByFNId } from "@/hooks/CIndexedDB";
-import { C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
+import { C_GETtGenerateRandomID, C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
 import RepeatModal from "@/components/RepeatModal";
 
-export default function ReceiveGoods() {
+export default function Transfer() {
   const [refDoc, setRefDoc] = useState("");
   const [isDisabledRefDoc, setIsDisabledRefDoc] = useState(false);
   const [oProducts, setProducts] = useState<Product[]>([]);
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [isOpen, setIsOpen] = useState(false);
-  const [checked, setChecked] = useState(false);
+  const [bCheckAutoScan, setChecked] = useState(true);
+  const [bCheckKeyboard, setCheckKeyboard] = useState(false);
   const [searchText, setSearchText] = useState<string>("");
-  const checkedRef = useRef(checked);
+  const checkedRef = useRef(bCheckAutoScan);
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [tRefSeq, setRefSeq] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingScanAuto, setIsLoadingScanAuto] = useState(false);
+  const [isAddScan, setAddScan] = useState(false);
   const [oDb, setDB] = useState<IDBDatabase | null>(null);
   const isNetworkOnline = useNetworkStatus();
   const [historyList, setHistoryList] = useState<History[]>([]);
@@ -73,7 +75,7 @@ export default function ReceiveGoods() {
           console.log("✅ ข้อมูลผู้ใช้ถูกตั้งค่า:", data);
         }
 
-        setRefSeq(crypto.randomUUID());
+        setRefSeq(C_GETtGenerateRandomID());
       } catch (error) {
         console.log("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
       }
@@ -90,8 +92,8 @@ export default function ReceiveGoods() {
   }, [oDb]);
   {/* ใช้ useEffect ในการเก็บค่า checked ไว้ */ }
   useEffect(() => {
-    checkedRef.current = checked;
-  }, [checked]);
+    checkedRef.current = bCheckAutoScan;
+  }, [bCheckAutoScan]);
 
 
   {/* สแกน BarCode */ }
@@ -134,6 +136,13 @@ export default function ReceiveGoods() {
     }
   };
 
+  const C_PRCxScanBar = (ptDecodedText: string) => {
+    setBarcode(ptDecodedText);
+    setAddScan(true);
+    C_ADDxProduct(ptDecodedText);
+    setAddScan(false);
+    setBarcode("");
+  };
 
 
 
@@ -313,7 +322,7 @@ export default function ReceiveGoods() {
     //pnType 1 = Upload, 2 = Export, 0 = Upload Error
     try {
       console.log("✅ หา RefSeq ใหม่");
-      const newRefSeq = crypto.randomUUID();
+      const newRefSeq = C_GETtGenerateRandomID();
       setRefSeq(newRefSeq);
       console.log("✅ RefSeq = ", newRefSeq);
 
@@ -518,18 +527,20 @@ export default function ReceiveGoods() {
           </button>
         </div>
         {/* ค้นหา PO และปุ่ม 3 จุด (สำหรับ desktop) */}
-        <div className="flex w-full md:w-80 md:ml-auto pt-2 relative">
-          <InputWithLabel
-            type="text"
-            label={""}
-            value={searchText}
-            onChange={setSearchText}
-            disabled={isDisabledRefDoc}
-            placeholder="อ้างอิงใบขอโอน"
-          />
+        <div className="w-full md:w-80 md:ml-auto pt-2 relative flex flex-row items-center gap-2">
+          <div className="w-full">
+            <InputWithLabel
+              type="text"
+              label={""}
+              value={searchText}
+              onChange={setSearchText}
+              disabled={isDisabledRefDoc}
+              placeholder="อ้างอิงใบขอโอน"
+            />
+          </div>
           {/* ปุ่ม 3 จุด */}
           <button
-            className="hidden md:block ml-2 p-2 rounded-md text-gray-500 hover:text-gray-700 text-[18px]"
+            className="hidden md:block p-2 rounded-md text-gray-500 hover:text-gray-700 text-[18px]"
             onClick={() => setIsOpen(!isOpen)}
           >
             <FaEllipsisV />
@@ -560,7 +571,7 @@ export default function ReceiveGoods() {
         )}
       </div>
       {/* กรอกข้อมูล */}
-      <div className="space-y-4 pt-4">
+      <div className="space-y-4 pt-2">
 
         <InputWithLabel
           type="text"
@@ -592,11 +603,13 @@ export default function ReceiveGoods() {
           inputRef={oBarcodeRef}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              if(checked){
-                C_ADDxProduct(barcode);
+              if (bCheckAutoScan) {
+                C_PRCxScanBar(barcode);
               }
             }
           }}
+          inputMode={bCheckKeyboard ? "none" : "numeric"}
+          readOnly={isAddScan}
         />
 
 
@@ -622,13 +635,13 @@ export default function ReceiveGoods() {
           </tr>
         </thead>
         <tbody className="bg-white">
-          {oProducts.map((product, index) => (
+          {oProducts.slice().reverse().map((oProduct, index) => (
             <tr key={index} className="border text-center text-gray-500 text-[14px]">
-              <td className="p-2">{index + 1}</td>
-              <td className="p-2">{product.FTBarcode}</td>
-              <td className="p-2">{product.FNQuantity}</td>
+              <td className="p-2">{oProducts.length - index}</td>
+              <td className="p-2">{oProduct.FTBarcode}</td>
+              <td className="p-2">{oProduct.FNQuantity}</td>
               <td className="p-2">
-                <button onClick={() => removeProduct(product.FNId)} className="text-red-500">
+                <button onClick={() => removeProduct(oProduct.FNId)} className="text-red-500">
                   <FaTrash />
                 </button>
               </td>
@@ -641,15 +654,31 @@ export default function ReceiveGoods() {
         {/* จำนวนรายการ */}
         <p className="text-gray-500 text-[14px]">จำนวนรายการ: {oProducts.length} รายการ</p>
 
-        <div className="flex w-full md:w-auto md:ml-auto pt-2 relative">
-          <label className="flex items-center text-gray-500 cursor-pointer">
+        <div className="flex flex-col w-full md:w-auto md:ml-auto pt-2 relative">
+          <label className="flex items-center text-gray-500 text-[14px] cursor-pointer">
             <input
               type="checkbox"
-              checked={checked}
-              onChange={() => setChecked(!checked)}
+              checked={bCheckAutoScan}
+              onChange={() => {
+                setChecked(!bCheckAutoScan);
+                oBarcodeRef.current?.focus();
+              }}
               className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
             />
-            <span className="ml-2 text-[14px]">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>
+            <span className="ml-2">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>
+          </label>
+
+          <label className="flex items-center text-gray-500 text-[14px] cursor-pointer pt-2">
+            <input
+              type="checkbox"
+              checked={bCheckKeyboard}
+              onChange={() => {
+                setCheckKeyboard(!bCheckKeyboard)
+                oBarcodeRef.current?.focus();
+              }}
+              className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="ml-2">ปิดคีย์บอร์ดสำหรับสแกนบาร์โค้ด</span>
           </label>
         </div>
       </div>
