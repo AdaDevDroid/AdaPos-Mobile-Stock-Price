@@ -89,9 +89,16 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
           devices
             .filter((device) => device.kind === "videoinput")
             .forEach(async (device) => {
-              const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: device.deviceId } });
-              stream.getTracks().forEach((track) => track.stop());
-              console.log("📸 Camera stream stopped");
+
+              navigator.mediaDevices.getUserMedia({ video: true })
+                .then((stream) => {
+                  stream.getTracks().forEach((track) => track.stop());
+                  console.log("📸 Camera stream stopped");
+                })
+                .catch((err) => {
+                  console.log("❌ Could not stop camera stream", err);
+                });
+                
             });
         });
   
