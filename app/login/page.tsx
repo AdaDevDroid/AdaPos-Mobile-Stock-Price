@@ -24,6 +24,7 @@ export default function Login() {
   const [oUserInfo, setUserInfo] = useState<UserInfo[]>([]);
   const [oBranchInfo, setBranchInfo] = useState<BranchInfo[]>([]);
   const [tCompName, setCompName] = useState("");
+  const [tUrlImg, setUrlImg] = useState("");
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
@@ -37,9 +38,14 @@ export default function Login() {
     const openDB = async () => {
       const db = await C_PRCxOpenIndexedDB();
       setODatabase(db);
+      const oUserData = await C_GETxUserData(db);
+      console.log("oUserData:", oUserData);
+      setUrlImg(oUserData?.FTImgObj ?? "");
     };
     openDB();
   }, []);
+
+
 
   useEffect(() => {
     // ✅ ดึง Cookie จาก Request
@@ -120,6 +126,7 @@ export default function Login() {
             FTAgnCode: user[0].FTAgnCode,
             FTAgnName: user[0].FTAgnName,
             FTMerCode: user[0].FTMerCode,
+            FTImgObj: user[0].FTImgObj,
           });
         }
         console.log("✅ User validated & stored locally.");
@@ -286,6 +293,7 @@ export default function Login() {
         FTAgnName: tCompName,
         FTAgnCode: oUserInfo[0]?.FTAgnCode,
         FTMerCode: oUserInfo[0]?.FTMerCode,
+        FTImgObj: oUserInfo[0]?.FTImgObj,
       });
     }
     console.log("✅ User validated & stored locally.2");
@@ -329,11 +337,12 @@ export default function Login() {
       <div className="flex flex-col items-center text-center mb-6">
         <div className="text-white text-2xl font-bold flex items-center justify-center w-16 h-16 rounded-md">
           <Image
-            src="/icons/logoAda.png"
+            src={tUrlImg && tUrlImg !== "" ? tUrlImg : "/icons/logoAda.png"}
             alt="Logo"
             width={64}
             height={64}
             className="h-16 text-center text-sm"
+            unoptimized
           />
         </div>
         <h2 className="text-2xl font-bold mt-4">AdaPos+ Stock & Price</h2>

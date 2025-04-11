@@ -1,8 +1,8 @@
 "use client";
-
+import { useEffect , useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { FaHome, FaBoxOpen, FaExchangeAlt, FaClipboardCheck, FaTags, FaSignOutAlt, FaBars } from "react-icons/fa";
-
+import { C_PRCxOpenIndexedDB,  C_GETxUserData } from "@/hooks/CIndexedDB";
 const menuItems = [
   { name: "หน้าหลัก", icon: <FaHome />, path: "/main" },
   { name: "รับสินค้าจากผู้จำหน่าย", icon: <FaBoxOpen />, path: "/receive" },
@@ -19,7 +19,18 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname(); // ✅ ดึง path ของหน้าปัจจุบัน
-  const tUrlImg = "";
+  const [tUrlImg, setUrlImg] = useState("");
+
+  useEffect(() => {
+    const  openDB = async () => {
+      const db = await C_PRCxOpenIndexedDB();
+      const oUserData = await C_GETxUserData(db);
+      setUrlImg(oUserData?.FTImgObj ?? "");
+  
+      //  console.log("oUserData: FTImgObj", tUrlImg);
+    };
+    openDB();
+  }, []);
 
   const handleLogout = async () => {
     console.log("logout");

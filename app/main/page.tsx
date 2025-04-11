@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { History, Product, UserInfo } from "@/models/models";
 import { useEffect, useState } from "react";
 import { FaCheckCircle, FaExclamationCircle, FaSyncAlt, FaRegCalendar, FaExclamationTriangle, FaAngleRight } from "react-icons/fa";
-import { C_INSxProducts, C_INSxStock, C_SETxFormattedDate } from "@/hooks/CSP";
+import { C_GETtGenerateRandomID, C_INSxProducts, C_INSxStock, C_SETxFormattedDate } from "@/hooks/CSP";
 import exportPurcaseInvoiceToExcel from "@/hooks/CTransferreceiptoutToExcel";
 import exportjustStockToExcel from "@/hooks/CAdjustStockToExcel";
 import exportTransferbetweenbranchToExcel from "@/hooks/CProducttransferwahouseToExcel";
@@ -105,7 +105,7 @@ export default function MainPage() {
           setStockProductHistoryList(oStockProductData);
         }
 
-        setRefSeq(crypto.randomUUID());
+        setRefSeq(C_GETtGenerateRandomID());
 
       } catch (error) {
         console.log("❌ เกิดข้อผิดพลาดในการเปิด IndexedDB", error);
@@ -362,7 +362,7 @@ export default function MainPage() {
     //pnType 1 = Upload, 2 = Export, 0 = Upload Error
     try {
       console.log("✅ หา RefSeq ใหม่");
-      const newRefSeq = crypto.randomUUID();
+      const newRefSeq = C_GETtGenerateRandomID();
       setRefSeq(newRefSeq);
 
       let tTaleHistoryName = "";
@@ -534,259 +534,171 @@ export default function MainPage() {
             <p className="text-center text-gray-500">ไม่มีประวัติการทำรายการ</p>
           )}
 
-        {(oReceiveDataProductTmp.length > 0 || oReceiveDataHistory.length > 0) && (
-          <h2 className="text-m mb-2 ps-2 text-gray-600">
-            รับสินค้าจากผู้จำหน่าย
-          </h2>
-        )}
         {oReceiveDataProductTmp.length > 0 &&
           oReceiveDataProductTmp.map((data, index) => (
             <div
               key={index}
-              className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-start border cursor-pointer"
+              className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-stretch border cursor-pointer"
               onClick={() => router.push("/receive")}
             >
               {/* ซ้าย: เนื้อหา */}
-              <div>
-                <p className="text-base font-semibold text-gray-800">
-                  เลขที่อ้างอิง <span className="text-sm text-gray-500 font-normal">#{data.FTRefDoc}</span>
-                </p>
-                <p className="text-sm text-gray-500 mt-2">
-                  ค้างทำรายการ
-                </p>
-                <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                  <FaRegCalendar className="w-4 h-4 text-gray-400" /> {data.FDCreateOn.split(" ")[0]}
+              <div className="flex flex-col justify-between flex-1 pr-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">
+                    รับสินค้าจากผู้จำหน่าย
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1 mb-1">
+                    เลขที่อ้างอิง <span className="font-normal">#{data.FTRefDoc}</span>
+                  </p>
+                </div>
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <FaRegCalendar className="w-4 h-4 text-gray-400" />
+                  {data.FDCreateOn.split(" ")[0]}
                 </p>
               </div>
 
               {/* ขวา: สถานะ + ปุ่ม */}
-              <div className="flex flex-col items-end gap-2 h-full">
-                <FaExclamationTriangle className="w-5 h-5 text-[#FFD700]" />
-                <div className="h-2"></div>
+              <div className="flex flex-col justify-between items-end">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600">ค้างทำรายการ</span>
+                  <FaExclamationTriangle className="w-5 h-5 text-[#FFD700]" />
+                </div>
                 <button
-                  className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1 mt-auto"
-                >ทำรายการต่อ
+                  className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1"
+                >
+                  ทำรายการต่อ
                   <FaAngleRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
           ))}
-
-        {oReceiveDataHistory.length > 0 &&
-          oReceiveDataHistory.map((data, index) => (
-            <div
-              key={index}
-              className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-start border cursor-pointer"
-              onClick={() => C_SETxViewHistoryProduct(data, "Recieve")} // ⬅️ ฟังก์ชันสำหรับคลิกที่ Card
-            >
-              {/* ซ้าย: เนื้อหา */}
-              <div>
-                <p className="text-base font-semibold text-gray-800">
-                  เลขที่อ้างอิง <span className="text-sm text-gray-500 font-normal">#{data.FTRefDoc}</span>
-                </p>
-                <p className="text-sm text-gray-500 mt-2">
-                  {data.FNStatus === 1
-                    ? "อัพโหลดผ่าน Web Services สำเร็จ"
-                    : data.FNStatus === 2
-                      ? "Export ไฟล์ Excel สำเร็จ"
-                      : "อัพโหลดผ่าน Web Services ไม่สำเร็จ"}
-                </p>
-                <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                  <FaRegCalendar className="w-4 h-4 text-gray-400" /> {data.FTDate}
-                </p>
-              </div>
-
-              {/* ขวา: สถานะ + ปุ่ม */}
-              <div className="flex flex-col items-end gap-2 h-full">
-                {data.FNStatus === 0 ? (
-                  <FaExclamationCircle className="w-5 h-5 text-red-500" />
-                ) : (
-                  <FaCheckCircle className="w-5 h-5 text-green-500" />
-                )}
-                <div className="h-2"></div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    C_SETxViewRepeat(data, "Recieve");
-                  }}
-                  className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1 mt-auto"
-                >
-                  <FaSyncAlt className="w-4 h-4" /> ทำซ้ำ
-                </button>
-              </div>
-            </div>
-          ))
-        }
-
-      </div>
-
-
-      <div className="container mx-auto p-2 space-y-2">
-        {(oTranferDataProductTmp.length > 0 || oTranferDataHistory.length > 0) && (
-          <h2 className="text-m mb-2 ps-2 text-gray-600">
-            รับ / โอนสินค้าระหว่างสาขา
-          </h2>
-        )}
 
         {oTranferDataProductTmp.length > 0 &&
           oTranferDataProductTmp.map((data, index) => (
             <div
               key={index}
-              className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-start border cursor-pointer"
+              className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-stretch border cursor-pointer"
               onClick={() => router.push("/transfer")}
             >
               {/* ซ้าย: เนื้อหา */}
-              <div>
-                <p className="text-base font-semibold text-gray-800">
-                  เลขที่อ้างอิง <span className="text-sm text-gray-500 font-normal">#{data.FTRefDoc}</span>
-                </p>
-                <p className="text-sm text-gray-500 mt-2">
-                  ค้างทำรายการ
-                </p>
-                <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                  <FaRegCalendar className="w-4 h-4 text-gray-400" /> {data.FDCreateOn.split(" ")[0]}
+              <div className="flex flex-col justify-between flex-1 pr-4">
+                <div>
+                  <p className="whitespace-nowrap overflow-hidden text-ellipsis text-sm font-semibold text-gray-800">
+                    รับ/โอนสินค้าระหว่างสาขา
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1 mb-1">
+                    เลขที่อ้างอิง <span className="font-normal">#{data.FTRefDoc}</span>
+                  </p>
+                </div>
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <FaRegCalendar className="w-4 h-4 text-gray-400" />
+                  {data.FDCreateOn.split(" ")[0]}
                 </p>
               </div>
 
               {/* ขวา: สถานะ + ปุ่ม */}
-              <div className="flex flex-col items-end gap-2 h-full">
-                <FaExclamationTriangle className="w-5 h-5 text-[#FFD700]" />
-                <div className="h-2"></div>
+              <div className="flex flex-col justify-between items-end">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600">ค้างทำรายการ</span>
+                  <FaExclamationTriangle className="w-5 h-5 text-[#FFD700]" />
+                </div>
                 <button
-                  className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1 mt-auto"
-                >ทำรายการต่อ
+                  className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1"
+                >
+                  ทำรายการต่อ
                   <FaAngleRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
           ))}
-
-        {oTranferDataHistory.length > 0 &&
-          oTranferDataHistory.map((data, index) => (
-            <div
-              key={index}
-              className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-start border cursor-pointer"
-              onClick={() => C_SETxViewHistoryProduct(data, "Transfer")} // ⬅️ ฟังก์ชันสำหรับคลิกที่ Card
-            >
-              {/* ซ้าย: เนื้อหา */}
-              <div>
-                <p className="text-base font-semibold text-gray-800">
-                  เลขที่อ้างอิง <span className="text-sm text-gray-500 font-normal">#{data.FTRefDoc}</span>
-                </p>
-                <p className="text-sm text-gray-500 mt-2">
-                  {data.FNStatus === 1
-                    ? "อัพโหลดผ่าน Web Services สำเร็จ"
-                    : data.FNStatus === 2
-                      ? "Export ไฟล์ Excel สำเร็จ"
-                      : "อัพโหลดผ่าน Web Services ไม่สำเร็จ"}
-                </p>
-                <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                  <FaRegCalendar className="w-4 h-4 text-gray-400" /> {data.FTDate}
-                </p>
-              </div>
-
-              {/* ขวา: สถานะ + ปุ่ม */}
-              <div className="flex flex-col items-end gap-2 h-full">
-                {data.FNStatus === 0 ? (
-                  <FaExclamationCircle className="w-5 h-5 text-red-500" />
-                ) : (
-                  <FaCheckCircle className="w-5 h-5 text-green-500" />
-                )}
-                <div className="h-2"></div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    C_SETxViewRepeat(data, "Transfer");
-                  }}
-                  className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1 mt-auto"
-                >
-                  <FaSyncAlt className="w-4 h-4" /> ทำซ้ำ
-                </button>
-              </div>
-            </div>
-          ))
-        }
-      </div>
-
-
-      <div className="container mx-auto p-2 space-y-2">
-        {(oStockDataProductTmp.length > 0 || oStockDataHistory.length > 0) && (
-          <h2 className="text-m mb-2 ps-2 text-gray-600">
-            ตรวจนับสต็อก
-          </h2>
-        )}
 
         {oStockDataProductTmp.length > 0 &&
           oStockDataProductTmp.map((data, index) => (
             <div
               key={index}
-              className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-start border cursor-pointer"
+              className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-stretch border cursor-pointer"
               onClick={() => router.push("/stock")}
             >
               {/* ซ้าย: เนื้อหา */}
-              <div>
-                <p className="text-base font-semibold text-gray-800">
-                  เลขที่อ้างอิง <span className="text-sm text-gray-500 font-normal">#{data.FTRefDoc}</span>
-                </p>
-                <p className="text-sm text-gray-500 mt-2">
-                  ค้างทำรายการ
-                </p>
-                <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                  <FaRegCalendar className="w-4 h-4 text-gray-400" /> {data.FDCreateOn.split(" ")[0]}
+              <div className="flex flex-col justify-between flex-1 pr-4">
+                <div>
+                  <p className="whitespace-nowrap overflow-hidden text-ellipsis text-sm font-semibold text-gray-800">
+                    ตรวจนับสต็อก
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1 mb-1">
+                    เลขที่อ้างอิง <span className="font-normal">#{data.FTRefDoc}</span>
+                  </p>
+                </div>
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <FaRegCalendar className="w-4 h-4 text-gray-400" />
+                  {data.FDCreateOn.split(" ")[0]}
                 </p>
               </div>
 
               {/* ขวา: สถานะ + ปุ่ม */}
-              <div className="flex flex-col items-end gap-2 h-full">
-                <FaExclamationTriangle className="w-5 h-5 text-[#FFD700]" />
-                <div className="h-2"></div>
+              <div className="flex flex-col justify-between items-end">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600">ค้างทำรายการ</span>
+                  <FaExclamationTriangle className="w-5 h-5 text-[#FFD700]" />
+                </div>
                 <button
-                  className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1 mt-auto"
-                >ทำรายการต่อ
+                  className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1"
+                >
+                  ทำรายการต่อ
                   <FaAngleRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
           ))}
 
-        {oStockDataHistory.length > 0 &&
-          oStockDataHistory.map((data, index) => (
+        <div className="h-1"/>
+
+        {oReceiveDataHistory.length > 0 &&
+          oReceiveDataHistory.map((data, index) => (
             <div
               key={index}
-              className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-start border cursor-pointer"
-              onClick={() => C_SETxViewHistoryProduct(data, "Stock")} // ⬅️ ฟังก์ชันสำหรับคลิกที่ Card
+              className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-stretch border cursor-pointer"
+              onClick={() => C_SETxViewHistoryProduct(data, "Recieve")}
             >
+
               {/* ซ้าย: เนื้อหา */}
-              <div>
-                <p className="text-base font-semibold text-gray-800">
-                  เลขที่อ้างอิง <span className="text-sm text-gray-500 font-normal">#{data.FTRefDoc}</span>
-                </p>
-                <p className="text-sm text-gray-500 mt-2">
-                  {data.FNStatus === 1
-                    ? "อัพโหลดผ่าน Web Services สำเร็จ"
-                    : data.FNStatus === 2
-                      ? "Export ไฟล์ Excel สำเร็จ"
-                      : "อัพโหลดผ่าน Web Services ไม่สำเร็จ"}
-                </p>
-                <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                  <FaRegCalendar className="w-4 h-4 text-gray-400" /> {data.FTDate}
+              <div className="flex flex-col justify-between flex-1 pr-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">
+                    รับสินค้าจากผู้จำหน่าย
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1 mb-1">
+                    เลขที่อ้างอิง <span className="font-normal">#{data.FTRefDoc}</span>
+                  </p>
+                </div>
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <FaRegCalendar className="w-4 h-4 text-gray-400" />
+                  {data.FTDate}
                 </p>
               </div>
 
               {/* ขวา: สถานะ + ปุ่ม */}
-              <div className="flex flex-col items-end gap-2 h-full">
-                {data.FNStatus === 0 ? (
-                  <FaExclamationCircle className="w-5 h-5 text-red-500" />
-                ) : (
-                  <FaCheckCircle className="w-5 h-5 text-green-500" />
-                )}
-                <div className="h-2"></div>
+              <div className="flex flex-col justify-between items-end">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600">
+                    {data.FNStatus === 1
+                      ? "อัพโหลด สำเร็จ"
+                      : data.FNStatus === 2
+                        ? "ส่งออกไฟล์ สำเร็จ"
+                        : "อัพโหลด ไม่สำเร็จ"}
+                  </span>
+                  {data.FNStatus === 0 ? (
+                    <FaExclamationCircle className="w-5 h-5 text-red-500" />
+                  ) : (
+                    <FaCheckCircle className="w-5 h-5 text-green-500" />
+                  )}
+                </div>
                 <button
+                  className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1"
                   onClick={(e) => {
                     e.stopPropagation();
-                    C_SETxViewRepeat(data, "Stock");
+                    C_SETxViewRepeat(data, "Recieve");
                   }}
-                  className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1 mt-auto"
                 >
                   <FaSyncAlt className="w-4 h-4" /> ทำซ้ำ
                 </button>
@@ -794,6 +706,115 @@ export default function MainPage() {
             </div>
           ))
         }
+
+        {oTranferDataHistory.length > 0 &&
+          oTranferDataHistory.map((data, index) => (
+            <div
+              key={index}
+              className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-stretch border cursor-pointer"
+              onClick={() => C_SETxViewHistoryProduct(data, "Transfer")}
+            >
+
+              {/* ซ้าย: เนื้อหา */}
+              <div className="flex flex-col justify-between flex-1 pr-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">
+                    รับ/โอนสินค้าระหว่างสาขา
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1 mb-1">
+                    เลขที่อ้างอิง <span className="font-normal">#{data.FTRefDoc}</span>
+                  </p>
+                </div>
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <FaRegCalendar className="w-4 h-4 text-gray-400" />
+                  {data.FTDate}
+                </p>
+              </div>
+
+              {/* ขวา: สถานะ + ปุ่ม */}
+              <div className="flex flex-col justify-between items-end">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600">
+                    {data.FNStatus === 1
+                      ? "อัพโหลด สำเร็จ"
+                      : data.FNStatus === 2
+                        ? "ส่งออกไฟล์ สำเร็จ"
+                        : "อัพโหลด ไม่สำเร็จ"}
+                  </span>
+                  {data.FNStatus === 0 ? (
+                    <FaExclamationCircle className="w-5 h-5 text-red-500" />
+                  ) : (
+                    <FaCheckCircle className="w-5 h-5 text-green-500" />
+                  )}
+                </div>
+                <button
+                  className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    C_SETxViewRepeat(data, "Recieve");
+                  }}
+                >
+                  <FaSyncAlt className="w-4 h-4" /> ทำซ้ำ
+                </button>
+              </div>
+            </div>
+          ))
+        }
+
+        {oStockDataHistory.length > 0 &&
+          oStockDataHistory.map((data, index) => (
+            <div
+              key={index}
+              className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-stretch border cursor-pointer"
+              onClick={() => C_SETxViewHistoryProduct(data, "Stock")} 
+            >
+
+              {/* ซ้าย: เนื้อหา */}
+              <div className="flex flex-col justify-between flex-1 pr-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">
+                    ตรวจนับสต็อก
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1 mb-1">
+                    เลขที่อ้างอิง <span className="font-normal">#{data.FTRefDoc}</span>
+                  </p>
+                </div>
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <FaRegCalendar className="w-4 h-4 text-gray-400" />
+                  {data.FTDate}
+                </p>
+              </div>
+
+              {/* ขวา: สถานะ + ปุ่ม */}
+              <div className="flex flex-col justify-between items-end">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600">
+                    {data.FNStatus === 1
+                      ? "อัพโหลด สำเร็จ"
+                      : data.FNStatus === 2
+                        ? "ส่งออกไฟล์ สำเร็จ"
+                        : "อัพโหลด ไม่สำเร็จ"}
+                  </span>
+                  {data.FNStatus === 0 ? (
+                    <FaExclamationCircle className="w-5 h-5 text-red-500" />
+                  ) : (
+                    <FaCheckCircle className="w-5 h-5 text-green-500" />
+                  )}
+                </div>
+                <button
+                  className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    C_SETxViewRepeat(data, "Recieve");
+                  }}
+                >
+                  <FaSyncAlt className="w-4 h-4" /> ทำซ้ำ
+                </button>
+              </div>
+            </div>
+          ))
+        }
+
       </div>
 
       <div className="h-16"></div>
