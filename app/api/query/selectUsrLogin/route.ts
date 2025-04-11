@@ -12,6 +12,7 @@ interface User {
      FTAgnCode: string | null;
      FTAgnName: string | null;
      FTMerCode: string | null;
+     FTImgObj: string | null;
 }
 
 export async function POST(req: Request) {
@@ -21,33 +22,44 @@ export async function POST(req: Request) {
           const aResult = await oPool.request()
                .input("username", username)
                .query(`
-              SELECT DISTINCT
-                    USRLI.FTUsrCode,
-                    FTUsrLogin,
-                    FTUsrLoginPwd,
-                    USRL.FTUsrName,
-                    USRG.FTBchCode,
-				BCHL.FTBchName,
-                    USRL.FTAgnCode,
-				AGNL.FTAgnName,
-                    USRG.FTMerCode
+               SELECT DISTINCT
+               USRLI.FTUsrCode,
+               FTUsrLogin,
+               FTUsrLoginPwd,
+               USRL.FTUsrName,
+               USRG.FTBchCode,
+               BCHL.FTBchName,
+               USRL.FTAgnCode,
+               AGNL.FTAgnName,
+               USRG.FTMerCode,
+               ISNULL(IMGAGY.FTImgObj, IMGCOMP.FTImgObj) AS FTImgObj
                FROM TCNMUsrLogin USRLI WITH (NOLOCK)
                INNER JOIN TCNMUser_L USRL
-                    ON USRL.FTUsrCode = USRLI.FTUsrCode
-                    AND USRL.FTAgnCode = USRLI.FTAgnCode
+               ON USRL.FTUsrCode = USRLI.FTUsrCode
+               AND USRL.FTAgnCode = USRLI.FTAgnCode
                INNER JOIN TCNTUsrGroup USRG
-                    ON USRG.FTUsrCode = USRLI.FTUsrCode
-                    AND USRG.FTAgnCode = USRLI.FTAgnCode	
-			   LEFT JOIN TCNMBranch_L BCHL
-                    ON BCHL.FTBchCode = USRG.FTBchCode
-			   LEFT JOIN TCNMAgency_L AGNL
-                    ON AGNL.FTAgnCode = USRLI.FTAgnCode	
+               ON USRG.FTUsrCode = USRLI.FTUsrCode
+               AND USRG.FTAgnCode = USRLI.FTAgnCode
+               LEFT JOIN TCNMBranch_L BCHL
+               ON BCHL.FTBchCode = USRG.FTBchCode
+               LEFT JOIN TCNMAgency_L AGNL
+               ON AGNL.FTAgnCode = USRLI.FTAgnCode
+               OUTER APPLY (
+               SELECT TOP 1 FTImgObj
+               FROM TCNMImgObj
+               WHERE FTAgnCode = USRLI.FTAgnCode AND FTImgTable = 'TCNMAgency'
+               ) IMGAGY
+               OUTER APPLY (
+               SELECT TOP 1 FTImgObj
+               FROM TCNMImgObj
+               WHERE FTImgTable = 'TCNMComp'
+               ) IMGCOMP
                WHERE
-                    FTUsrStaActive = '1'
-                    AND FTUsrLogType = '1'
-                    AND FTUsrLogin = @username
-                    AND USRL.FNLngID = 1
-                    AND GETDATE() BETWEEN FDUsrPwdStart AND FDUsrPwdExpired
+               FTUsrStaActive = '1'
+               AND FTUsrLogType = '1'
+               AND FTUsrLogin = @username
+               AND USRL.FNLngID = 1
+               AND GETDATE() BETWEEN FDUsrPwdStart AND FDUsrPwdExpired
                ORDER BY FTUsrCode ASC;
                `);
                  
