@@ -668,7 +668,7 @@ export default function Stock() {
               }}
               className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
             />
-            <span className="ml-2">บันทึกอัตโนมัติหลังสแกนบาร์โค้ด</span>
+            <span className="ml-2">ปิดคีย์บอร์ดสำหรับสแกนบาร์โค้ด</span>
           </label>
         </div>
       </div>
