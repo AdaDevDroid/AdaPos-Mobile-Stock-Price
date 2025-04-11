@@ -6,7 +6,7 @@ const pwaConfig = withPWA({
   register: true,
   skipWaiting: true,
   cacheOnFrontEndNav: true, // ทำให้สามารถไปหน้าอื่นได้แบบ Offline
-  disable: process.env.NODE_ENV === "development",
+  disable: false,
 });
 
 const nextConfig: NextConfig = {
