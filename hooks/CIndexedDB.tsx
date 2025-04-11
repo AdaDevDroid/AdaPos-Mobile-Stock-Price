@@ -2,7 +2,7 @@ import { History, Product, UserInfo, SysConfig } from "@/models/models"
 
 export const C_PRCxOpenIndexedDB = async () => {
   const DB_NAME = "AdaDB";
-  const DB_VERSION = 17;
+  const DB_VERSION = 18;
 
   const shouldResetDB = async (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -71,6 +71,7 @@ export const C_PRCxOpenIndexedDB = async () => {
         store.createIndex("FTAgnCode", "FTAgnCode", { unique: false });
         store.createIndex("FTAgnName", "FTAgnName", { unique: false });
         store.createIndex("FTMerCode", "FTMerCode", { unique: false });
+        store.createIndex("FTImgObj", "FTImgObj", { unique: false });
         console.log("✅ สร้างตาราง 'TCNTUserTmp' สำเร็จ");
       }
       //TsysConfig
@@ -323,6 +324,7 @@ export const C_GETxUserData = async (oDb: IDBDatabase): Promise<UserInfo | null>
             FTAgnCode: userData.FTAgnCode,
             FTAgnName: userData.FTAgnName,
             FTMerCode: userData.FTMerCode,
+            FTImgObj: userData.FTImgObj,
           };
           resolve(userInfo);
         } else {

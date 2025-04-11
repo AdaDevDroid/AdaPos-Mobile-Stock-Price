@@ -30,8 +30,7 @@ export interface UserInfo {
     FTUsrLogin: string;
     FTUsrLoginPwd: string | null;
     FTUsrCode: string;  
-
-
+    FTImgObj: string | null;
   }
 
   export interface SysConfig {
