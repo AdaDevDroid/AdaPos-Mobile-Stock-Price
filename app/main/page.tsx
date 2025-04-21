@@ -751,7 +751,7 @@ export default function MainPage() {
                   className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1"
                   onClick={(e) => {
                     e.stopPropagation();
-                    C_SETxViewRepeat(data, "Recieve");
+                    C_SETxViewRepeat(data, "Transfer");
                   }}
                 >
                   <FaSyncAlt className="w-4 h-4" /> ทำซ้ำ
@@ -805,7 +805,7 @@ export default function MainPage() {
                   className="text-blue-600 text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md flex items-center gap-1"
                   onClick={(e) => {
                     e.stopPropagation();
-                    C_SETxViewRepeat(data, "Recieve");
+                    C_SETxViewRepeat(data, "Stock");
                   }}
                 >
                   <FaSyncAlt className="w-4 h-4" /> ทำซ้ำ

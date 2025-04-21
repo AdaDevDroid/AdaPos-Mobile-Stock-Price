@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-// import { C_GetoUrlObject } from "../../../hooks/CConfig";
+import { C_GetoUrlObject } from "../../../hooks/CConfig";
 import { PdtData } from "@/models/call-promotion";
 
-const urlMaster = 'https://dev.ada-soft.com:44340/AdaStandard/API2PSMaster/V5';
+// const urlMaster = 'https://dev.ada-soft.com:44340/AdaStandard/API2PSMaster/V5';
 
 export async function POST(request: Request) {
      try {
           const pdtData: PdtData = await request.json();
 
           // Get the URL dynamically
-          // const urlMaster = await C_GetoUrlObject();
+          const urlMaster = await C_GetoUrlObject();
 
           const response = await fetch(
                `${urlMaster}/Check/CheckProduct`,
