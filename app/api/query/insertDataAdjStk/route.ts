@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
         
         const res = await pool.query(`
             SELECT TOP 1 FTXthDocSeq
-            FROM TCNTDocSPDTTmpAdj
+            FROM TMBTDocDTTmpAdj
             ORDER BY FTXthDocSeq DESC;
           `);
 
