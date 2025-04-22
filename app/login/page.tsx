@@ -31,6 +31,12 @@ export default function Login() {
         .register("/sw.js")
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
+
+      navigator.serviceWorker.addEventListener('message', event => {
+        if (event.data.status === 'cache-complete') {
+          alert('✅ พร้อมใช้งานออฟไลน์แล้ว');
+        }
+      });
     }
   }, []);
 
@@ -40,7 +46,11 @@ export default function Login() {
       setODatabase(db);
       const oUserData = await C_GETxUserData(db);
       console.log("oUserData:", oUserData);
-      setUrlImg(oUserData?.FTImgObj ?? "");
+      const cookies = parse(document.cookie);
+      const savedUsername = cookies.rememberedUsername;
+      if (savedUsername) {
+        setUrlImg(oUserData?.FTImgObj ?? "");
+      }
     };
     openDB();
   }, []);
@@ -91,7 +101,7 @@ export default function Login() {
       }
       const oUserData = await C_GETxUserData(oDatabase);
       console.log("oUserData:", oUserData);
-    
+
       const encryptedPassword = new CEncrypt("2").C_PWDtASE128Encrypt(password);
       console.log("oUserData:", oUserData);
       return oUserData && oUserData.FTUsrLogin === username && oUserData.FTUsrLoginPwd === encryptedPassword;
@@ -105,15 +115,15 @@ export default function Login() {
     });
     if (!userResponse.ok) return false;
     const { user } = await userResponse.json();
-    
-    if(user.length>1){
+
+    if (user.length > 1) {
 
       setUserInfo(user);
       setBranchInfo(user);
       setCompName(user[0].FTAgnName);
       setIsBranchOpen(true);
-     
-    }else{
+
+    } else {
       if (user[0].FTBchCode) {
         if (oDatabase) {
           await C_INSxUserToDB(oDatabase, {
@@ -326,11 +336,49 @@ export default function Login() {
       console.log("⚠️ Login Error:", error);
       setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
     } finally {
-      setError(""); 
+      setError("");
       setIsLoading(false);
     }
   };
 
+  async function checkPWACacheReady() {
+    if (!('caches' in window)) {
+      alert('❌ Browser นี้ไม่รองรับ Cache API');
+      return;
+    }
+  
+    const expectedPrefixes = ['workbox-precache', 'static-resources'];
+  
+    try {
+      const cacheNames = await caches.keys();
+      console.log('Caches ในระบบ:', cacheNames);
+  
+      const missing = expectedPrefixes.filter(prefix =>
+        !cacheNames.some(name => name.startsWith(prefix))
+      );
+  
+      if (missing.length === 0) {
+        alert('✅ พร้อมใช้งานออฟไลน์แล้ว! 🎉');
+      } else {
+        alert('⚠️ ยังขาด cache ที่จำเป็น: ' + missing.join(', '));
+      }
+    } catch (error) {
+      console.error('เกิดข้อผิดพลาดระหว่างตรวจสอบ cache:', error);
+      alert('❌ ตรวจสอบ cache ไม่สำเร็จ!');
+    }
+  }
+
+  function clearServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(reg => {
+          reg.unregister().then(() => {
+            console.log('🧹 Service Worker ถูกลบเรียบร้อย!');
+          });
+        });
+      });
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-gray-100">
@@ -390,11 +438,27 @@ export default function Login() {
           >
             {bLoading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
           </button>
+
         </form>
       </div>
 
       <p className="text-center text-gray-400 text-sm mt-6">Version 2.0.1</p>
       <p className="text-center text-gray-400 text-xs">© 2025 AdaPos+. All rights reserved.</p>
+      <button
+            type="submit"
+            className="w-full bg-blue-500 text-white py-2 rounded-md font-bold hover:bg-blue-600"
+            onClick={checkPWACacheReady}
+          >
+            เช็ค ออฟไลน์
+          </button>
+
+          <button
+            type="submit"
+            className="w-full bg-blue-500 text-white py-2 rounded-md font-bold hover:bg-blue-600"
+            onClick={clearServiceWorker}
+          >
+            clearServiceWorker
+          </button>
       <Image
         src="/icons/logoAdaLogin.png"
         alt="Logo"
@@ -408,7 +472,7 @@ export default function Login() {
         oData={oBranchInfo || []}
         onOptionSelect={C_PRCxBchSelect}
       />
-      
+
 
       {isLoading && (
         <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50 z-[9999]">
