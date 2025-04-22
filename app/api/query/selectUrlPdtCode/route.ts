@@ -24,8 +24,6 @@ export async function POST(req: NextRequest) {
                                    searchType === 'product_code' ? "pl.FTPdtCode = @searchQuery" : "1=0"
                          }
                     `);
-
-               console.log('Query :'+ searchType + ' : ' + searchQuery + ' : ' + agnCode);
                const aData = aResult.recordset;
                const oPdtCode = aData.map((record: PdtCode) => ({ ...record }));
 
