@@ -393,7 +393,7 @@ export default function Login() {
         </form>
       </div>
 
-      <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.11</p>
+      <p className="text-center text-gray-400 text-sm mt-6">Version 2.0.1</p>
       <p className="text-center text-gray-400 text-xs">© 2025 AdaPos+. All rights reserved.</p>
       <Image
         src="/icons/logoAdaLogin.png"
