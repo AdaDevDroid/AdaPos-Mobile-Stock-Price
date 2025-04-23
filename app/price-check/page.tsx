@@ -64,7 +64,7 @@ const PricePromotionCheck = () => {
       const pdtCode = dataCode.data[0].FTPdtCode;
 
       const pdtData = {
-        ptAgnCode: '',
+        ptAgnCode: oUserData.FTAgnCode,
         ptBchCode: '',
         ptMerCode: '',
         ptShpCode: '',
