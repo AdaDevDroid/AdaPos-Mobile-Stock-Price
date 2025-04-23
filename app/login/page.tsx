@@ -449,7 +449,7 @@ export default function Login() {
       if (workboxCount === 9 && staticCount > 40) {
         alert('✅ พร้อมใช้งานออฟไลน์แล้ว! 🎉');
       } else {
-        let missing = [];
+        const missing = [];
         if (workboxCount !== 9) missing.push(`workbox-precache (${workboxCount}/9)`);
         if (staticCount <= 40) missing.push(`static-resources (${staticCount}/40)`);
 
@@ -546,7 +546,7 @@ export default function Login() {
         </form>
       </div>
 
-      <p className="text-center text-gray-400 text-sm mt-6">Version 2.0.3</p>
+      <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.12</p>
       <p className="text-center text-gray-400 text-xs">© 2025 AdaPos+. All rights reserved.</p>
 
 
