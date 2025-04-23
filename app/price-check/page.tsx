@@ -34,12 +34,21 @@ const PricePromotionCheck = () => {
 
     setLoading(true);
     try {
+      // Get user data from IndexedDB
+      const oDatabase = await C_PRCxOpenIndexedDB();
+      const oUserData = await C_GETxUserData(oDatabase);
+      if (!oUserData) {
+        alert("ไม่สามารถดึงข้อมูลผู้ใช้งานได้");
+        setLoading(false);
+        return;
+      }
+
       const responseCode = await fetch('/api/query/selectUrlPdtCode', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ searchType, searchQuery })
+        body: JSON.stringify({ searchType, searchQuery, agnCode: oUserData.FTAgnCode })
       });
 
       if (!responseCode.ok) {
@@ -54,18 +63,8 @@ const PricePromotionCheck = () => {
 
       const pdtCode = dataCode.data[0].FTPdtCode;
 
-      // Get user data from IndexedDB
-      const oDatabase = await C_PRCxOpenIndexedDB();
-      const oUserData = await C_GETxUserData(oDatabase);
-
-      if (!oUserData) {
-        alert("ไม่สามารถดึงข้อมูลผู้ใช้งานได้");
-        setLoading(false);
-        return;
-      }
-
       const pdtData = {
-        ptAgnCode: '',
+        ptAgnCode: oUserData.FTAgnCode,
         ptBchCode: '',
         ptMerCode: '',
         ptShpCode: '',
