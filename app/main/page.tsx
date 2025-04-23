@@ -482,7 +482,7 @@ export default function MainPage() {
     switch (tType) {
       case "Recieve":
         tTaleName = "TCNTProductReceive";
-        tDocKey = "TCNTPdtTwiHD";
+        tDocKey = "TAPTPiHD";
         break;
       case "Transfer":
         tTaleName = "TCNTProductTransfer";
@@ -490,7 +490,7 @@ export default function MainPage() {
         break;
       case "Stock":
         tTaleName = "TCNTProductStock";
-        tDocKey = "TCNTDocDTTmpAdj";
+        tDocKey = "TCNTPdtAdjStkHD";
         break;
       default:
         console.log(`❌ ptType: "${tType}" ไม่ตรงกับประเภทที่กำหนด`);

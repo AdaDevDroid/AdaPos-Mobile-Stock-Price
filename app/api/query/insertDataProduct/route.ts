@@ -4,7 +4,7 @@ import { Product } from "@/models/models";
 
 export async function POST(req: NextRequest) {
     try {
-
+        let newFTXthDocSeq = 0;
         // ✅ รับ JSON Data เป็น Array ของ Product[]
         const products: Product[] = await req.json();
 
@@ -14,6 +14,27 @@ export async function POST(req: NextRequest) {
 
         // ✅ เชื่อมต่อฐานข้อมูล
         const pool = await C_CTDoConnectToDatabase();
+
+
+        const res = await pool.request()
+        .input("FTBchCode", products[0].FTBchCode)
+        .input("FTAgnCode", products[0].FTAgnCode)
+        .query(`
+            SELECT TOP 1 FTXthDocSeq
+            FROM TMBTDocDTTmp
+            WHERE FTBchCode = @FTBchCode
+			AND FTAgnCode = @FTAgnCode
+            ORDER BY FTXthDocSeq DESC;
+          `);
+
+          
+         if (res && res.recordset && res.recordset.length > 0) {
+            newFTXthDocSeq = parseInt(res.recordset[0].FTXthDocSeq, 10) + 1;
+          } else {
+            newFTXthDocSeq = 1;
+          }
+          console.log("🔍 res Data:", newFTXthDocSeq);
+
 
         for (let index = 0; index < products.length; index++) {
             const product = products[index];
@@ -26,6 +47,7 @@ export async function POST(req: NextRequest) {
 
             const request = pool.request();
             request.input("FTBchCode", FTBchCode);
+            request.input("FTXthDocSeq", newFTXthDocSeq);
             request.input("FTXthDocNo", FTRefDoc);
             request.input("FNXtdSeqNo", FNId);
             request.input("FTXthDocKey", FTXthDocKey);
@@ -41,15 +63,15 @@ export async function POST(req: NextRequest) {
             request.input("FTAgnCode", FTAgnCode);
             request.input("FTPORef", FTPORef);
 
-            console.log("🔍 Insert Data:", product);
+            console.log("🔍 Insert Data:3", product);
             // ✅ INSERT ข้อมูลลงใน `TCNTDocSPDTTmp`
             await request.query(`
             INSERT INTO dbo.TMBTDocDTTmp (
-            FTBchCode, FTXthDocNo, FNXtdSeqNo, FTXthDocKey, FTXthDocType, 
+            FTBchCode, FTXthDocSeq, FTXthDocNo, FNXtdSeqNo, FTXthDocKey, FTXthDocType, 
             FTXtdBarCode, FCXtdQty, FCXtdQtyAll, FCXtdCostIn, FDLastUpdOn, 
             FDCreateOn, FTLastUpdBy, FTCreateBy, FTAgnCode, FTPORef
             ) VALUES (
-            @FTBchCode, @FTXthDocNo, @FNXtdSeqNo, @FTXthDocKey, @FTXthDocType, 
+            @FTBchCode, @FTXthDocSeq, @FTXthDocNo, @FNXtdSeqNo, @FTXthDocKey, @FTXthDocType, 
             @FTXtdBarCode, @FCXtdQty, @FCXtdQtyAll, @FCXtdCostIn, @FDLastUpdOn, 
             @FDCreateOn, @FTLastUpdBy, @FTCreateBy, @FTAgnCode, @FTPORef
             );
