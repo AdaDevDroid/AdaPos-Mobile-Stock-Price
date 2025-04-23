@@ -9,6 +9,7 @@ import { useNetworkStatus } from '@/hooks/NetworkStatusContext'
 import Image from "next/image";
 import BrancheModal from "@/components/BchModal";
 import { UserInfo, BranchInfo } from "@/models/models";
+import { FaWrench, FaCheckCircle, FaSpinner } from "react-icons/fa";
 
 export default function Login() {
   const router = useRouter();
@@ -25,6 +26,32 @@ export default function Login() {
   const [oBranchInfo, setBranchInfo] = useState<BranchInfo[]>([]);
   const [tCompName, setCompName] = useState("");
   const [tUrlImg, setUrlImg] = useState("");
+
+  const { workboxCount, staticCount, isReady } = usePWACacheStatus();
+  const [showWrench, setShowWrench] = useState(false);
+
+  const [showOfflineText, setShowOfflineText] = useState(true);
+
+  useEffect(() => {
+    if (workboxCount === 9 && staticCount > 40) {
+      setShowOfflineText(true);
+      const timer = setTimeout(() => setShowOfflineText(false), 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowOfflineText(true);
+    }
+  }, [workboxCount, staticCount]);
+
+  useEffect(() => {
+    if (!isReady) {
+      const timer = setTimeout(() => setShowWrench(true), 10000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowWrench(false);
+    }
+  }, [isReady]);
+
+
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
@@ -39,6 +66,55 @@ export default function Login() {
       });
     }
   }, []);
+
+
+  function usePWACacheStatus() {
+    const [status, setStatus] = useState({
+      workboxCount: 0,
+      staticCount: 0,
+      isReady: false
+    });
+
+    useEffect(() => {
+      const checkCache = async () => {
+        if (!('caches' in window)) {
+          console.warn('❌ Browser ไม่รองรับ Cache API');
+          return;
+        }
+
+        try {
+          const cacheNames = await caches.keys();
+          let workboxCount = 0;
+          let staticCount = 0;
+
+          for (const cacheName of cacheNames) {
+            const cache = await caches.open(cacheName);
+            const requests = await cache.keys();
+
+            if (cacheName.startsWith('workbox-precache')) {
+              workboxCount = requests.length;
+            }
+            if (cacheName.startsWith('static-resources')) {
+              staticCount = requests.length;
+            }
+          }
+
+          const isReady = (workboxCount === 9 && staticCount > 40);
+          setStatus({ workboxCount, staticCount, isReady });
+        } catch (error) {
+          console.error('❌ ตรวจสอบ cache ผิดพลาด:', error);
+        }
+      };
+
+      const interval = setInterval(checkCache, 1000);  // เช็คทุก 1 วินาที
+      checkCache(); // เรียกทันทีตอนโหลด
+
+      return () => clearInterval(interval);
+    }, []);
+
+    return status;
+  }
+
 
   useEffect(() => {
     const openDB = async () => {
@@ -346,25 +422,52 @@ export default function Login() {
       alert('❌ Browser นี้ไม่รองรับ Cache API');
       return;
     }
-  
-    const expectedPrefixes = ['workbox-precache', 'static-resources'];
-  
+
     try {
       const cacheNames = await caches.keys();
       console.log('Caches ในระบบ:', cacheNames);
-  
-      const missing = expectedPrefixes.filter(prefix =>
-        !cacheNames.some(name => name.startsWith(prefix))
-      );
-  
-      if (missing.length === 0) {
+
+      let workboxCount = 0;
+      let staticCount = 0;
+
+      for (const cacheName of cacheNames) {
+        const cache = await caches.open(cacheName);
+        const requests = await cache.keys();
+
+        if (cacheName.startsWith('workbox-precache')) {
+          workboxCount = requests.length;
+        }
+
+        if (cacheName.startsWith('static-resources')) {
+          staticCount = requests.length;
+        }
+      }
+
+      console.log(`📦 จำนวนไฟล์ workbox-precache: ${workboxCount}`);
+      console.log(`📦 จำนวนไฟล์ static-resources: ${staticCount}`);
+
+      if (workboxCount === 9 && staticCount > 40) {
         alert('✅ พร้อมใช้งานออฟไลน์แล้ว! 🎉');
       } else {
-        alert('⚠️ ยังขาด cache ที่จำเป็น: ' + missing.join(', '));
+        let missing = [];
+        if (workboxCount !== 9) missing.push(`workbox-precache (${workboxCount}/9)`);
+        if (staticCount <= 40) missing.push(`static-resources (${staticCount}/40)`);
+
+        const confirmClear = confirm(`ไฟล์สำหรับ Offline ไม่ครบ: ${missing.join(', ')}\n\nคุณต้องการซ่อมแซมไฟล์และโหลดใหม่หรือไม่?`);
+
+        if (confirmClear) {
+
+          clearServiceWorker();
+
+          alert('ซ่อมแซมไฟล์เรียบร้อยแล้ว กำลังรีเฟรชเพื่อโหลดไฟล์สำหรับ Offline ใหม่!');
+        } else {
+          alert('ยกเลิกการล้าง cache');
+        }
       }
+
     } catch (error) {
       console.error('เกิดข้อผิดพลาดระหว่างตรวจสอบ cache:', error);
-      alert('❌ ตรวจสอบ cache ไม่สำเร็จ!');
+      alert('ตรวจสอบ cache ไม่สำเร็จ!');
     }
   }
 
@@ -374,6 +477,7 @@ export default function Login() {
         registrations.forEach(reg => {
           reg.unregister().then(() => {
             console.log('🧹 Service Worker ถูกลบเรียบร้อย!');
+            window.location.reload();
           });
         });
       });
@@ -442,23 +546,64 @@ export default function Login() {
         </form>
       </div>
 
-      <p className="text-center text-gray-400 text-sm mt-6">Version 2.0.1</p>
+      <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.11</p>
       <p className="text-center text-gray-400 text-xs">© 2025 AdaPos+. All rights reserved.</p>
-      <button
-            type="submit"
-            className="w-full bg-blue-500 text-white py-2 rounded-md font-bold hover:bg-blue-600"
-            onClick={checkPWACacheReady}
-          >
-            เช็ค ออฟไลน์
-          </button>
 
-          <button
-            type="submit"
-            className="w-full bg-blue-500 text-white py-2 rounded-md font-bold hover:bg-blue-600"
-            onClick={clearServiceWorker}
-          >
-            clearServiceWorker
-          </button>
+
+
+      <div className="fixed bottom-4 left-4 flex items-center gap-2 z-50">
+        {showOfflineText && (
+          <div className="flex flex-col items-center justify-center">
+
+            <div className="relative flex items-center justify-center">
+              {workboxCount === 9 && staticCount > 40 ? (
+                <div className="group relative">
+                  <FaCheckCircle className="text-green-500" size={20} />
+                  <div className="absolute left-8 bottom-1 bg-white text-gray-800 shadow p-2 rounded text-xs min-w-max whitespace-nowrap opacity-0 group-hover:opacity-100 transition">
+                    ✅ Offline พร้อมใช้งาน!
+                  </div>
+                </div>
+              ) : (
+                <div className="group relative">
+                  {showWrench ? (
+                    <button
+                      onClick={checkPWACacheReady}
+                      className="bg-yellow-500 p-2 rounded-full hover:bg-yellow-600 focus:outline-none"
+                      title="ซ่อมแซมไฟล์ออฟไลน์"
+                    >
+                      <FaWrench className="text-white" size={20} />
+                    </button>
+                  ) : (
+                    <FaSpinner className="text-yellow-500 animate-spin" size={20} />
+                  )}
+                  <div className="absolute left-8 bottom-1 bg-white text-gray-800 shadow p-2 rounded text-xs min-w-max whitespace-nowrap opacity-0 group-hover:opacity-100 transition">
+                    ⚡ Offline ไม่พร้อมใช้งาน<br />
+                    workbox: {workboxCount}/9<br />
+                    static: {staticCount}/40
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className={`mt-1 text-xs text-center leading-snug ${workboxCount === 9 && staticCount > 40
+              ? 'text-green-600'
+              : showWrench
+                ? 'text-yellow-500'
+                : 'text-yellow-500'
+              }`}>
+              {workboxCount === 9 && staticCount > 40 ? (
+                <>Offline Mode<br />พร้อมใช้งาน</>
+              ) : showWrench ? (
+                <>Offline Mode<br />โหลดข้อมูลไม่สำเร็จ<br />กรุณาซ่อมแซมไฟล์</>
+              ) : (
+                <>Offline Mode<br />กำลังโหลด...</>
+              )}
+            </div>
+
+
+          </div>
+        )}
+      </div>
+
       <Image
         src="/icons/logoAdaLogin.png"
         alt="Logo"
