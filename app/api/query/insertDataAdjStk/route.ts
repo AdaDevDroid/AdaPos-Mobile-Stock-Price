@@ -15,9 +15,14 @@ export async function POST(req: NextRequest) {
         // ✅ เชื่อมต่อฐานข้อมูล
         const pool = await C_CTDoConnectToDatabase();
         
-        const res = await pool.query(`
+        const res = await pool.request()
+        .input("FTBchCode", products[0].FTBchCode)
+        .input("FTAgnCode", products[0].FTAgnCode)
+        .query(`
             SELECT TOP 1 FTXthDocSeq
             FROM TMBTDocDTTmpAdj
+            WHERE FTBchCode = @FTBchCode
+			AND FTAgnCode = @FTAgnCode
             ORDER BY FTXthDocSeq DESC;
           `);
 
@@ -28,6 +33,8 @@ export async function POST(req: NextRequest) {
             newFTXthDocSeq = 1;
           }
           console.log("🔍 res Data:", newFTXthDocSeq);
+
+          
           for (let index = 0; index < products.length; index++) {
             const product = products[index];
             const {
