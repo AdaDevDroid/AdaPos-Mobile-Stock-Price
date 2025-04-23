@@ -23,7 +23,9 @@ export async function POST(req: NextRequest) {
             FROM TMBTDocDTTmpAdj
             WHERE FTBchCode = @FTBchCode
 			AND FTAgnCode = @FTAgnCode
-            ORDER BY TRY_CAST(FTXthDocSeq AS INT) DESC;
+
+         ORDER BY TRY_CAST(FTXthDocSeq AS INT) DESC;
+
           `);
 
           

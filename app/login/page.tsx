@@ -9,6 +9,7 @@ import { useNetworkStatus } from '@/hooks/NetworkStatusContext'
 import Image from "next/image";
 import BrancheModal from "@/components/BchModal";
 import { UserInfo, BranchInfo } from "@/models/models";
+import { FaWrench, FaCheckCircle, FaSpinner } from "react-icons/fa";
 
 export default function Login() {
   const router = useRouter();
@@ -25,14 +26,95 @@ export default function Login() {
   const [oBranchInfo, setBranchInfo] = useState<BranchInfo[]>([]);
   const [tCompName, setCompName] = useState("");
   const [tUrlImg, setUrlImg] = useState("");
+
+  const { workboxCount, staticCount, isReady } = usePWACacheStatus();
+  const [showWrench, setShowWrench] = useState(false);
+
+  const [showOfflineText, setShowOfflineText] = useState(true);
+
+  useEffect(() => {
+    if (workboxCount === 9 && staticCount > 40) {
+      setShowOfflineText(true);
+      const timer = setTimeout(() => setShowOfflineText(false), 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowOfflineText(true);
+    }
+  }, [workboxCount, staticCount]);
+
+  useEffect(() => {
+    if (!isReady) {
+      const timer = setTimeout(() => setShowWrench(true), 10000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowWrench(false);
+    }
+  }, [isReady]);
+
+
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/sw.js")
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
+
+      navigator.serviceWorker.addEventListener('message', event => {
+        if (event.data.status === 'cache-complete') {
+          alert('✅ พร้อมใช้งานออฟไลน์แล้ว');
+        }
+      });
     }
   }, []);
+
+
+  function usePWACacheStatus() {
+    const [status, setStatus] = useState({
+      workboxCount: 0,
+      staticCount: 0,
+      isReady: false
+    });
+
+    useEffect(() => {
+      const checkCache = async () => {
+        if (!('caches' in window)) {
+          console.warn('❌ Browser ไม่รองรับ Cache API');
+          return;
+        }
+
+        try {
+          const cacheNames = await caches.keys();
+          let workboxCount = 0;
+          let staticCount = 0;
+
+          for (const cacheName of cacheNames) {
+            const cache = await caches.open(cacheName);
+            const requests = await cache.keys();
+
+            if (cacheName.startsWith('workbox-precache')) {
+              workboxCount = requests.length;
+            }
+            if (cacheName.startsWith('static-resources')) {
+              staticCount = requests.length;
+            }
+          }
+
+          const isReady = (workboxCount === 9 && staticCount > 40);
+          setStatus({ workboxCount, staticCount, isReady });
+        } catch (error) {
+          console.error('❌ ตรวจสอบ cache ผิดพลาด:', error);
+        }
+      };
+
+      const interval = setInterval(checkCache, 1000);  // เช็คทุก 1 วินาที
+      checkCache(); // เรียกทันทีตอนโหลด
+
+      return () => clearInterval(interval);
+    }, []);
+
+    return status;
+  }
+
 
   useEffect(() => {
     const openDB = async () => {
@@ -40,7 +122,11 @@ export default function Login() {
       setODatabase(db);
       const oUserData = await C_GETxUserData(db);
       console.log("oUserData:", oUserData);
-      setUrlImg(oUserData?.FTImgObj ?? "");
+      const cookies = parse(document.cookie);
+      const savedUsername = cookies.rememberedUsername;
+      if (savedUsername) {
+        setUrlImg(oUserData?.FTImgObj ?? "");
+      }
     };
     openDB();
   }, []);
@@ -91,7 +177,7 @@ export default function Login() {
       }
       const oUserData = await C_GETxUserData(oDatabase);
       console.log("oUserData:", oUserData);
-    
+
       const encryptedPassword = new CEncrypt("2").C_PWDtASE128Encrypt(password);
       console.log("oUserData:", oUserData);
       return oUserData && oUserData.FTUsrLogin === username && oUserData.FTUsrLoginPwd === encryptedPassword;
@@ -105,15 +191,15 @@ export default function Login() {
     });
     if (!userResponse.ok) return false;
     const { user } = await userResponse.json();
-    
-    if(user.length>1){
+
+    if (user.length > 1) {
 
       setUserInfo(user);
       setBranchInfo(user);
       setCompName(user[0].FTAgnName);
       setIsBranchOpen(true);
-     
-    }else{
+
+    } else {
       if (user[0].FTBchCode) {
         if (oDatabase) {
           await C_INSxUserToDB(oDatabase, {
@@ -326,11 +412,77 @@ export default function Login() {
       console.log("⚠️ Login Error:", error);
       setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
     } finally {
-      setError(""); 
+      setError("");
       setIsLoading(false);
     }
   };
 
+  async function checkPWACacheReady() {
+    if (!('caches' in window)) {
+      alert('❌ Browser นี้ไม่รองรับ Cache API');
+      return;
+    }
+
+    try {
+      const cacheNames = await caches.keys();
+      console.log('Caches ในระบบ:', cacheNames);
+
+      let workboxCount = 0;
+      let staticCount = 0;
+
+      for (const cacheName of cacheNames) {
+        const cache = await caches.open(cacheName);
+        const requests = await cache.keys();
+
+        if (cacheName.startsWith('workbox-precache')) {
+          workboxCount = requests.length;
+        }
+
+        if (cacheName.startsWith('static-resources')) {
+          staticCount = requests.length;
+        }
+      }
+
+      console.log(`📦 จำนวนไฟล์ workbox-precache: ${workboxCount}`);
+      console.log(`📦 จำนวนไฟล์ static-resources: ${staticCount}`);
+
+      if (workboxCount === 9 && staticCount > 40) {
+        alert('✅ พร้อมใช้งานออฟไลน์แล้ว! 🎉');
+      } else {
+        let missing = [];
+        if (workboxCount !== 9) missing.push(`workbox-precache (${workboxCount}/9)`);
+        if (staticCount <= 40) missing.push(`static-resources (${staticCount}/40)`);
+
+        const confirmClear = confirm(`ไฟล์สำหรับ Offline ไม่ครบ: ${missing.join(', ')}\n\nคุณต้องการซ่อมแซมไฟล์และโหลดใหม่หรือไม่?`);
+
+        if (confirmClear) {
+
+          clearServiceWorker();
+
+          alert('ซ่อมแซมไฟล์เรียบร้อยแล้ว กำลังรีเฟรชเพื่อโหลดไฟล์สำหรับ Offline ใหม่!');
+        } else {
+          alert('ยกเลิกการล้าง cache');
+        }
+      }
+
+    } catch (error) {
+      console.error('เกิดข้อผิดพลาดระหว่างตรวจสอบ cache:', error);
+      alert('ตรวจสอบ cache ไม่สำเร็จ!');
+    }
+  }
+
+  function clearServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(reg => {
+          reg.unregister().then(() => {
+            console.log('🧹 Service Worker ถูกลบเรียบร้อย!');
+            window.location.reload();
+          });
+        });
+      });
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-gray-100">
@@ -390,11 +542,68 @@ export default function Login() {
           >
             {bLoading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
           </button>
+
         </form>
       </div>
 
-      <p className="text-center text-gray-400 text-sm mt-6">Version 2.0.1</p>
+      <p className="text-center text-gray-400 text-sm mt-6">Version 2.0.3</p>
       <p className="text-center text-gray-400 text-xs">© 2025 AdaPos+. All rights reserved.</p>
+
+
+
+      <div className="fixed bottom-4 left-4 flex items-center gap-2 z-50">
+        {showOfflineText && (
+          <div className="flex flex-col items-center justify-center">
+
+            <div className="relative flex items-center justify-center">
+              {workboxCount === 9 && staticCount > 40 ? (
+                <div className="group relative">
+                  <FaCheckCircle className="text-green-500" size={20} />
+                  <div className="absolute left-8 bottom-1 bg-white text-gray-800 shadow p-2 rounded text-xs min-w-max whitespace-nowrap opacity-0 group-hover:opacity-100 transition">
+                    ✅ Offline พร้อมใช้งาน!
+                  </div>
+                </div>
+              ) : (
+                <div className="group relative">
+                  {showWrench ? (
+                    <button
+                      onClick={checkPWACacheReady}
+                      className="bg-yellow-500 p-2 rounded-full hover:bg-yellow-600 focus:outline-none"
+                      title="ซ่อมแซมไฟล์ออฟไลน์"
+                    >
+                      <FaWrench className="text-white" size={20} />
+                    </button>
+                  ) : (
+                    <FaSpinner className="text-yellow-500 animate-spin" size={20} />
+                  )}
+                  <div className="absolute left-8 bottom-1 bg-white text-gray-800 shadow p-2 rounded text-xs min-w-max whitespace-nowrap opacity-0 group-hover:opacity-100 transition">
+                    ⚡ Offline ไม่พร้อมใช้งาน<br />
+                    workbox: {workboxCount}/9<br />
+                    static: {staticCount}/40
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className={`mt-1 text-xs text-center leading-snug ${workboxCount === 9 && staticCount > 40
+              ? 'text-green-600'
+              : showWrench
+                ? 'text-yellow-500'
+                : 'text-yellow-500'
+              }`}>
+              {workboxCount === 9 && staticCount > 40 ? (
+                <>Offline Mode<br />พร้อมใช้งาน</>
+              ) : showWrench ? (
+                <>Offline Mode<br />โหลดข้อมูลไม่สำเร็จ<br />กรุณาซ่อมแซมไฟล์</>
+              ) : (
+                <>Offline Mode<br />กำลังโหลด...</>
+              )}
+            </div>
+
+
+          </div>
+        )}
+      </div>
+
       <Image
         src="/icons/logoAdaLogin.png"
         alt="Logo"
@@ -408,7 +617,7 @@ export default function Login() {
         oData={oBranchInfo || []}
         onOptionSelect={C_PRCxBchSelect}
       />
-      
+
 
       {isLoading && (
         <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-gray-900 bg-opacity-50 z-[9999]">
