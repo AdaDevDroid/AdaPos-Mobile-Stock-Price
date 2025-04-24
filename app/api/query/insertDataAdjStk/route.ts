@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
           
          if (res && res.recordset && res.recordset.length > 0) {
-            newFTXthDocSeq = 1;
+            newFTXthDocSeq = parseInt(res.recordset[0].FTXthDocSeq, 10) + 1;
           } else {
             newFTXthDocSeq = 1;
           }
