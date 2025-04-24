@@ -14,6 +14,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean | null>(null);
 
   useEffect(() => {
+      console.log = () => { };
+      console.warn = () => { };
+      console.error = () => { };
+  }, []);
+
+  useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         // .register("/sw.js")
