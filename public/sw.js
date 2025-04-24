@@ -1,7 +1,7 @@
 // นำเข้า Workbox
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.0.2/workbox-sw.js');
 
-const VERSION = "2.0.3"
+const VERSION = "1.0.12";
 // ตรวจสอบว่า Workbox ถูกโหลดสำเร็จ
 console.log('ตรวจสอบว่า Workbox ถูกโหลดสำเร็จ');
 if (workbox) {
