@@ -16,25 +16,35 @@ if (workbox) {
     updateStatic();
     // เก็บ VERSION ใหม่ใน cache
     caches.open(workbox.core.cacheName).then((cache) => {
-      cache.put('/', new Response(VERSION)); // เก็บ VERSION ใหม่
+      cache.put(`${process.env.NEXT_PUBLIC_BASE_PATH}/`, new Response(VERSION));// เก็บ VERSION ใหม่
     });
 
-    // Precache ไฟล์ที่กำหนดไว้ล่วงหน้าใหม่
-    workbox.precaching.precacheAndRoute([
-      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/`, revision: VERSION },
-      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/login`, revision: VERSION },
-      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/main`, revision: VERSION },
-      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/receive`, revision: VERSION },
-      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/transfer`, revision: VERSION },
-      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/stock`, revision: VERSION },
-      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/price-check`, revision: VERSION },
-      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/icons/icon-192x192.png`, revision: VERSION },
-      { url: `${process.env.NEXT_PUBLIC_BASE_PATH}/icons/icon-512x512.png`, revision: VERSION },
-    ]);
+    // ปรับปรุง precaching routes
+    const routes = [
+      '/',
+      '/login',
+      '/main', 
+      '/receive',
+      '/transfer',
+      '/stock',
+      '/price-check',
+      '/icons/icon-192x192.png',
+      '/icons/icon-512x512.png'
+    ];
+
+    // Map routes with base path
+    const precacheUrls = routes.map(route => ({
+      url: `${process.env.NEXT_PUBLIC_BASE_PATH}${route}`,
+      revision: VERSION
+    }));
+
+    workbox.precaching.precacheAndRoute(precacheUrls);
   }
 
   async function updateStatic() {
     const cache = await caches.open('static-resources');
+    
+    // Add base path to static resources
     const urls = [
       '/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_49a6ea35._.js',
       '/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_5160d576._.js',
@@ -77,7 +87,7 @@ if (workbox) {
       '/_next/static/chunks/node_modules_react-icons_fi_index_mjs_9cbf4bb1._.js',
       '/_next/static/chunks/node_modules_react-icons_lib_74ccc930._.js',
       '/_next/static/chunks/node_modules_xlsx_xlsx_mjs_ad755052._.js'
-    ];
+    ].map(url => `${process.env.NEXT_PUBLIC_BASE_PATH}${url}`);
 
     await Promise.all(
       urls.map(url =>

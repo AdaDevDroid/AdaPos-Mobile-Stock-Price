@@ -10,5 +10,5 @@ export const metadata: Metadata = {
       icon: `${process.env.NEXT_PUBLIC_BASE_PATH}/icons/icon-192x192.png`,
       apple: `${process.env.NEXT_PUBLIC_BASE_PATH}/icons/apple-touch-icon.png`,
     },
-    manifest: "/manifest.json",
+    manifest: `${process.env.NEXT_PUBLIC_BASE_PATH}/manifest.json`,
   };
