@@ -13,11 +13,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean | null>(null);
 
-  useEffect(() => {
-      console.log = () => { };
-      console.warn = () => { };
-      console.error = () => { };
-  }, []);
+  // useEffect(() => {
+  //     console.log = () => { };
+  //     console.warn = () => { };
+  //     console.error = () => { };
+  // }, []);
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -47,7 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <link rel="manifest" href="/manifest.json" />
+        <link rel="manifest" href={`${process.env.NEXT_PUBLIC_BASE_PATH}/manifest.json`} />
         <meta name="theme-color" content="#000000" />
         <link rel="icon" href={`${process.env.NEXT_PUBLIC_BASE_PATH}/favicon.ico`} />
       </head>

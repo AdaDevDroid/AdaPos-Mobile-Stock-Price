@@ -617,7 +617,8 @@ export default function Login() {
         src={`${process.env.NEXT_PUBLIC_BASE_PATH}/icons/logoAdaLogin.png`}
         alt="Logo"
         width={80}
-        height={80}
+        height={0}
+        style={{ height: 'auto' }}
         className="text-center"
       />
       <BrancheModal
