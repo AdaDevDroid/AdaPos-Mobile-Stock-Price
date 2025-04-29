@@ -28,6 +28,7 @@ export default function Transfer() {
   const checkedRef = useRef(bCheckAutoScan);
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [tRefSeq, setRefSeq] = useState("");
+  const tQtyRef = useRef(quantity);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingScanAuto, setIsLoadingScanAuto] = useState(false);
   const [isAddScan, setAddScan] = useState(false);
@@ -93,8 +94,8 @@ export default function Transfer() {
   {/* ใช้ useEffect ในการเก็บค่า checked ไว้ */ }
   useEffect(() => {
     checkedRef.current = bCheckAutoScan;
-  }, [bCheckAutoScan]);
-
+    tQtyRef.current = quantity;
+  }, [bCheckAutoScan, quantity]);
 
   {/* สแกน BarCode */ }
   const { C_PRCxStartScanner, C_PRCxStopScanner, C_PRCxPauseScanner, C_PRCxResumeScanner, bScanning, oScannerRef } = CCameraScanner(
@@ -117,7 +118,7 @@ export default function Transfer() {
 
         if (countdown === 0) {
           clearInterval(timer);
-          C_ADDxProduct(ptDecodedText);
+          C_ADDxProduct(ptDecodedText,tQtyRef.current);
           setIsLoadingScanAuto(false);
         }
       }, 1000);
@@ -139,7 +140,7 @@ export default function Transfer() {
   const C_PRCxScanBar = (ptDecodedText: string) => {
     setBarcode(ptDecodedText);
     setAddScan(true);
-    C_ADDxProduct(ptDecodedText);
+    C_ADDxProduct(ptDecodedText,tQtyRef.current);
     setAddScan(false);
     setBarcode("");
   };
@@ -212,7 +213,7 @@ export default function Transfer() {
     };
   };
   {/* เพิ่มสินค้า */ }
-  const C_ADDxProduct = (barcode: string) => {
+  const C_ADDxProduct = (barcode: string, ptQty: string) => {
 
     if (!barcode || !quantity) {
       alert("กรุณากรอกบาร์โค้ด หรือจำนวนให้ครบถ้วน");
@@ -227,7 +228,7 @@ export default function Transfer() {
         FNId: newId,
         FTBarcode: barcode,
         FCCost: 0,
-        FNQuantity: parseInt(quantity),
+        FNQuantity: parseInt(ptQty),
         FTRefDoc: refDoc,
         FTRefSeq: tRefSeq,
         FTXthDocKey: "TCNTPdtTwxHD",
@@ -620,7 +621,7 @@ export default function Transfer() {
           onChange={setQuantity}
           label={"จำนวนที่ได้รับ"}
           icon={<FaPlus />}
-          onClick={() => C_ADDxProduct(barcode)}
+          onClick={() => C_ADDxProduct(barcode,tQtyRef.current)}
         />
       </div>
 
