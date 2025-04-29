@@ -33,6 +33,7 @@ export default function Stock() {
   const [oProducts, setProducts] = useState<Product[]>([]);
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState("1");
+  const tQtyRef = useRef(quantity);
   const [bCheckAutoScan, setChecked] = useState(true);
   const [bCheckKeyboard, setCheckKeyboard] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -97,7 +98,8 @@ export default function Stock() {
   {/* ใช้ useEffect ในการเก็บค่า checked และ cost  */ }
   useEffect(() => {
     checkedRef.current = bCheckAutoScan;
-  }, [bCheckAutoScan]);
+    tQtyRef.current = quantity;
+  }, [bCheckAutoScan, quantity]);
 
 
   {/* สแกน BarCode */ }
@@ -121,7 +123,7 @@ export default function Stock() {
 
         if (countdown === 0) {
           clearInterval(timer);
-          C_ADDxProduct(ptDecodedText);
+          C_ADDxProduct(ptDecodedText,tQtyRef.current);
           setIsLoadingScanAuto(false);
         }
       }, 1000);
@@ -144,7 +146,7 @@ export default function Stock() {
   const C_PRCxScanBar = (ptDecodedText: string) => {
     setBarcode(ptDecodedText);
     setAddScan(true);
-    C_ADDxProduct(ptDecodedText);
+    C_ADDxProduct(ptDecodedText,tQtyRef.current);
     setAddScan(false);
     setBarcode("");
   };
@@ -258,7 +260,7 @@ export default function Stock() {
   };
 
   {/* เพิ่มสินค้า */ }
-  const C_ADDxProduct = (ptBarcode: string) => {
+  const C_ADDxProduct = (ptBarcode: string, ptQty: string) => {
 
 
     if (!ptBarcode || !quantity) {
@@ -274,7 +276,7 @@ export default function Stock() {
         FNId: newId,
         FTBarcode: ptBarcode,
         FCCost: 0,
-        FNQuantity: parseInt(quantity),
+        FNQuantity: parseInt(ptQty),
         FTRefDoc: tRefDoc,
         FTRefSeq: tRefSeq,
         FTXthDocKey: "TCNTPdtAdjStkHD",
@@ -610,7 +612,7 @@ export default function Stock() {
           onChange={setQuantity}
           label={"จำนวนที่นับได้"}
           icon={<FaPlus />}
-          onClick={() => C_ADDxProduct(barcode)}
+          onClick={() => C_ADDxProduct(barcode,tQtyRef.current)}
         />
       </div>
 

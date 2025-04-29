@@ -29,6 +29,7 @@ export default function Receive() {
   const [oProductHistoryList, setProductHistoryList] = useState<Product[]>();
   const [oDb, setDB] = useState<IDBDatabase | null>(null);
   const tCostRef = useRef(tCost);
+  const tQtyRef = useRef(tQty);
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [tRefSeq, setRefSeq] = useState("");
   const [tHistoryDate, setHistoryDate] = useState("");
@@ -128,11 +129,15 @@ export default function Receive() {
     tCostRef.current = tCost;
   }, [bCheckAutoScan, tCost]);
   useEffect(() => {
+    bCheckedRef.current = bCheckAutoScan;
+    tQtyRef.current = tQty;
+  }, [bCheckAutoScan, tQty]);
+  useEffect(() => {
     if (oPendingBarcode !== null) {
-      C_ADDxProduct(oPendingBarcode, tCost); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
+      C_ADDxProduct(oPendingBarcode, tCost,tQty); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
       setPendingBarcode(null);
     }
-  }, [tCost]);
+  }, [tCost,tQty]);
 
 
 
@@ -158,7 +163,7 @@ export default function Receive() {
 
         if (countdown === 0) {
           clearInterval(timer);
-          C_ADDxProduct(ptDecodedText, tCostRef.current);
+          C_ADDxProduct(ptDecodedText, tCostRef.current,tQtyRef.current);
           setIsLoadingScanAuto(false);
         }
       }, 1000);
@@ -180,7 +185,7 @@ export default function Receive() {
   const C_PRCxScanBar = (ptDecodedText: string) => {
     setBarcode(ptDecodedText);
     setAddScan(true);
-    C_ADDxProduct(ptDecodedText, tCostRef.current);
+    C_ADDxProduct(ptDecodedText, tCostRef.current,tQtyRef.current);
     setAddScan(false);
     setBarcode("");
   };
@@ -347,7 +352,7 @@ export default function Receive() {
 
 
   {/* เพิ่มสินค้า */ }
-  const C_ADDxProduct = (ptBarcode: string, ptCost: string) => {
+  const C_ADDxProduct = (ptBarcode: string, ptCost: string, ptQty: string) => {
     if (!ptCost) {
       setCost("0");
       setPendingBarcode(ptBarcode);
@@ -367,7 +372,7 @@ export default function Receive() {
         FNId: newId,
         FTBarcode: ptBarcode,
         FCCost: parseFloat(ptCost),
-        FNQuantity: parseInt(tQty),
+        FNQuantity: parseInt(ptQty),
         FTRefDoc: tRefDoc,
         FTRefSeq: tRefSeq,
         FTXthDocKey: "TAPTPiHD",
@@ -668,7 +673,7 @@ export default function Receive() {
           onChange={setQty}
           label={"จำนวนที่ได้รับ"}
           icon={<FaPlus />}
-          onClick={() => C_ADDxProduct(tBarcode, tCost)}
+          onClick={() => C_ADDxProduct(tBarcode, tCost,tQty)}
         />
       </div>
 
