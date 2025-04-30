@@ -28,6 +28,8 @@ app.prepare().then(() => {
     }).listen(httpsPort, (err) => {
         if (err) throw err;
         // แนะนำให้แสดง Domain จริง หรือ localhost ถ้าทดสอบในเครื่อง
+        console.log(`> Environment: ${process.env.NODE_ENV}`);
+        console.log(`> Mode: ${dev ? 'DEVELOPMENT' : 'PRODUCTION'}`);
         console.log(`> Ready on https://localhost:${httpsPort}${basePath}`);
         console.log(`> Or access via https://dev.ada-soft.com:${httpsPort}${basePath} if DNS is configured`);
     });

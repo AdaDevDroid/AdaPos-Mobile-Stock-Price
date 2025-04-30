@@ -33,7 +33,7 @@ export default function Login() {
   const [showOfflineText, setShowOfflineText] = useState(true);
 
   useEffect(() => {
-    if (workboxCount === 9 && staticCount > 40) {
+    if (workboxCount === 9 && staticCount > 25) {
       setShowOfflineText(true);
       const timer = setTimeout(() => setShowOfflineText(false), 5000);
       return () => clearTimeout(timer);
@@ -100,7 +100,7 @@ export default function Login() {
             }
           }
 
-          const isReady = (workboxCount === 9 && staticCount > 40);
+          const isReady = (workboxCount === 9 && staticCount > 25);
           setStatus({ workboxCount, staticCount, isReady });
         } catch (error) {
           console.error('❌ ตรวจสอบ cache ผิดพลาด:', error);
@@ -453,7 +453,7 @@ export default function Login() {
       console.log(`📦 จำนวนไฟล์ workbox-precache: ${workboxCount}`);
       console.log(`📦 จำนวนไฟล์ static-resources: ${staticCount}`);
 
-      if (workboxCount === 9 && staticCount > 40) {
+      if (workboxCount === 9 && staticCount > 25) {
         alert('✅ พร้อมใช้งานออฟไลน์แล้ว! 🎉');
       } else {
         const missing = [];
@@ -564,7 +564,7 @@ export default function Login() {
           <div className="flex flex-col items-center justify-center">
 
             <div className="relative flex items-center justify-center">
-              {workboxCount === 9 && staticCount > 40 ? (
+              {workboxCount === 9 && staticCount > 25 ? (
                 <div className="group relative">
                   <FaCheckCircle className="text-green-500" size={20} />
                   <div className="absolute left-8 bottom-1 bg-white text-gray-800 shadow p-2 rounded text-xs min-w-max whitespace-nowrap opacity-0 group-hover:opacity-100 transition">
@@ -592,13 +592,13 @@ export default function Login() {
                 </div>
               )}
             </div>
-            <div className={`mt-1 text-xs text-center leading-snug ${workboxCount === 9 && staticCount > 40
+            <div className={`mt-1 text-xs text-center leading-snug ${workboxCount === 9 && staticCount > 25
               ? 'text-green-600'
               : showWrench
                 ? 'text-yellow-500'
                 : 'text-yellow-500'
               }`}>
-              {workboxCount === 9 && staticCount > 40 ? (
+              {workboxCount === 9 && staticCount > 25 ? (
                 <>Offline Mode<br />พร้อมใช้งาน</>
               ) : showWrench ? (
                 <>Offline Mode<br />โหลดข้อมูลไม่สำเร็จ<br />กรุณาซ่อมแซมไฟล์</>
