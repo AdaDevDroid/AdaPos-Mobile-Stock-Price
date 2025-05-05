@@ -62,6 +62,16 @@ if (workbox) {
       `${BASE_PATH}/_next/static/chunks/main-app-93e4dceeac7d2a79.js`,
       `${BASE_PATH}/_next/static/chunks/webpack-9fe7c363585b0767.js`,
       `${BASE_PATH}/_next/static/css/7d5e323db8624040.css`,
+      `${BASE_PATH}/_next/static/chunks/_app-pages-browser_node_modules_next_dist_client_dev_noop-turbopack-hmr_js.js`,
+      `${BASE_PATH}/_next/static/chunks/app-pages-internals.js`,
+      `${BASE_PATH}/_next/static/chunks/app/layout.js`,
+      `${BASE_PATH}/_next/static/chunks/app/login/page.js`,
+      `${BASE_PATH}/_next/static/chunks/app/main/page.js`,
+      `${BASE_PATH}/_next/static/chunks/app/page.js`,
+      `${BASE_PATH}/_next/static/chunks/app/price-check/page.js`,
+      `${BASE_PATH}/_next/static/chunks/app/receive/page.js`,
+      `${BASE_PATH}/_next/static/chunks/app/stock/page.js`,
+      `${BASE_PATH}/_next/static/chunks/app/transfer/page.js`,
       `${BASE_PATH}/favicon.ico`,
       `${BASE_PATH}/icons/logoAda.png`
     ];
