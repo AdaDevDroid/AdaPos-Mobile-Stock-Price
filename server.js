@@ -8,7 +8,7 @@ const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
-const basePath = '/AdaCheckStockSTD';
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/AdaCheckStockSTD'; // กำหนด basePath ถ้ามี
 
 // --- กำหนดค่า SSL ---
 const httpsOptions = {
