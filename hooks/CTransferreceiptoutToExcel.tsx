@@ -29,7 +29,7 @@ const exportToExcel = (data: oData[]) => {
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, emptySheet, "Suggestion");
-    XLSX.utils.book_append_sheet(workbook, worksheet1, "Purchase Invoice");
+    XLSX.utils.book_append_sheet(workbook, worksheet1, "Purchase Invoice_lite");
   
     XLSX.writeFile(workbook, "PurcaseInvoice.xlsx");
   };

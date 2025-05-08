@@ -10,11 +10,10 @@ interface oData {
 const exportToExcel = (data: oData[]) => {
 
   const formattedProducts = data.map((oProduct) => ({
-    ProductCode: oProduct.tProductCode,
     Barcode: oProduct.tBarcode,
     Quantity: parseFloat(oProduct.tQTY.toString()).toFixed(4), // แปลงเป็นทศนิยม 4 ตำแหน่ง
   }));
-    const header1 = [["* Product Code Text[20]", "* Bar Code Text[25]", " * Qty  Decimal[18,4]  "]];
+    const header1 = [["* Bar Code Text[25]", " * Qty  Decimal[18,4]  "]];
     const emptySheet = XLSX.utils.aoa_to_sheet([[]]);
 
   
@@ -28,7 +27,7 @@ const exportToExcel = (data: oData[]) => {
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, emptySheet, "Suggestion");
-    XLSX.utils.book_append_sheet(workbook, worksheet1, "Transferbetweenbranch");
+    XLSX.utils.book_append_sheet(workbook, worksheet1, "Transferbetweenbranch_lite");
   
     XLSX.writeFile(workbook, "Producttransferwahouse.xlsx");
   };
