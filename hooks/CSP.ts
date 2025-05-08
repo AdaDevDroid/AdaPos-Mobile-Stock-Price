@@ -17,7 +17,7 @@ export function C_SETxFormattedDate(): string {
 
 export const C_INSxProducts = async (oProducts: Product[]) => {
     try {
-      const response = await fetch('/api/query/insertDataProduct', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/insertDataProduct`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(oProducts)
@@ -32,7 +32,7 @@ export const C_INSxProducts = async (oProducts: Product[]) => {
 
 export const C_INSxStock = async (oProducts: Product[]) => {
   try {
-    const response = await fetch('/api/query/insertDataAdjStk', {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/insertDataAdjStk`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(oProducts)
