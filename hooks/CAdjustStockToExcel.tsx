@@ -11,13 +11,12 @@ interface oData {
 
 const exportToExcel = (data: oData[]) => {
   const formattedProducts = data.map((oProduct) => ({
-    ProductCode: oProduct.tProductCode,
     Barcode: oProduct.tBarcode,
     StockControlCode: oProduct.tStockCode,
     Quantity: parseFloat(oProduct.tQTY.toString()).toFixed(4), // แปลงเป็นทศนิยม 4 ตำแหน่ง
     CreateOn: oProduct.dCreateOn,
   }));
-    const header1 = [["*Product Code Text[20]", "*Bar Code Text[25]", "Stock Control Code[50]", " * Qty  Decimal[18,4] "," *Date / Time [datetime]"]];
+    const header1 = [["*Bar Code Text[25]", "Stock Control Code[50]", " * Qty  Decimal[18,4] "," *Date / Time [datetime]"]];
     const emptySheet = XLSX.utils.aoa_to_sheet([[]]);
 
   
@@ -31,7 +30,7 @@ const exportToExcel = (data: oData[]) => {
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, emptySheet, "Suggestion");
-    XLSX.utils.book_append_sheet(workbook, worksheet1, "Adjust Stock");
+    XLSX.utils.book_append_sheet(workbook, worksheet1, "Adjust Stock_lite");
   
     XLSX.writeFile(workbook, "AdjustStock.xlsx");
   };
