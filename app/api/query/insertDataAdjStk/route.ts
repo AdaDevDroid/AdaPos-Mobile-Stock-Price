@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { C_CTDoConnectToDatabase } from '../../database/connect_db';
-import { Product } from "@/models/models";
+
 
 export async function POST(req: NextRequest) {
     try {
         let newFTXthDocSeq = 0;
         // ✅ รับ JSON Data เป็น Array ของ Product[]
-        const products: Product[] = await req.json();
+        const { products, userInfo } = await req.json();
 
         if (!Array.isArray(products) || products.length === 0) {
             return NextResponse.json({ message: "Invalid Data" }, { status: 400 });
@@ -14,11 +14,11 @@ export async function POST(req: NextRequest) {
 
         // ✅ เชื่อมต่อฐานข้อมูล
         const pool = await C_CTDoConnectToDatabase();
-        
+
         const res = await pool.request()
-        .input("FTBchCode", products[0].FTBchCode)
-        .input("FTAgnCode", products[0].FTAgnCode)
-        .query(`
+            .input("FTBchCode", products[0].FTBchCode)
+            .input("FTAgnCode", products[0].FTAgnCode)
+            .query(`
             SELECT TOP 1 FTXthDocSeq
             FROM TMBTDocDTTmpAdj
             WHERE FTBchCode = @FTBchCode
@@ -28,51 +28,51 @@ export async function POST(req: NextRequest) {
 
           `);
 
-          
-         if (res && res.recordset && res.recordset.length > 0) {
-            newFTXthDocSeq = parseInt(res.recordset[0].FTXthDocSeq, 10) + 1;
-          } else {
-            newFTXthDocSeq = 1;
-          }
-          console.log("🔍 res Data:", newFTXthDocSeq);
 
-          
-          for (let index = 0; index < products.length; index++) {
+        if (res && res.recordset && res.recordset.length > 0) {
+            newFTXthDocSeq = parseInt(res.recordset[0].FTXthDocSeq, 10) + 1;
+        } else {
+            newFTXthDocSeq = 1;
+        }
+        console.log("🔍 res Data:", newFTXthDocSeq);
+
+
+        for (let index = 0; index < products.length; index++) {
             const product = products[index];
             const {
                 FTBarcode, FNQuantity, FTRefDoc,
-                FTXthDocKey, FTBchCode, FTAgnCode, FTUsrName, FDCreateOn
+                FTXthDocKey, FTBchCode, FTAgnCode, FDCreateOn
             } = product;
 
             const FNId = index + 1;
 
-        let retryCount = 0;
-        const maxRetries = 3;
-        let success = false;
-        while (!success && retryCount < maxRetries) {
-            try {
-                const request = pool.request();
-                request.input("FTBchCode", FTBchCode);
-                request.input("FTXthDocSeq", newFTXthDocSeq);
-                request.input("FNXtdSeqNo", FNId);
-                request.input("FTXthDocKey", FTXthDocKey);
-                request.input("FTXthDocType", "1");
-                request.input("FTXtdBarCode", FTBarcode);
-                request.input("FCXtdQtyAll", FNQuantity);
-                request.input("FTXtdBchRef", "1");
-                request.input("FDAjdDateTimeC1", convertToCE(FDCreateOn));
-                request.input("FCAjdUnitQtyC1", FNQuantity);
-                request.input("FTAjdPlcCode", FTRefDoc);
-                request.input("FDLastUpdOn", convertToCE(FDCreateOn));
-                request.input("FDCreateOn", convertToCE(FDCreateOn));
-                request.input("FTLastUpdBy", FTUsrName);
-                request.input("FTCreateBy", FTUsrName);
-                request.input("FTTmpStatus", "1");
-                request.input("FTAgnCode", FTAgnCode);
-    
-                console.log("🔍 Insert Data:", product);
-                // ✅ INSERT ข้อมูลลงใน `TCNTDocSPDTTmp`
-                await request.query(`
+            let retryCount = 0;
+            const maxRetries = 3;
+            let success = false;
+            while (!success && retryCount < maxRetries) {
+                try {
+                    const request = pool.request();
+                    request.input("FTBchCode", FTBchCode);
+                    request.input("FTXthDocSeq", newFTXthDocSeq);
+                    request.input("FNXtdSeqNo", FNId);
+                    request.input("FTXthDocKey", FTXthDocKey);
+                    request.input("FTXthDocType", "1");
+                    request.input("FTXtdBarCode", FTBarcode);
+                    request.input("FCXtdQtyAll", FNQuantity);
+                    request.input("FTXtdBchRef", "1");
+                    request.input("FDAjdDateTimeC1", convertToCE(FDCreateOn));
+                    request.input("FCAjdUnitQtyC1", FNQuantity);
+                    request.input("FTAjdPlcCode", FTRefDoc);
+                    request.input("FDLastUpdOn", convertToCE(FDCreateOn));
+                    request.input("FDCreateOn", convertToCE(FDCreateOn));
+                    request.input("FTLastUpdBy", userInfo.FTUsrCode);
+                    request.input("FTCreateBy", userInfo.FTUsrCode);
+                    request.input("FTTmpStatus", "1");
+                    request.input("FTAgnCode", FTAgnCode);
+
+                    console.log("🔍 Insert Data:", product);
+                    // ✅ INSERT ข้อมูลลงใน `TCNTDocSPDTTmp`
+                    await request.query(`
     
     
     
@@ -86,17 +86,18 @@ export async function POST(req: NextRequest) {
                 @FDCreateOn, @FTLastUpdBy, @FTCreateBy, @FTTmpStatus, @FTAgnCode
                 );
              `);
-          success = true;
-               } catch (error) {
-                retryCount++;
-                newFTXthDocSeq = parseInt(res.recordset[0].FTXthDocSeq, 10) + retryCount;
-                console.log(`Retrying (${retryCount}/${maxRetries}) due to error:`, error);
-                if (retryCount >= maxRetries) {
-                    throw new Error(`Failed to insert product after ${maxRetries} attempts`);
+                    success = true;
+                } catch (error) {
+                    console.log("🔍 res2 Data:", res);
+                    retryCount++;
+                    newFTXthDocSeq = parseInt(res.recordset[0].FTXthDocSeq, 10) + retryCount;
+                    console.log(`Retrying (${retryCount}/${maxRetries}) due to error:`, error);
+                    if (retryCount >= maxRetries) {
+                        throw new Error(`Failed to insert product after ${maxRetries} attempts`);
+                    }
                 }
             }
         }
-    }
 
         return NextResponse.json({ message: "Insert Success", count: products.length }, { status: 201 });
 

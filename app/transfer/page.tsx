@@ -231,7 +231,7 @@ export default function Transfer() {
         FNQuantity: parseInt(ptQty),
         FTRefDoc: refDoc,
         FTRefSeq: tRefSeq,
-        FTXthDocKey: "TCNTPdtTwxHD",
+        FTXthDocKey: "TCNTPdtTbxHD",
         FTBchCode: oUserInfo?.FTBchCode || "",
         FTAgnCode: oUserInfo?.FTAgnCode || "",
         FTUsrName: oUserInfo?.FTUsrName || "",
@@ -308,7 +308,7 @@ export default function Transfer() {
       FNQuantity: oProducts.FNQuantity,
       FTRefDoc: oProducts.FTRefDoc,
       FTRefSeq: tRefSeq,
-      FTXthDocKey: "TCNTPdtTwxHD",
+      FTXthDocKey: "TCNTPdtTbxHD",
       FTBchCode: oUserInfo?.FTBchCode || "",
       FTAgnCode: oUserInfo?.FTAgnCode || "",
       FTUsrName: oUserInfo?.FTUsrName || "",
@@ -432,7 +432,11 @@ export default function Transfer() {
     // //  Upload ผ่าน Web Services
     // C_INSxProducts(oProducts);
     try {
-      await C_INSxProducts(oProducts); // รอให้ฟังก์ชันทำงานสำเร็จ
+      if (oUserInfo) {
+        await C_INSxProducts(oProducts, oUserInfo); // รอให้ฟังก์ชันทำงานสำเร็จ
+      } else {
+        throw new Error("❌ ไม่พบข้อมูลผู้ใช้");
+      }
     } catch (error) {
       console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
       alert("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล");

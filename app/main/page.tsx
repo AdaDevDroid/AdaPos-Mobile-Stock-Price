@@ -303,10 +303,13 @@ export default function MainPage() {
     }
     try {
       //  Upload ผ่าน Web Services
+      if (!oUserInfo) {
+        throw new Error("User info is not available");
+      }
       if (tType === "Stock") {
-        await C_INSxStock(oProducts);
+        await C_INSxStock(oProducts, oUserInfo);
       } else {
-        await C_INSxProducts(oProducts);
+        await C_INSxProducts(oProducts, oUserInfo);
       }
     } catch (error) {
       console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
@@ -486,7 +489,7 @@ export default function MainPage() {
         break;
       case "Transfer":
         tTaleName = "TCNTProductTransfer";
-        tDocKey = "TCNTPdtTwxHD";
+        tDocKey = "TCNTPdtTbxHD";
         break;
       case "Stock":
         tTaleName = "TCNTProductStock";
