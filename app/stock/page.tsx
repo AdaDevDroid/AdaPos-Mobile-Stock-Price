@@ -396,7 +396,10 @@ export default function Stock() {
     // //  Upload ผ่าน Web Services
     // C_INSxProducts(oProducts);
     try {
-      await C_INSxStock(oProducts); // รอให้ฟังก์ชันทำงานสำเร็จ
+      if (!oUserInfo) {
+        throw new Error("ไม่พบข้อมูลผู้ใช้");
+      }
+      await C_INSxStock(oProducts, oUserInfo);
     } catch (error) {
       console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
       alert("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล");
