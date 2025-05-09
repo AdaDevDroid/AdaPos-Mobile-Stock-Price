@@ -1,4 +1,4 @@
-import { Product } from "@/models/models";
+import { Product ,UserInfo} from "@/models/models";
 
 export function C_SETxFormattedDate(): string {
     const now = new Date();
@@ -15,12 +15,15 @@ export function C_SETxFormattedDate(): string {
     return `${buddhistYear}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
 }
 
-export const C_INSxProducts = async (oProducts: Product[]) => {
+export const C_INSxProducts = async (oProducts: Product[],oUserInfo: UserInfo) => {
     try {
       const response = await fetch('/api/query/insertDataProduct', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(oProducts)
+        body: JSON.stringify({
+          products: oProducts,
+          userInfo: oUserInfo
+        })
       });
   
       const data = await response.json();
@@ -30,12 +33,15 @@ export const C_INSxProducts = async (oProducts: Product[]) => {
     }
 };
 
-export const C_INSxStock = async (oProducts: Product[]) => {
+export const C_INSxStock = async (oProducts: Product[],oUserInfo: UserInfo) => {
   try {
     const response = await fetch('/api/query/insertDataAdjStk', {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(oProducts)
+      body: JSON.stringify({
+        products: oProducts,
+        userInfo: oUserInfo
+      })
     });
 
     const data = await response.json();

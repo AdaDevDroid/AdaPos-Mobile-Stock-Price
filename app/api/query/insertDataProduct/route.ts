@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { C_CTDoConnectToDatabase } from '../../database/connect_db';
-import { Product } from "@/models/models";
+
 
 export async function POST(req: NextRequest) {
     try {
         let newFTXthDocSeq = 0;
         // ✅ รับ JSON Data เป็น Array ของ Product[]
-        const products: Product[] = await req.json();
+        const { products, userInfo } = await req.json();
+
+
 
         if (!Array.isArray(products) || products.length === 0) {
             return NextResponse.json({ message: "Invalid Data" }, { status: 400 });
@@ -42,7 +44,7 @@ export async function POST(req: NextRequest) {
         const product = products[index];
         const {
             FTBarcode, FCCost, FNQuantity, FTRefDoc,
-            FTXthDocKey, FTBchCode, FTAgnCode, FTUsrName, FDCreateOn, FTPORef
+            FTXthDocKey, FTBchCode, FTAgnCode, FDCreateOn, FTPORef
         } = product;
 
         const FNId = index + 1;
@@ -66,8 +68,8 @@ export async function POST(req: NextRequest) {
                 request.input("FCXtdCostIn", FCCost);
                 request.input("FDLastUpdOn", convertToCE(FDCreateOn));
                 request.input("FDCreateOn", convertToCE(FDCreateOn));
-                request.input("FTLastUpdBy", FTUsrName);
-                request.input("FTCreateBy", FTUsrName);
+                request.input("FTLastUpdBy", userInfo.FTUsrCode);
+                request.input("FTCreateBy", userInfo.FTUsrCode);
                 request.input("FTAgnCode", FTAgnCode);
                 request.input("FTPORef", FTPORef);
 

@@ -473,7 +473,10 @@ export default function Receive() {
     // //  Upload ผ่าน Web Services
     // C_INSxProducts(oProducts);
     try {
-      await C_INSxProducts(oProducts); // รอให้ฟังก์ชันทำงานสำเร็จ
+      if (!oUserInfo) {
+        throw new Error("User info is not available");
+      }
+      await C_INSxProducts(oProducts, oUserInfo); // รอให้ฟังก์ชันทำงานสำเร็จ
     } catch (error) {
       console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
       alert("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล");
