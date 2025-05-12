@@ -1,19 +1,22 @@
 import withPWA from "next-pwa";
 import type { NextConfig } from "next";
 
+const basePath = '/AdaCheckStockSTD';
+
 const pwaConfig = withPWA({
   dest: "public",
   register: true,
   skipWaiting: true,
   cacheOnFrontEndNav: true, // ทำให้สามารถไปหน้าอื่นได้แบบ Offline
-  disable: false,
+  disable: false, 
+  buildExcludes: [/middleware-manifest\.json$/], // เพื่อป้องกัน warning ใหม่ของ next-pwa
+  publicExcludes: ['!**/robots.txt', '!**/sitemap.xml'], // สำหรับ PWA ที่ใช้ basePath
 });
 
 const nextConfig: NextConfig = {
   reactStrictMode: false,
   devIndicators: false,
-  // basePath: '/AdaCheckStockSTD',// ✅ เพิ่ม basePath เพื่อให้ Next.js ทำงานใน /AdaCheckStockSTD
-  basePath: `${process.env.NEXT_PUBLIC_BASE_PATH}`,// ✅ เพิ่ม basePath เพื่อให้ Next.js ทำงานใน /AdaCheckStockSTD
+  basePath: basePath,// ✅ เพิ่ม basePath เพื่อให้ Next.js ทำงานใน /AdaCheckStockSTD
   ...pwaConfig,
   webpack: (config, { dev }) => {
     if (dev) {
