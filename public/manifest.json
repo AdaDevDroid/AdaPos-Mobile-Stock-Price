@@ -1,7 +1,7 @@
 {
     "name": "AdaPos+ Mobile Stock & Price",
     "short_name": "AdaPos+ Mobile Stock & Price",
-    "start_url": "/",
+    "start_url": "/AdaCheckStockSTD/",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#000000",

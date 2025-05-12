@@ -15,7 +15,20 @@ const port = 3001;
 app.prepare().then(() => {
     createServer((req, res) => {
         const parsedUrl = parse(req.url, true);
-        handle(req, res, parsedUrl);
+		
+        // จัดการกับ URLs ที่มี basePath
+        if (parsedUrl.pathname && parsedUrl.pathname.startsWith(basePath)) {
+            // ตรวจสอบว่า URL มี basePath หรือไม่
+            handle(req, res, parsedUrl);
+        } else if (parsedUrl.pathname && parsedUrl.pathname.startsWith('/_next/')) {
+            // สำหรับ URLs ที่เริ่มต้นด้วย /_next/
+            const correctedUrl = parse(`${basePath}${parsedUrl.pathname}`, true);
+            handle(req, res, correctedUrl);
+        } else {
+            // สำหรับ URLs อื่น ๆ ที่ไม่ตรงกับ basePath
+            handle(req, res, parsedUrl);
+        }
+		
     }).listen(port, (err) => {
         if (err) throw err;
         console.log(`> Environment: ${process.env.NODE_ENV}`);
