@@ -222,32 +222,53 @@ export default function Login() {
         }
         console.log("✅ User validated & stored locally.");
         return true;
-      } 
-      else{
-        if(user[0].FTAgnCode){
-            console.log("🟢 Online Mode: Validating User via API");
-          // const BchResponse = await fetch("/api/query/selectBchByAgn", {
-            const BchResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectBchByAgn`, {
+
+      }
+      else {
+        if (user[0].FTAgnCode) {
+          console.log("🟢 Online Mode: Validating User via API");
+          const BchResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectBchByAgn`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ FTAgnCode: user[0].FTAgnCode }), // ส่งค่า FTAgnCode ไปยัง API
           });
           if (!BchResponse.ok) return false;
           const { bch } = await BchResponse.json();
+          if (bch.length > 1) {
+            setUserInfo(user);
+            setBranchInfo(bch);
+            setCompName(user[0].FTAgnName);
+            setIsBranchOpen(true);
+          }
+          else {
+            if (bch[0].FTBchCode) {
+              if (oDatabase) {
+                await C_INSxUserToDB(oDatabase, {
+                  FTUsrCode: user[0].FTUsrCode,
+                  FTUsrLogin: user[0].FTUsrLogin,
+                  FTUsrLoginPwd: user[0].FTUsrLoginPwd,
+                  FTUsrName: user[0].FTUsrName,
+                  FTBchCode: bch[0].FTBchCode,
+                  FTBchName: bch[0].FTBchName,
+                  FTAgnCode: user[0].FTAgnCode,
+                  FTAgnName: user[0].FTAgnName,
+                  FTMerCode: user[0].FTMerCode,
+                  FTImgObj: user[0].FTImgObj,
+                });
+              }
+              console.log("✅ bch validated & stored locally.");
+              return true;
+            }
+          }
 
-
-          setUserInfo(user);
-          setBranchInfo(bch);
-          setCompName(user[0].FTAgnName);
-          setIsBranchOpen(true);
         }
         else {
           console.log("✅User 009 ");
           console.log("🟢 Online Mode: Validating User via API");
           // const BchResponse = await fetch("/api/query/selectBchAll", {
           const BchResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectBchAll`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
           });
 
           if (!BchResponse.ok) return false;
@@ -260,10 +281,33 @@ export default function Login() {
           if (!CompResponse.ok) return false;
           const { comp } = await CompResponse.json();
 
-          setUserInfo(user);
-          setCompName(comp);
-          setBranchInfo(bch);
-          setIsBranchOpen(true);
+          if (bch.length > 1) {
+
+            setUserInfo(user);
+            setCompName(comp);
+            setBranchInfo(bch);
+            setIsBranchOpen(true);
+          }
+          else {
+            if (bch[0].FTBchCode) {
+              if (oDatabase) {
+                await C_INSxUserToDB(oDatabase, {
+                  FTUsrCode: user[0].FTUsrCode,
+                  FTUsrLogin: user[0].FTUsrLogin,
+                  FTUsrLoginPwd: user[0].FTUsrLoginPwd,
+                  FTUsrName: user[0].FTUsrName,
+                  FTBchCode: bch[0].FTBchCode,
+                  FTBchName: bch[0].FTBchName,
+                  FTAgnCode: user[0].FTAgnCode,
+                  FTAgnName: user[0].FTAgnName,
+                  FTMerCode: user[0].FTMerCode,
+                  FTImgObj: user[0].FTImgObj,
+                });
+              }
+              console.log("✅ bch validated & stored locally.");
+              return true;
+            }
+          }
 
         }
       }
