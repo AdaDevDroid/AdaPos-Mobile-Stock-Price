@@ -17,9 +17,9 @@ export async function POST() {
           `);
                  
           const aData = aResult.recordset;
-          console.log(" 🟢 aData:", aData);
+          console.log(" 🟢 aData: All", aData);
           const oBchData = aData.map((bch: BranchInfo) => ({ ...bch }));
-          console.log(" 🟢 oBranchData:", oBchData);
+
           
       
           if (oBchData.length === 0) {

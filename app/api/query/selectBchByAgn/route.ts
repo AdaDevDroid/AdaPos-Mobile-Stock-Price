@@ -20,9 +20,9 @@ export async function POST(req: Request) {
           `);
                  
           const aData = aResult.recordset;
-          console.log(" 🟢 aData:", aData);
+          console.log(" 🟢 aData: byagn", aData);
           const oBchData = aData.map((bch: BranchInfo) => ({ ...bch }));
-          console.log(" 🟢 oBranchData:", oBchData);
+
           
       
           if (oBchData.length === 0) {
