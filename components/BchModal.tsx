@@ -43,7 +43,7 @@ const BrancheModal: React.FC<BranchModalProps> = ({
                   key={index}
                   className="border text-center text-gray-500 text-[14px] hover:bg-green-200"
                   onClick={() => onOptionSelect(user.FTBchCode, user.FTBchName)} 
-            
+   
                 >
                   <td className="p-2">{index + 1}</td>
                   <td className="p-2">{user.FTBchCode}</td>

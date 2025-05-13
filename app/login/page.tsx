@@ -33,7 +33,7 @@ export default function Login() {
   const [showOfflineText, setShowOfflineText] = useState(true);
 
   useEffect(() => {
-    if (workboxCount === 9 && staticCount > 40) {
+    if (workboxCount === 9 && staticCount >= 25) {
       setShowOfflineText(true);
       const timer = setTimeout(() => setShowOfflineText(false), 5000);
       return () => clearTimeout(timer);
@@ -55,7 +55,8 @@ export default function Login() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
-        .register("/sw.js")
+        // .register("/sw.js")
+        .register(`${process.env.NEXT_PUBLIC_BASE_PATH}/sw.js`)
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
 
@@ -99,7 +100,7 @@ export default function Login() {
             }
           }
 
-          const isReady = (workboxCount === 9 && staticCount > 40);
+          const isReady = (workboxCount === 9 && staticCount >= 25);
           setStatus({ workboxCount, staticCount, isReady });
         } catch (error) {
           console.error('❌ ตรวจสอบ cache ผิดพลาด:', error);
@@ -159,7 +160,7 @@ export default function Login() {
     console.log("login แล้ว");
     router.push("/main");
 
-  }, []);
+  }, [router]);
 
   const C_SETxToken = (token: string) => {
     const nExpToken = 60; // เวลาหมดอายุในหน่วยนาที
@@ -188,7 +189,7 @@ export default function Login() {
     }
 
     console.log("🟢 Online Mode: Validating User via API");
-    const userResponse = await fetch("/api/query/selectUsrLogin", {
+    const userResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectUsrLogin`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -221,12 +222,12 @@ export default function Login() {
         }
         console.log("✅ User validated & stored locally.");
         return true;
-      }
-      else {
-        if (user[0].FTAgnCode) {
-
-          console.log("🟢 Online Mode: Validating User via API");
-          const BchResponse = await fetch("/api/query/selectBchByAgn", {
+      } 
+      else{
+        if(user[0].FTAgnCode){
+            console.log("🟢 Online Mode: Validating User via API");
+          // const BchResponse = await fetch("/api/query/selectBchByAgn", {
+            const BchResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectBchByAgn`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ FTAgnCode: user[0].FTAgnCode }), // ส่งค่า FTAgnCode ไปยัง API
@@ -243,14 +244,16 @@ export default function Login() {
         else {
           console.log("✅User 009 ");
           console.log("🟢 Online Mode: Validating User via API");
-          const BchResponse = await fetch("/api/query/selectBchAll", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+          // const BchResponse = await fetch("/api/query/selectBchAll", {
+          const BchResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectBchAll`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           });
+
           if (!BchResponse.ok) return false;
           const { bch } = await BchResponse.json();
 
-          const CompResponse = await fetch("/api/query/selectCompName", {
+          const CompResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectCompName`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
           });
@@ -273,7 +276,7 @@ export default function Login() {
   const C_PRCxSyncConfig = async (oDatabase: IDBDatabase) => {
     try {
       console.log("🔄 Syncing SysConfig...");
-      const response = await fetch("/api/query/selectSysConfig", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectSysConfig`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -450,12 +453,12 @@ export default function Login() {
       console.log(`📦 จำนวนไฟล์ workbox-precache: ${workboxCount}`);
       console.log(`📦 จำนวนไฟล์ static-resources: ${staticCount}`);
 
-      if (workboxCount === 9 && staticCount > 40) {
+      if (workboxCount === 9 && staticCount >= 25) {
         alert('✅ พร้อมใช้งานออฟไลน์แล้ว! 🎉');
       } else {
         const missing = [];
         if (workboxCount !== 9) missing.push(`workbox-precache (${workboxCount}/9)`);
-        if (staticCount <= 40) missing.push(`static-resources (${staticCount}/40)`);
+        if (staticCount < 25) missing.push(`static-resources (${staticCount}/25)`);
 
         const confirmClear = confirm(`ไฟล์สำหรับ Offline ไม่ครบ: ${missing.join(', ')}\n\nคุณต้องการซ่อมแซมไฟล์และโหลดใหม่หรือไม่?`);
 
@@ -493,7 +496,8 @@ export default function Login() {
       <div className="flex flex-col items-center text-center mb-6">
         <div className="text-white text-2xl font-bold flex items-center justify-center w-16 h-16 rounded-md">
           <Image
-            src={tUrlImg && tUrlImg !== "" ? tUrlImg : "/icons/logoAda.png"}
+            // src="/icons/logoAda.png"
+            src={tUrlImg && tUrlImg !== "" ? tUrlImg : `${process.env.NEXT_PUBLIC_BASE_PATH}/icons/logoAda.png`}
             alt="Logo"
             width={64}
             height={64}
@@ -550,7 +554,7 @@ export default function Login() {
         </form>
       </div>
 
-      <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.12</p>
+      <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.2</p>
       <p className="text-center text-gray-400 text-xs">© 2025 AdaPos+. All rights reserved.</p>
 
 
@@ -560,7 +564,7 @@ export default function Login() {
           <div className="flex flex-col items-center justify-center">
 
             <div className="relative flex items-center justify-center">
-              {workboxCount === 9 && staticCount > 40 ? (
+              {workboxCount === 9 && staticCount >= 25 ? (
                 <div className="group relative">
                   <FaCheckCircle className="text-green-500" size={20} />
                   <div className="absolute left-8 bottom-1 bg-white text-gray-800 shadow p-2 rounded text-xs min-w-max whitespace-nowrap opacity-0 group-hover:opacity-100 transition">
@@ -583,18 +587,18 @@ export default function Login() {
                   <div className="absolute left-8 bottom-1 bg-white text-gray-800 shadow p-2 rounded text-xs min-w-max whitespace-nowrap opacity-0 group-hover:opacity-100 transition">
                     ⚡ Offline ไม่พร้อมใช้งาน<br />
                     workbox: {workboxCount}/9<br />
-                    static: {staticCount}/40
+                    static: {staticCount}/25
                   </div>
                 </div>
               )}
             </div>
-            <div className={`mt-1 text-xs text-center leading-snug ${workboxCount === 9 && staticCount > 40
+            <div className={`mt-1 text-xs text-center leading-snug ${workboxCount === 9 && staticCount >= 25
               ? 'text-green-600'
               : showWrench
                 ? 'text-yellow-500'
                 : 'text-yellow-500'
               }`}>
-              {workboxCount === 9 && staticCount > 40 ? (
+              {workboxCount === 9 && staticCount >= 25 ? (
                 <>Offline Mode<br />พร้อมใช้งาน</>
               ) : showWrench ? (
                 <>Offline Mode<br />โหลดข้อมูลไม่สำเร็จ<br />กรุณาซ่อมแซมไฟล์</>
@@ -609,10 +613,12 @@ export default function Login() {
       </div>
 
       <Image
-        src="/icons/logoAdaLogin.png"
+        // src="/icons/logoAdaLogin.png"
+        src={`${process.env.NEXT_PUBLIC_BASE_PATH}/icons/logoAdaLogin.png`}
         alt="Logo"
         width={80}
-        height={80}
+        height={0}
+        style={{ height: 'auto' }}
         className="text-center"
       />
       <BrancheModal

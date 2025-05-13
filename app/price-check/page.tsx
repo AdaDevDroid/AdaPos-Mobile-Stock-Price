@@ -43,7 +43,7 @@ const PricePromotionCheck = () => {
         return;
       }
 
-      const responseCode = await fetch('/api/query/selectUrlPdtCode', {
+      const responseCode = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectUrlPdtCode`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,7 +72,7 @@ const PricePromotionCheck = () => {
         ptPdtCode: pdtCode,
       };
 
-      const response = await fetch('/api/call-promotion', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/call-promotion`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

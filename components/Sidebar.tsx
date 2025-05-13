@@ -45,7 +45,8 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
       console.log("❌ ไม่สามารถ Logout:", error);
     }
     // 🔄 รีไดเรกต์ออกจากระบบ
-    window.location.href = "/";
+    // window.location.href = "/";
+    window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH}/`;
   };
   return (
     <div className={`h-full bg-white shadow-md text-white whitespace-nowrap ${isOpen ? "w-64" : "w-16"} transition-all duration-300 fixed`}>
@@ -57,7 +58,8 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
             <FaBars className="ms-4" size={24} />
           ) : (
             <img
-              src={tUrlImg && tUrlImg !== "" ? tUrlImg : "/icons/logoAda.png"}
+              // src={tUrlImg && tUrlImg !== "" ? tUrlImg : "/icons/logoAda.png"}
+              src={tUrlImg && tUrlImg !== "" ? tUrlImg : `${process.env.NEXT_PUBLIC_BASE_PATH}/icons/logoAda.png`}
               alt="Logo"
               className="w-8 h-8"
             />

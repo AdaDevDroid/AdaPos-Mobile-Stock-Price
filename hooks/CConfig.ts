@@ -4,7 +4,7 @@ export const C_GetoUrlObject = async (): Promise<string> => {
   try {
     // กำหนด base URL จาก environment variable หรือใช้ค่าเริ่มต้น
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    const url = new URL('/api/query/selectUrlObject', baseUrl);
+    const url = new URL(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectUrlObject`, baseUrl);
 
     const response = await fetch(url.toString(), {
       method: "POST",
