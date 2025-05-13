@@ -1,7 +1,9 @@
 // นำเข้า Workbox
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.0.2/workbox-sw.js');
 
-const VERSION = "1.0.12";
+const VERSION = "1.0.2"; // เวอร์ชั่น
+const BASE_PATH = self.__WB_MANIFEST?.BASE_PATH || '/AdaCheckStockSTD'; // กำหนด basePath ถ้ามี
+
 // ตรวจสอบว่า Workbox ถูกโหลดสำเร็จ
 console.log('ตรวจสอบว่า Workbox ถูกโหลดสำเร็จ');
 if (workbox) {
@@ -16,67 +18,62 @@ if (workbox) {
     updateStatic();
     // เก็บ VERSION ใหม่ใน cache
     caches.open(workbox.core.cacheName).then((cache) => {
-      cache.put('/', new Response(VERSION)); // เก็บ VERSION ใหม่
+      cache.put(`${BASE_PATH}/`, new Response(VERSION)); // เก็บ VERSION ใหม่
     });
 
-    // Precache ไฟล์ที่กำหนดไว้ล่วงหน้าใหม่
+    // Precache ไฟล์ที่กำหนดไว้ล่วงหน้าใหม่ with BASE_PATH
     workbox.precaching.precacheAndRoute([
-      { url: '/', revision: VERSION },
-      { url: '/login', revision: VERSION },
-      { url: '/main', revision: VERSION },
-      { url: '/receive', revision: VERSION },
-      { url: '/transfer', revision: VERSION },
-      { url: '/stock', revision: VERSION },
-      { url: '/price-check', revision: VERSION },
-      { url: '/icons/icon-192x192.png', revision: VERSION },
-      { url: '/icons/icon-512x512.png', revision: VERSION },
+      { url: `${BASE_PATH}/`, revision: VERSION },
+      { url: `${BASE_PATH}/login`, revision: VERSION },
+      { url: `${BASE_PATH}/main`, revision: VERSION },
+      { url: `${BASE_PATH}/receive`, revision: VERSION },
+      { url: `${BASE_PATH}/transfer`, revision: VERSION },
+      { url: `${BASE_PATH}/stock`, revision: VERSION },
+      { url: `${BASE_PATH}/price-check`, revision: VERSION },
+      { url: `${BASE_PATH}/icons/icon-192x192.png`, revision: VERSION },
+      { url: `${BASE_PATH}/icons/icon-512x512.png`, revision: VERSION },
     ]);
   }
 
   async function updateStatic() {
     const cache = await caches.open('static-resources');
     const urls = [
-      '/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_49a6ea35._.js',
-      '/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_5160d576._.js',
-      '/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_61dcf9ba._.js',
-      '/_next/static/chunks/_1a8fb61d._.js',
-      '/_next/static/chunks/_723fa7e6._.js',
-      '/_next/static/chunks/_797ea879._.js',
-      '/_next/static/chunks/_83a281bb._.js',
-      '/_next/static/chunks/_be317ff2._.js',
-      '/_next/static/chunks/_c6584716._.js',
-      '/_next/static/chunks/_ca031bef._.js',
-      '/_next/static/chunks/_e69f0d32._.js',
-      '/_next/static/chunks/_f6cf4364._.js',
-      '/_next/static/chunks/app_globals_73c37791.css',
-      '/_next/static/chunks/app_layout_tsx_f0e4c1a2._.js',
-      '/_next/static/chunks/app_login_page_tsx_5315b68d._.js',
-      '/_next/static/chunks/app_main_page_tsx_5315b68d._.js',
-      '/_next/static/chunks/app_page_tsx_5315b68d._.js',
-      '/_next/static/chunks/app_page_tsx_8221feda._.js',
-      '/_next/static/chunks/app_price-check_page_tsx_5315b68d._.js',
-      '/_next/static/chunks/app_receive_page_tsx_5315b68d._.js',
-      '/_next/static/chunks/app_stock_page_tsx_5315b68d._.js',
-      '/_next/static/chunks/app_transfer_page_tsx_5315b68d._.js',
-      '/_next/static/chunks/node_modules_%40swc_helpers_cjs_00636ac3._.js',
-      '/_next/static/chunks/node_modules_1c03786c._.js',
-      '/_next/static/chunks/node_modules_html5-qrcode_esm_62b22b9a._.js',
-      '/_next/static/chunks/node_modules_html5-qrcode_third_party_zxing-js_umd_df022588.js',
-      '/_next/static/chunks/node_modules_lucide-react_dist_esm_5422ca27._.js',
-      '/_next/static/chunks/node_modules_next_6537e83d._.js',
-      '/_next/static/chunks/node_modules_next_dist_3bfaed20._.js',
-      '/_next/static/chunks/node_modules_next_dist_5ed72bed._.js',
-      '/_next/static/chunks/node_modules_next_dist_client_43e3ffb8._.js',
-      '/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js',
-      '/_next/static/chunks/node_modules_next_dist_compiled_483ce580._.js',
-      '/_next/static/chunks/node_modules_next_dist_compiled_buffer_index_feebad72.js',
-      '/_next/static/chunks/node_modules_next_dist_compiled_crypto-browserify_index_07270ec0.js',
-      '/_next/static/chunks/node_modules_next_image_11ac1673.js',
-      '/_next/static/chunks/node_modules_react-icons_ci_index_mjs_e4544c82._.js',
-      '/_next/static/chunks/node_modules_react-icons_fa_index_mjs_d2e2d7f5._.js',
-      '/_next/static/chunks/node_modules_react-icons_fi_index_mjs_9cbf4bb1._.js',
-      '/_next/static/chunks/node_modules_react-icons_lib_74ccc930._.js',
-      '/_next/static/chunks/node_modules_xlsx_xlsx_mjs_ad755052._.js'
+      `${BASE_PATH}/_next/image?url=%2FAdaCheckStockSTD%2Ficons%2FlogoAdaLogin.png&w=256&q=75`,
+      `${BASE_PATH}/_next/static/chunks/2170a4aa-49b5104fb06205c3.js`,
+      `${BASE_PATH}/_next/static/chunks/463-26d0300b0cad1c8a.js`,
+      `${BASE_PATH}/_next/static/chunks/488-4b36c4bd6902d2cb.js`,
+      `${BASE_PATH}/_next/static/chunks/4bd1b696-b56b174fe27827d1.js`,
+      `${BASE_PATH}/_next/static/chunks/626-e94f734356ed4534.js`,
+      `${BASE_PATH}/_next/static/chunks/684-6a88eb906b4903b6.js`,
+      `${BASE_PATH}/_next/static/chunks/7cb1fa1f-1822bc2611099e2d.js`,
+      `${BASE_PATH}/_next/static/chunks/836-53d164cd3468ff05.js`,
+      `${BASE_PATH}/_next/static/chunks/8e1d74a4-fe16d9e17b9732e7.js`,
+      `${BASE_PATH}/_next/static/chunks/aaea2bcf-ac6970987f5bc297.js`,
+      `${BASE_PATH}/_next/static/chunks/app/layout-3e31d2da671e459a.js`,
+      `${BASE_PATH}/_next/static/chunks/app/login/page-3f97dd2ce14bb1b0.js`,
+      `${BASE_PATH}/_next/static/chunks/app/main/page-1af1dffdd2bbfcc9.js`,
+      `${BASE_PATH}/_next/static/chunks/app/page-e5d451557ffaafa7.js`,
+      `${BASE_PATH}/_next/static/chunks/app/price-check/page-7c28b0048cba184b.js`,
+      `${BASE_PATH}/_next/static/chunks/app/receive/page-ee74d62e9c3d1d24.js`,
+      `${BASE_PATH}/_next/static/chunks/app/stock/page-3cdd7eea61b8daa1.js`,
+      `${BASE_PATH}/_next/static/chunks/app/transfer/page-a25d77e1689ba8c4.js`,
+      `${BASE_PATH}/_next/static/chunks/e34aaff9-9d0e4ab542d5999d.js`,
+      `${BASE_PATH}/_next/static/chunks/ee560e2c-8a73055faacac193.js`,
+      `${BASE_PATH}/_next/static/chunks/main-app-93e4dceeac7d2a79.js`,
+      `${BASE_PATH}/_next/static/chunks/webpack-9fe7c363585b0767.js`,
+      `${BASE_PATH}/_next/static/css/7d5e323db8624040.css`,
+      `${BASE_PATH}/_next/static/chunks/_app-pages-browser_node_modules_next_dist_client_dev_noop-turbopack-hmr_js.js`,
+      `${BASE_PATH}/_next/static/chunks/app-pages-internals.js`,
+      `${BASE_PATH}/_next/static/chunks/app/layout.js`,
+      `${BASE_PATH}/_next/static/chunks/app/login/page.js`,
+      `${BASE_PATH}/_next/static/chunks/app/main/page.js`,
+      `${BASE_PATH}/_next/static/chunks/app/page.js`,
+      `${BASE_PATH}/_next/static/chunks/app/price-check/page.js`,
+      `${BASE_PATH}/_next/static/chunks/app/receive/page.js`,
+      `${BASE_PATH}/_next/static/chunks/app/stock/page.js`,
+      `${BASE_PATH}/_next/static/chunks/app/transfer/page.js`,
+      `${BASE_PATH}/favicon.ico`,
+      `${BASE_PATH}/icons/logoAda.png`
     ];
 
     await Promise.all(
@@ -84,6 +81,8 @@ if (workbox) {
         fetch(url).then(response => {
           if (response.ok) return cache.put(url, response.clone());
           else console.warn('❌ โหลดไม่ได้:', url);
+        }).catch(err => { 
+          console.warn('❌ เกิดข้อผิดพลาดในการโหลด:', url, err);
         })
       )
     );

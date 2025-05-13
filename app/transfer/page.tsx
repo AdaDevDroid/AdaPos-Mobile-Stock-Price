@@ -50,7 +50,8 @@ export default function Transfer() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
-        .register("/sw.js")
+        // .register("/sw.js")
+        .register(`${process.env.NEXT_PUBLIC_BASE_PATH}/sw.js`)
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
     }

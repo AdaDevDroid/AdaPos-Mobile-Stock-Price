@@ -14,7 +14,8 @@ export const NetworkStatusProvider = ({ children }: { children: React.ReactNode 
       if (onlineStatus) {
         try {
           // 🔥 เช็คอินเทอร์เน็ตโดยใช้ API ที่เราควบคุมได้
-          const response = await fetch("/test-network.ts", { method: "HEAD", cache: "no-store" });
+          // const response = await fetch("/test-network.ts", { method: "HEAD", cache: "no-store" });
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/test-network.ts`, { method: "HEAD", cache: "no-store" });
           onlineStatus = response.ok;
         } catch (error) {
           onlineStatus = false;
