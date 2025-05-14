@@ -45,6 +45,14 @@ export default function MainPage() {
   useAuth();
 
   useEffect(() => {
+    const shouldReload = sessionStorage.getItem("shouldReload");
+    if (shouldReload === "true") {
+      sessionStorage.removeItem("shouldReload");
+      window.location.reload();
+    }
+  }, []);
+
+  useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         // .register("/sw.js")
