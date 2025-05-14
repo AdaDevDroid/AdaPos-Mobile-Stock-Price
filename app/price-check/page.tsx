@@ -6,7 +6,8 @@ import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import { C_PRCxOpenIndexedDB, C_GETxUserData } from "@/hooks/CIndexedDB";
 import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
-import { Price, Promotion, ProductData} from "@/models/price-check";
+import { Price, Promotion, ProductData } from "@/models/price-check";
+import { C_GetoUrlObject } from "../../hooks/CConfig";
 
 const PricePromotionCheck = () => {
   useAuth();
@@ -72,12 +73,18 @@ const PricePromotionCheck = () => {
         ptPdtCode: pdtCode,
       };
 
+      // Get URL object
+      const urlMaster = await C_GetoUrlObject();
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/call-promotion`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(pdtData)
+        body: JSON.stringify({
+          ...pdtData,
+          urlMaster
+        })
       });
 
       if (!response.ok) {

@@ -2,11 +2,11 @@
 
 export const C_GetoUrlObject = async (): Promise<string> => {
   try {
-    // กำหนด base URL จาก environment variable หรือใช้ค่าเริ่มต้น
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    const url = new URL(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectUrlObject`, baseUrl);
+    
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/AdaCheckStockSTD';
+    const url = `${basePath}/api/query/selectUrlObject`;
 
-    const response = await fetch(url.toString(), {
+    const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
     });
