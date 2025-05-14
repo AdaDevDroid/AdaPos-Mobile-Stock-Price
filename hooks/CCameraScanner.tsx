@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
 
 export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
@@ -41,19 +41,28 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
       const qrScanner = new Html5Qrcode("reader");
   
       await qrScanner.start(
-        { facingMode: "environment" },  // ใช้กล้องหลัง
-        { fps: 10, qrbox: C_GETxQrBoxSize() },
-        (decodedText) => {
-          try {
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: C_GETxQrBoxSize(),
+        },
+        (decodedText, decodedResult) => {
+          const formatName = decodedResult?.result?.format?.formatName;
+  
+          const allowedFormats = ["EAN_13", "CODE_128", "CODE_39", "UPC_A", "UPC_E"];
+  
+          if (formatName && allowedFormats.includes(formatName)) {
+            console.log("✅ Barcode Scanned:", decodedText, `(${formatName})`);
             onScan(decodedText);
-          } catch (error) {
-            console.log("Error in scan callback:", error);
+          } else {
+            console.log("❌ Ignored format:", formatName);
           }
         },
         (errorMessage) => {
-          errorMessage
+           console.log("Error:", errorMessage);
         }
       );
+  
   
       console.log("✅ Scanner started");
       oHtml5QrCode.current = qrScanner;
