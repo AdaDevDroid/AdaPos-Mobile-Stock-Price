@@ -36,6 +36,7 @@ export default function Login() {
   useEffect(() => {
     const checkVersion = async () => {
       try {
+
         const version = process.env.NEXT_PUBLIC_VERSION as string || "0.0.0";
         const localVersion = localStorage.getItem("app_version");
         console.log(version, localVersion);
@@ -44,6 +45,7 @@ export default function Login() {
 
           // เคลียร์ cache
           if ("caches" in window) {
+
             //alert("ตรวจพบเวอร์ชันใหม่ กำลังรีโหลดหน้าใหม่");
             const cacheNames = await caches.keys();
             await Promise.all(cacheNames.map((name) => caches.delete(name)));
