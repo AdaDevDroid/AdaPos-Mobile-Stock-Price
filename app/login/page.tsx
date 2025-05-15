@@ -26,11 +26,49 @@ export default function Login() {
   const [oBranchInfo, setBranchInfo] = useState<BranchInfo[]>([]);
   const [tCompName, setCompName] = useState("");
   const [tUrlImg, setUrlImg] = useState("");
+  const VERSION = process.env.NEXT_PUBLIC_VERSION as string;
 
   const { workboxCount, staticCount, isReady } = usePWACacheStatus();
   const [showWrench, setShowWrench] = useState(false);
 
   const [showOfflineText, setShowOfflineText] = useState(true);
+
+  useEffect(() => {
+    const checkVersion = async () => {
+      try {
+
+        const version = process.env.NEXT_PUBLIC_VERSION as string || "0.0.0";
+        const localVersion = localStorage.getItem("app_version");
+        console.log(version, localVersion);
+        if (localVersion && localVersion !== version) {
+          console.log("🔁 เวอร์ชันใหม่ ตรวจพบ! เคลียร์ cache แล้วรีโหลด");
+
+          // เคลียร์ cache
+          if ("caches" in window) {
+
+            //alert("ตรวจพบเวอร์ชันใหม่ กำลังรีโหลดหน้าใหม่");
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map((name) => caches.delete(name)));
+          }
+
+          // ล้าง localStorage/sessionStorage
+          localStorage.clear();
+          // อัปเดต version ใหม่
+          localStorage.setItem("app_version", version);
+
+          clearServiceWorker();
+          // รีโหลดหน้า
+          //window.location.reload();
+        } else {
+          localStorage.setItem("app_version", version);
+        }
+      } catch (err) {
+        console.error("❌ ตรวจ version ไม่สำเร็จ:", err);
+      }
+    };
+
+    checkVersion();
+  }, []);
 
   useEffect(() => {
     if (workboxCount === 9 && staticCount >= 25) {
@@ -135,6 +173,7 @@ export default function Login() {
 
 
   useEffect(() => {
+    sessionStorage.setItem("shouldReload", "true");
     // ✅ ดึง Cookie จาก Request
     const cookies = parse(document.cookie);
     const savedUsername = cookies.rememberedUsername;
@@ -260,6 +299,33 @@ export default function Login() {
             }
           }
 
+          if (bch.length > 1) {
+            setUserInfo(user);
+            setBranchInfo(bch);
+            setCompName(user[0].FTAgnName);
+            setIsBranchOpen(true);
+          }
+          else {
+            if (bch[0].FTBchCode) {
+              if (oDatabase) {
+                await C_INSxUserToDB(oDatabase, {
+                  FTUsrCode: user[0].FTUsrCode,
+                  FTUsrLogin: user[0].FTUsrLogin,
+                  FTUsrLoginPwd: user[0].FTUsrLoginPwd,
+                  FTUsrName: user[0].FTUsrName,
+                  FTBchCode: bch[0].FTBchCode,
+                  FTBchName: bch[0].FTBchName,
+                  FTAgnCode: user[0].FTAgnCode,
+                  FTAgnName: user[0].FTAgnName,
+                  FTMerCode: user[0].FTMerCode,
+                  FTImgObj: user[0].FTImgObj,
+                });
+              }
+              console.log("✅ bch validated & stored locally.");
+              return true;
+            }
+          }
+
         }
         else {
           console.log("✅User 009 ");
@@ -268,6 +334,7 @@ export default function Login() {
           const BchResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectBchAll`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+
           });
 
           if (!BchResponse.ok) return false;
@@ -282,6 +349,33 @@ export default function Login() {
 
           if (bch.length > 1) {
 
+          if (bch.length > 1) {
+
+            setUserInfo(user);
+            setCompName(comp);
+            setBranchInfo(bch);
+            setIsBranchOpen(true);
+          }
+          else {
+            if (bch[0].FTBchCode) {
+              if (oDatabase) {
+                await C_INSxUserToDB(oDatabase, {
+                  FTUsrCode: user[0].FTUsrCode,
+                  FTUsrLogin: user[0].FTUsrLogin,
+                  FTUsrLoginPwd: user[0].FTUsrLoginPwd,
+                  FTUsrName: user[0].FTUsrName,
+                  FTBchCode: bch[0].FTBchCode,
+                  FTBchName: bch[0].FTBchName,
+                  FTAgnCode: user[0].FTAgnCode,
+                  FTAgnName: user[0].FTAgnName,
+                  FTMerCode: user[0].FTMerCode,
+                  FTImgObj: user[0].FTImgObj,
+                });
+              }
+              console.log("✅ bch validated & stored locally.");
+              return true;
+            }
+          }
             setUserInfo(user);
             setCompName(comp);
             setBranchInfo(bch);
@@ -597,7 +691,7 @@ export default function Login() {
         </form>
       </div>
 
-      <p className="text-center text-gray-400 text-sm mt-6">Version 1.0.2</p>
+      <p className="text-center text-gray-400 text-sm mt-6">Version {VERSION}</p>
       <p className="text-center text-gray-400 text-xs">© 2025 AdaPos+. All rights reserved.</p>
 
 

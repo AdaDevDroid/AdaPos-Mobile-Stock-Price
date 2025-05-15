@@ -6,7 +6,8 @@ import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import { C_PRCxOpenIndexedDB, C_GETxUserData } from "@/hooks/CIndexedDB";
 import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
-import { Price, Promotion, ProductData} from "@/models/price-check";
+import { Price, Promotion, ProductData } from "@/models/price-check";
+import { C_GetoUrlObject } from "../../hooks/CConfig";
 
 const PricePromotionCheck = () => {
   useAuth();
@@ -24,7 +25,7 @@ const PricePromotionCheck = () => {
     oBarcodeRef.current?.focus();
   }, []);
 
-  const handleSearch = async () => {
+  const handleSearch = async (searchQuery: String) => {
 
     if (!isNetworkOnline) {
       setLoading(false);
@@ -72,12 +73,18 @@ const PricePromotionCheck = () => {
         ptPdtCode: pdtCode,
       };
 
+      // Get URL object
+      const urlMaster = await C_GetoUrlObject();
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/call-promotion`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(pdtData)
+        body: JSON.stringify({
+          ...pdtData,
+          urlMaster
+        })
       });
 
       if (!response.ok) {
@@ -101,7 +108,7 @@ const PricePromotionCheck = () => {
       C_PRCxPauseScanner();
 
       setSearchQuery(ptDecodedText);
-      handleSearch();
+      handleSearch(ptDecodedText);
 
       // ✅ รอ 500ms ก่อนเปิดกล้องใหม่
       setTimeout(() => {
@@ -176,7 +183,7 @@ const PricePromotionCheck = () => {
                     }
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
-                        handleSearch();
+                        handleSearch(searchQuery);
                       }
                     }}
                   />
@@ -196,7 +203,7 @@ const PricePromotionCheck = () => {
 
                   {/* ปุ่มค้นหา */}
                   <button
-                    onClick={handleSearch}
+                    onClick={() => handleSearch(searchQuery)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-r-lg border-blue-500 hover:bg-blue-700"
                   >
                     <div className="flex items-center justify-center">
@@ -257,6 +264,7 @@ const PricePromotionCheck = () => {
                         </div>
                       )}
                     </div>
+                
                   </div>
 
                   {/* Current Price */}
