@@ -25,7 +25,7 @@ const PricePromotionCheck = () => {
     oBarcodeRef.current?.focus();
   }, []);
 
-  const handleSearch = async () => {
+  const handleSearch = async (searchQuery: String) => {
 
     if (!isNetworkOnline) {
       setLoading(false);
@@ -108,7 +108,7 @@ const PricePromotionCheck = () => {
       C_PRCxPauseScanner();
 
       setSearchQuery(ptDecodedText);
-      handleSearch();
+      handleSearch(ptDecodedText);
 
       // ✅ รอ 500ms ก่อนเปิดกล้องใหม่
       setTimeout(() => {
@@ -183,7 +183,7 @@ const PricePromotionCheck = () => {
                     }
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
-                        handleSearch();
+                        handleSearch(searchQuery);
                       }
                     }}
                   />
@@ -203,7 +203,7 @@ const PricePromotionCheck = () => {
 
                   {/* ปุ่มค้นหา */}
                   <button
-                    onClick={handleSearch}
+                    onClick={() => handleSearch(searchQuery)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-r-lg border-blue-500 hover:bg-blue-700"
                   >
                     <div className="flex items-center justify-center">
@@ -264,6 +264,7 @@ const PricePromotionCheck = () => {
                         </div>
                       )}
                     </div>
+                
                   </div>
 
                   {/* Current Price */}
