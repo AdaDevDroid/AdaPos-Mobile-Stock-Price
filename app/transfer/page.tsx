@@ -119,7 +119,7 @@ export default function Transfer() {
 
         if (countdown === 0) {
           clearInterval(timer);
-          C_ADDxProduct(ptDecodedText,tQtyRef.current);
+          C_ADDxProduct(ptDecodedText, tQtyRef.current);
           setIsLoadingScanAuto(false);
         }
       }, 1000);
@@ -141,7 +141,7 @@ export default function Transfer() {
   const C_PRCxScanBar = (ptDecodedText: string) => {
     setBarcode(ptDecodedText);
     setAddScan(true);
-    C_ADDxProduct(ptDecodedText,tQtyRef.current);
+    C_ADDxProduct(ptDecodedText, tQtyRef.current);
     setAddScan(false);
     setBarcode("");
   };
@@ -421,12 +421,12 @@ export default function Transfer() {
     setIsLoading(true);
     if (!oProducts || oProducts.length === 0) {
       setIsLoading(false);
-      alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
+      alert("❌ ไม่มีข้อมูลสินค้า");
       return;
     }
     if (!isNetworkOnline) {
       C_PRCxSaveDB(0);
-      alert("❌ ข้อความ: Upload ไม่สำเร็จ");
+      alert("❌ Upload ไม่สำเร็จ");
       setIsLoading(false);
       return;
     }
@@ -434,7 +434,15 @@ export default function Transfer() {
     // C_INSxProducts(oProducts);
     try {
       if (oUserInfo) {
-        await C_INSxProducts(oProducts, oUserInfo); // รอให้ฟังก์ชันทำงานสำเร็จ
+        const success = await C_INSxProducts(oProducts, oUserInfo);
+        if (success) {
+          C_PRCxSaveDB(1);
+        } else {
+          C_PRCxSaveDB(0);
+          alert("❌ Upload ข้อมูลไม่สำเร็จ");
+          setIsLoading(false);
+          return;
+        }
       } else {
         throw new Error("❌ ไม่พบข้อมูลผู้ใช้");
       }
@@ -444,10 +452,6 @@ export default function Transfer() {
     } finally {
       setIsLoading(false); // ปิด loading progress
     }
-
-    // Save Data to IndexedDB
-    C_PRCxSaveDB(1);
-
     setIsLoading(false);
   }
   async function C_PRCxExportExcel() {
@@ -626,7 +630,7 @@ export default function Transfer() {
           onChange={setQuantity}
           label={"จำนวนที่ได้รับ"}
           icon={<FaPlus />}
-          onClick={() => C_ADDxProduct(barcode,tQtyRef.current)}
+          onClick={() => C_ADDxProduct(barcode, tQtyRef.current)}
         />
       </div>
 
