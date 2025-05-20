@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
                               ,pl.FTPdtName
                               ,pb.FTBarCode
                          FROM TCNMPdt_L pl
-                         LEFT JOIN TCNMPdtBar pb ON pl.FTPdtCode = pb.FTPdtCode 
+                         LEFT JOIN TCNMPdtBar pb 
+                         ON pl.FTPdtCode = pb.FTPdtCode
                          AND pl.FTAgnCode = pb.FTAgnCode
                          WHERE pl.FNLngID = 1
                          AND pl.FTAgnCode = @agnCode

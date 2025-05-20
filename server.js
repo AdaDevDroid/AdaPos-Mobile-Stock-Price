@@ -1,3 +1,4 @@
+require('dotenv').config({ path: '.env.local' });
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
@@ -10,7 +11,7 @@ const handle = app.getRequestHandler();
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/AdaCheckStockSTD';
 
-const port = 3001;
+const port = process.env.PORT || 3001;
 
 app.prepare().then(() => {
     createServer((req, res) => {
