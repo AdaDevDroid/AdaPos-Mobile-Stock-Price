@@ -1,7 +1,7 @@
 // นำเข้า Workbox
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.0.2/workbox-sw.js');
 
-const VERSION = "1.0.4"; // เวอร์ชั่น
+const VERSION = "1.0.5"; // เวอร์ชั่น
 const BASE_PATH = self.__WB_MANIFEST?.BASE_PATH || '/AdaCheckStockSTD'; // กำหนด basePath ถ้ามี
 
 // ตรวจสอบว่า Workbox ถูกโหลดสำเร็จ
