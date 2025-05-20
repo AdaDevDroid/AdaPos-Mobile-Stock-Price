@@ -5,98 +5,85 @@ import { C_CTDoConnectToDatabase } from '../../database/connect_db';
 export async function POST(req: NextRequest) {
     try {
         let newFTXthDocSeq = 0;
-        // ✅ รับ JSON Data เป็น Array ของ Product[]
         const { products, userInfo } = await req.json();
-
-
 
         if (!Array.isArray(products) || products.length === 0) {
             return NextResponse.json({ message: "Invalid Data" }, { status: 400 });
         }
 
-        // ✅ เชื่อมต่อฐานข้อมูล
         const pool = await C_CTDoConnectToDatabase();
 
-
         const res = await pool.request()
-        .input("FTBchCode", products[0].FTBchCode)
-        .input("FTAgnCode", products[0].FTAgnCode)
-        .query(`
-            SELECT TOP 1 FTXthDocSeq
-            FROM TMBTDocDTTmp
-            WHERE FTBchCode = @FTBchCode
-			AND FTAgnCode = @FTAgnCode
+            .input("FTBchCode", products[0].FTBchCode)
+            .input("FTAgnCode", products[0].FTAgnCode)
+            .query(`
+                SELECT TOP 1 FTXthDocSeq
+                FROM TMBTDocDTTmp
+                WHERE FTBchCode = @FTBchCode
+                  AND FTAgnCode = @FTAgnCode
+                ORDER BY TRY_CAST(FTXthDocSeq AS INT) DESC;
+            `);
 
-            ORDER BY TRY_CAST(FTXthDocSeq AS INT) DESC;
+        newFTXthDocSeq = res?.recordset?.[0]?.FTXthDocSeq ? parseInt(res.recordset[0].FTXthDocSeq, 10) + 1 : 1;
+        console.log("🔍 res Data:", newFTXthDocSeq);
 
-          `);
+        const batchSize = 100;
 
-          
-         if (res && res.recordset && res.recordset.length > 0) {
-            newFTXthDocSeq = parseInt(res.recordset[0].FTXthDocSeq, 10) + 1;
-          } else {
-            newFTXthDocSeq = 1;
-          }
-          console.log("🔍 res Data:", newFTXthDocSeq);
+        for (let batchStart = 0; batchStart < products.length; batchStart += batchSize) {
+            const batch = products.slice(batchStart, batchStart + batchSize);
+            const values = [];
+            const parameters = [];
+            const request = pool.request();
 
+            request.input("FTXthDocSeq", newFTXthDocSeq); // ใช้เลขเดียวกันทั้งหมด
 
-    for (let index = 0; index < products.length; index++) {
-        const product = products[index];
-        const {
-            FTBarcode, FCCost, FNQuantity, FTRefDoc,
-            FTXthDocKey, FTBchCode, FTAgnCode, FDCreateOn, FTPORef
-        } = product;
+            for (let index = 0; index < batch.length; index++) {
+                const product = batch[index];
+                const {
+                    FTBarcode, FCCost, FNQuantity, FTRefDoc,
+                    FTXthDocKey, FTBchCode, FTAgnCode, FDCreateOn, FTPORef
+                } = product;
 
-        const FNId = index + 1;
+                const FNId = batchStart + index + 1;
+                const idx = batchStart + index;
 
-        let retryCount = 0;
-        const maxRetries = 3;
-        let success = false;
+                values.push(`(@FTBchCode${idx}, @FTXthDocSeq, @FTXthDocNo${idx}, @FNXtdSeqNo${idx}, 
+                    @FTXthDocKey${idx}, NULL, @FTXtdBarCode${idx}, @FCXtdQty${idx}, @FCXtdQtyAll${idx}, 
+                    @FCXtdCostIn${idx}, @FDLastUpdOn${idx}, @FDCreateOn${idx}, @FTLastUpdBy${idx}, 
+                    @FTCreateBy${idx}, @FTAgnCode${idx}, @FTPORef${idx})`);
 
-        while (!success && retryCount < maxRetries) {
-            try {
-                const request = pool.request();
-                request.input("FTBchCode", FTBchCode);
-                request.input("FTXthDocSeq", newFTXthDocSeq);
-                request.input("FTXthDocNo", FTRefDoc);
-                request.input("FNXtdSeqNo", FNId);
-                request.input("FTXthDocKey", FTXthDocKey);
-                request.input("FTXthDocType", null);
-                request.input("FTXtdBarCode", FTBarcode);
-                request.input("FCXtdQty", FNQuantity);
-                request.input("FCXtdQtyAll", FNQuantity);
-                request.input("FCXtdCostIn", FCCost);
-                request.input("FDLastUpdOn", convertToCE(FDCreateOn));
-                request.input("FDCreateOn", convertToCE(FDCreateOn));
-                request.input("FTLastUpdBy", userInfo.FTUsrCode);
-                request.input("FTCreateBy", userInfo.FTUsrCode);
-                request.input("FTAgnCode", FTAgnCode);
-                request.input("FTPORef", FTPORef);
-
-                console.log("🔍 Insert Data:3", product);
-                // ✅ INSERT ข้อมูลลงใน `TCNTDocSPDTTmp`
-                await request.query(`
-                INSERT INTO dbo.TMBTDocDTTmp (
-                FTBchCode, FTXthDocSeq, FTXthDocNo, FNXtdSeqNo, FTXthDocKey, FTXthDocType, 
-                FTXtdBarCode, FCXtdQty, FCXtdQtyAll, FCXtdCostIn, FDLastUpdOn, 
-                FDCreateOn, FTLastUpdBy, FTCreateBy, FTAgnCode, FTPORef
-                ) VALUES (
-                @FTBchCode, @FTXthDocSeq, @FTXthDocNo, @FNXtdSeqNo, @FTXthDocKey, @FTXthDocType, 
-                @FTXtdBarCode, @FCXtdQty, @FCXtdQtyAll, @FCXtdCostIn, @FDLastUpdOn, 
-                @FDCreateOn, @FTLastUpdBy, @FTCreateBy, @FTAgnCode, @FTPORef
+                parameters.push(
+                    { name: `FTBchCode${idx}`, value: FTBchCode },
+                    { name: `FTXthDocNo${idx}`, value: FTRefDoc },
+                    { name: `FNXtdSeqNo${idx}`, value: FNId },
+                    { name: `FTXthDocKey${idx}`, value: FTXthDocKey },
+                    { name: `FTXtdBarCode${idx}`, value: FTBarcode },
+                    { name: `FCXtdQty${idx}`, value: FNQuantity },
+                    { name: `FCXtdQtyAll${idx}`, value: FNQuantity },
+                    { name: `FCXtdCostIn${idx}`, value: FCCost },
+                    { name: `FDLastUpdOn${idx}`, value: convertToCE(FDCreateOn) },
+                    { name: `FDCreateOn${idx}`, value: convertToCE(FDCreateOn) },
+                    { name: `FTLastUpdBy${idx}`, value: userInfo.FTUsrCode },
+                    { name: `FTCreateBy${idx}`, value: userInfo.FTUsrCode },
+                    { name: `FTAgnCode${idx}`, value: FTAgnCode },
+                    { name: `FTPORef${idx}`, value: FTPORef }
                 );
-          `);
-                success = true;
-            } catch (error) {
-                retryCount++;
-                newFTXthDocSeq = parseInt(res.recordset[0].FTXthDocSeq, 10) + retryCount;
-                console.log(`Retrying (${retryCount}/${maxRetries}) due to error:`, error);
-                if (retryCount >= maxRetries) {
-                    throw new Error(`Failed to insert product after ${maxRetries} attempts`);
-                }
             }
+
+            parameters.forEach(p => request.input(p.name, p.value));
+
+            const sql = `
+        INSERT INTO dbo.TMBTDocDTTmp (
+            FTBchCode, FTXthDocSeq, FTXthDocNo, FNXtdSeqNo, FTXthDocKey, FTXthDocType, 
+            FTXtdBarCode, FCXtdQty, FCXtdQtyAll, FCXtdCostIn, FDLastUpdOn, 
+            FDCreateOn, FTLastUpdBy, FTCreateBy, FTAgnCode, FTPORef
+        ) VALUES
+        ${values.join(",\n")}
+    `;
+
+            console.log(`🔄 Inserting batch ${batchStart}-${batchStart + batch.length - 1}`);
+            await request.query(sql);
         }
-    }
 
         return NextResponse.json({ message: "Insert Success", count: products.length }, { status: 201 });
 
@@ -106,7 +93,7 @@ export async function POST(req: NextRequest) {
     }
 }
 
-const convertToCE = (dateString: string) => {
+const convertToCE = (dateString: string): string => {
     const date = new Date(dateString);
 
     if (date.getFullYear() > 2500) {
