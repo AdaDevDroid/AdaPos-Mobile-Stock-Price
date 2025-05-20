@@ -25,7 +25,7 @@ const PricePromotionCheck = () => {
     oBarcodeRef.current?.focus();
   }, []);
 
-  const handleSearch = async (searchQuery: String) => {
+  const handleSearch = async (searchQuery: string) => {
 
     if (!isNetworkOnline) {
       setLoading(false);
