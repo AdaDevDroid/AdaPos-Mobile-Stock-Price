@@ -134,10 +134,10 @@ export default function Receive() {
   }, [bCheckAutoScan, tQty]);
   useEffect(() => {
     if (oPendingBarcode !== null) {
-      C_ADDxProduct(oPendingBarcode, tCost,tQty); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
+      C_ADDxProduct(oPendingBarcode, tCost, tQty); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
       setPendingBarcode(null);
     }
-  }, [tCost,tQty]);
+  }, [tCost, tQty]);
 
 
 
@@ -163,7 +163,7 @@ export default function Receive() {
 
         if (countdown === 0) {
           clearInterval(timer);
-          C_ADDxProduct(ptDecodedText, tCostRef.current,tQtyRef.current);
+          C_ADDxProduct(ptDecodedText, tCostRef.current, tQtyRef.current);
           setIsLoadingScanAuto(false);
         }
       }, 1000);
@@ -185,7 +185,7 @@ export default function Receive() {
   const C_PRCxScanBar = (ptDecodedText: string) => {
     setBarcode(ptDecodedText);
     setAddScan(true);
-    C_ADDxProduct(ptDecodedText, tCostRef.current,tQtyRef.current);
+    C_ADDxProduct(ptDecodedText, tCostRef.current, tQtyRef.current);
     setAddScan(false);
     setBarcode("");
   };
@@ -452,7 +452,7 @@ export default function Receive() {
       setRefDoc("");
       setSearchText("");
       setIsDisabledRefDoc(false);
-      if (isNetworkOnline) {
+      if (pnType === 1) {
         alert("✅ บันทึกข้อมูลสำเร็จ");
       }
     }
@@ -461,12 +461,12 @@ export default function Receive() {
     setIsLoading(true);
     if (!oProducts || oProducts.length === 0) {
       setIsLoading(false);
-      alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
+      alert("❌ ไม่มีข้อมูลสินค้า");
       return;
     }
     if (!isNetworkOnline) {
       C_PRCxSaveDB(0);
-      alert("❌ ข้อความ: Upload ไม่สำเร็จ");
+      alert("❌ Upload ไม่สำเร็จ Internet ไม่พร้อมใช้งาน");
       setIsLoading(false);
       return;
     }
@@ -477,21 +477,24 @@ export default function Receive() {
       if (!oUserInfo) {
         throw new Error("User info is not available");
       }
-      await C_INSxProducts(oProducts, oUserInfo); // รอให้ฟังก์ชันทำงานสำเร็จ
+      const success = await C_INSxProducts(oProducts, oUserInfo);
+      if (success) {
+        C_PRCxSaveDB(1);
+      } else {
+        C_PRCxSaveDB(0);
+        alert("❌ Upload ข้อมูลไม่สำเร็จ");
+        setIsLoading(false);
+        return;
+      }
     } catch (error) {
       console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
       alert("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล");
     } finally {
       setIsLoading(false); // ปิด loading progress
     }
-
-    // Save Data to IndexedDB
-    C_PRCxSaveDB(1);
-
     setIsLoading(false);
-
-
   };
+
   async function C_PRCxExportExcel() {
     setIsLoading(true);
     if (!oProducts || oProducts.length === 0) {
@@ -676,7 +679,7 @@ export default function Receive() {
           onChange={setQty}
           label={"จำนวนที่ได้รับ"}
           icon={<FaPlus />}
-          onClick={() => C_ADDxProduct(tBarcode, tCost,tQty)}
+          onClick={() => C_ADDxProduct(tBarcode, tCost, tQty)}
         />
       </div>
 

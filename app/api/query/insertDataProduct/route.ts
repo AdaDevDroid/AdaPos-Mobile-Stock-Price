@@ -3,9 +3,9 @@ import { C_CTDoConnectToDatabase } from '../../database/connect_db';
 
 
 export async function POST(req: NextRequest) {
+    let newFTXthDocSeq = 0;
+    const { products, userInfo } = await req.json();
     try {
-        let newFTXthDocSeq = 0;
-        const { products, userInfo } = await req.json();
 
         if (!Array.isArray(products) || products.length === 0) {
             return NextResponse.json({ message: "Invalid Data" }, { status: 400 });
@@ -88,7 +88,26 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ message: "Insert Success", count: products.length }, { status: 201 });
 
     } catch (error) {
-        console.log("Insert Error: 2", error);
+        console.log("Insert Error: ", error);
+
+        // ✅ Rollback partial inserts if error happens
+        try {
+            const pool = await C_CTDoConnectToDatabase();
+            await pool.request()
+                .input("FTXthDocSeq", newFTXthDocSeq)
+                .input("FTBchCode", products[0].FTBchCode)
+                .input("FTAgnCode", products[0].FTAgnCode)
+                .query(`
+                    DELETE FROM TMBTDocDTTmp
+                    WHERE FTXthDocSeq = @FTXthDocSeq
+                    AND FTBchCode = @FTBchCode
+                    AND FTAgnCode = @FTAgnCode
+                `);
+            console.log(`🗑️ Rolled back data with FTXthDocSeq = ${newFTXthDocSeq}`);
+        } catch (rollbackError) {
+            console.error("❌ Rollback failed:", rollbackError);
+        }
+
         return NextResponse.json({ message: "Insert Failed", error }, { status: 500 });
     }
 }

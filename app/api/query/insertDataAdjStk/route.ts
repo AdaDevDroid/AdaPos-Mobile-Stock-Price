@@ -3,16 +3,16 @@ import { C_CTDoConnectToDatabase } from '../../database/connect_db';
 
 
 export async function POST(req: NextRequest) {
+    let newFTXthDocSeq = 0;
+    const { products, userInfo } = await req.json();
     try {
-        let newFTXthDocSeq = 0;
-        const { products, userInfo } = await req.json();
-    
+
         if (!Array.isArray(products) || products.length === 0) {
             return NextResponse.json({ message: "Invalid Data" }, { status: 400 });
         }
-    
+
         const pool = await C_CTDoConnectToDatabase();
-    
+
         const res = await pool.request()
             .input("FTBchCode", products[0].FTBchCode)
             .input("FTAgnCode", products[0].FTAgnCode)
@@ -23,19 +23,19 @@ export async function POST(req: NextRequest) {
                   AND FTAgnCode = @FTAgnCode
                 ORDER BY TRY_CAST(FTXthDocSeq AS INT) DESC;
             `);
-    
+
         newFTXthDocSeq = res?.recordset?.[0]?.FTXthDocSeq
             ? parseInt(res.recordset[0].FTXthDocSeq, 10) + 1
             : 1;
-    
+
         const batchSize = 100;
-    
+
         for (let batchStart = 0; batchStart < products.length; batchStart += batchSize) {
             const batch = products.slice(batchStart, batchStart + batchSize);
             const values = [];
             const parameters = [];
             const request = pool.request();
-    
+
             for (let i = 0; i < batch.length; i++) {
                 const product = batch[i];
                 const idx = batchStart + i;
@@ -43,16 +43,16 @@ export async function POST(req: NextRequest) {
                     FTBarcode, FNQuantity, FTRefDoc,
                     FTXthDocKey, FTBchCode, FTAgnCode, FDCreateOn
                 } = product;
-    
+
                 const FNXtdSeqNo = idx + 1;
-    
+
                 values.push(`(
                     @FTBchCode${idx}, @FTXthDocSeq, @FNXtdSeqNo${idx}, @FTXthDocKey${idx}, @FTXthDocType${idx}, 
                     @FTXtdBarCode${idx}, @FCXtdQtyAll${idx}, @FTXtdBchRef${idx}, @FDAjdDateTimeC1${idx}, @FCAjdUnitQtyC1${idx},
                     @FTAjdPlcCode${idx}, @FDLastUpdOn${idx}, @FDCreateOn${idx}, @FTLastUpdBy${idx}, @FTCreateBy${idx},
                     @FTTmpStatus${idx}, @FTAgnCode${idx}
                 )`);
-    
+
                 parameters.push(
                     { name: `FTBchCode${idx}`, value: FTBchCode },
                     { name: `FNXtdSeqNo${idx}`, value: FNXtdSeqNo },
@@ -72,10 +72,10 @@ export async function POST(req: NextRequest) {
                     { name: `FTAgnCode${idx}`, value: FTAgnCode }
                 );
             }
-    
+
             request.input("FTXthDocSeq", newFTXthDocSeq);
             parameters.forEach(p => request.input(p.name, p.value));
-    
+
             const sql = `
                 INSERT INTO dbo.TMBTDocDTTmpAdj (
                     FTBchCode, FTXthDocSeq, FNXtdSeqNo, FTXthDocKey, FTXthDocType, 
@@ -85,15 +85,35 @@ export async function POST(req: NextRequest) {
                 ) VALUES
                 ${values.join(",\n")}
             `;
-    
+
             console.log(`🟡 Inserting batch ${batchStart}-${batchStart + batch.length - 1}`);
             await request.query(sql);
         }
-    
+
         return NextResponse.json({ message: "Insert Success", count: products.length }, { status: 201 });
-    
+
     } catch (error) {
         console.error("❌ Insert Error:", error);
+
+        // ✅ Rollback partial inserts if error happens
+        try {
+            const pool = await C_CTDoConnectToDatabase();
+            await pool.request()
+                .input("FTXthDocSeq", newFTXthDocSeq)
+                .input("FTBchCode", products[0].FTBchCode)
+                .input("FTAgnCode", products[0].FTAgnCode)
+                .query(`
+            DELETE FROM TMBTDocDTTmpAdj
+            WHERE FTXthDocSeq = @FTXthDocSeq
+            AND FTBchCode = @FTBchCode
+            AND FTAgnCode = @FTAgnCode
+        `);
+            console.log(`🗑️ Rolled back data with FTXthDocSeq = ${newFTXthDocSeq}`);
+        } catch (rollbackError) {
+            console.error("❌ Rollback failed:", rollbackError);
+        }
+
+
         return NextResponse.json({ message: "Insert Failed", error }, { status: 500 });
     }
 }

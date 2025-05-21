@@ -301,12 +301,12 @@ export default function MainPage() {
     setIsLoading(true);
     if (!oProducts || oProducts.length === 0) {
       setIsLoading(false);
-      alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
+      alert("❌ ไม่มีข้อมูลสินค้า");
       return;
     }
     if (!isNetworkOnline) {
       C_PRCxSaveDB(0);
-      alert("❌ ข้อความ: Upload ไม่สำเร็จ");
+      alert("❌ Upload ไม่สำเร็จ");
       setIsLoading(false);
       return;
     }
@@ -315,10 +315,19 @@ export default function MainPage() {
       if (!oUserInfo) {
         throw new Error("User info is not available");
       }
+      let success = false;
       if (tType === "Stock") {
-        await C_INSxStock(oProducts, oUserInfo);
+        success = await C_INSxStock(oProducts, oUserInfo);
       } else {
-        await C_INSxProducts(oProducts, oUserInfo);
+        success = await C_INSxProducts(oProducts, oUserInfo);
+      }
+      if (success) {
+        C_PRCxSaveDB(1);
+      } else {
+        C_PRCxSaveDB(0);
+        alert("❌ Upload ข้อมุลไม่สำเร็จ");
+        setIsLoading(false);
+        return;
       }
     } catch (error) {
       console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
@@ -326,9 +335,6 @@ export default function MainPage() {
     } finally {
       setIsLoading(false); // ปิด loading progress
     }
-    // Save Data to IndexedDB
-    C_PRCxSaveDB(1);
-
     setIsLoading(false);
   };
 
