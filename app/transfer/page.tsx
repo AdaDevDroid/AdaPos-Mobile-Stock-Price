@@ -43,6 +43,7 @@ export default function Transfer() {
   const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
   const [isRepeat, setIsRepeat] = useState(false);
   const oBarcodeRef = useRef<HTMLInputElement>(null);
+  const oQtyRef = useRef<HTMLInputElement>(null);
 
   const nListMerge = 1; // รวมรายการ 1 รวม , 0 ไม่รวม  
 
@@ -136,7 +137,7 @@ export default function Transfer() {
         C_PRCxResumeScanner();
         setIsLoading(false);
       }, 500);
-
+      oQtyRef.current?.focus();
     }
   };
 
@@ -652,6 +653,8 @@ export default function Transfer() {
             if (e.key === "Enter") {
               if (bCheckAutoScan) {
                 C_PRCxScanBar(barcode);
+              }else {
+                oQtyRef.current?.focus();
               }
             }
           }}
@@ -665,6 +668,7 @@ export default function Transfer() {
           type="number"
           value={quantity}
           onChange={setQuantity}
+          inputRef={oQtyRef}
           label={"จำนวนที่ได้รับ"}
           icon={<FaPlus />}
           onClick={() => C_ADDxProduct(barcode, tQtyRef.current)}

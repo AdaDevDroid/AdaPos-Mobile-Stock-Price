@@ -48,6 +48,7 @@ export default function Stock() {
   const isNetworkOnline = useNetworkStatus();
   const [isRepeat, setIsRepeat] = useState(false);
   const oBarcodeRef = useRef<HTMLInputElement>(null);
+  const oQtyRef = useRef<HTMLInputElement>(null);
 
   const nListMerge = 1; // รวมรายการ 1 รวม , 0 ไม่รวม  
 
@@ -140,7 +141,7 @@ export default function Stock() {
         C_PRCxResumeScanner();
         setIsLoading(false);
       }, 500);
-
+      oQtyRef.current?.focus();
     }
   };
 
@@ -636,6 +637,8 @@ export default function Stock() {
             if (e.key === "Enter") {
               if (bCheckAutoScan) {
                 C_PRCxScanBar(barcode);
+              } else {
+                oQtyRef.current?.focus();
               }
             }
           }}
@@ -647,6 +650,7 @@ export default function Stock() {
           type="number"
           value={quantity}
           onChange={setQuantity}
+          inputRef={oQtyRef}
           label={"จำนวนที่นับได้"}
           icon={<FaPlus />}
           onClick={() => C_ADDxProduct(barcode, tQtyRef.current)}

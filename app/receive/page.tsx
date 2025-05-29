@@ -182,7 +182,6 @@ export default function Receive() {
         C_PRCxResumeScanner();
         setIsLoading(false);
       }, 500);
-      setQty("");
       oQtyRef.current?.focus();
     }
   };
@@ -688,9 +687,12 @@ export default function Receive() {
           onClick={bScanning ? C_PRCxStopScanner : C_PRCxStartScanner}
           inputRef={oBarcodeRef}
           onKeyDown={(e) => {
+            console.log("Key pressed:", e.key);
             if (e.key === "Enter") {
               if (bCheckAutoScan) {
                 C_PRCxScanBar(tBarcode);
+              }else {
+                oQtyRef.current?.focus();
               }
             }
           }}
