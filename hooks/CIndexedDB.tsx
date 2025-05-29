@@ -489,6 +489,62 @@ export const C_INSxDataIndexedDB = async (oDb: IDBDatabase, storeName: string, d
   }
 };
 
+export const C_UPDxDataIndexedDB = async (
+  oDb: IDBDatabase,
+  storeName: string,
+  barcode: string,       
+  newQuantity: number  
+) => {
+  try {
+    if (!oDb) {
+      console.log("❌ Database is not initialized");
+      return;
+    }
+
+    const transaction = oDb.transaction(storeName, "readwrite");
+    const store = transaction.objectStore(storeName);
+
+    // ใช้ cursor เพื่อไล่ดู record ทั้งหมด (กรณีที่ไม่มี index)
+    const request = store.openCursor();
+
+    request.onsuccess = (event) => {
+      const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+
+      if (cursor) {
+        const data = cursor.value;
+
+        if (data.FTBarcode === barcode) {
+          // อัปเดต FNQuantity
+          data.FNQuantity = newQuantity;
+
+          const updateRequest = cursor.update(data);
+          updateRequest.onsuccess = () => {
+            console.log(`✅ อัปเดต FNQuantity ของ barcode: ${barcode} สำเร็จ`);
+          };
+          updateRequest.onerror = () => {
+            console.log(`❌ ไม่สามารถอัปเดต FNQuantity ของ barcode: ${barcode}`, updateRequest.error);
+          };
+        }
+
+        // ไป record ถัดไป
+        cursor.continue();
+      } else {
+        console.log(`🔍 จบการค้นหา barcode: ${barcode}`);
+      }
+    };
+
+    request.onerror = () => {
+      console.log("❌ เกิดข้อผิดพลาดในการค้นหา", request.error);
+    };
+
+    transaction.onerror = () => {
+      console.log("❌ เกิดข้อผิดพลาดใน transaction", transaction.error || "Unknown Error");
+    };
+  } catch (error) {
+    console.log("❌ ข้อผิดพลาดในการใช้งาน IndexedDB", error);
+  }
+};
+
 const C_DELxHistoryData = async (oDb: IDBDatabase, ptTableName: string, pnLimitData: number): Promise<string[]> => {
   return new Promise(async (resolve, reject) => {
     const storeName = ptTableName;

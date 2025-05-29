@@ -8,7 +8,7 @@ import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaH
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CProducttransferwahouseToExcel';
 import { History, Product, UserInfo } from "@/models/models"
-import { C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_PRCxOpenIndexedDB, C_DELoDataTmp, C_DELxProductTmpByFNId } from "@/hooks/CIndexedDB";
+import { C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_PRCxOpenIndexedDB, C_DELoDataTmp, C_DELxProductTmpByFNId, C_UPDxDataIndexedDB } from "@/hooks/CIndexedDB";
 import { C_GETtGenerateRandomID, C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
@@ -43,6 +43,8 @@ export default function Transfer() {
   const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
   const [isRepeat, setIsRepeat] = useState(false);
   const oBarcodeRef = useRef<HTMLInputElement>(null);
+
+  const nListMerge = 1; // รวมรายการ 1 รวม , 0 ไม่รวม  
 
   {/* เช็ค User*/ }
   useAuth();
@@ -222,26 +224,52 @@ export default function Transfer() {
     }
 
     setIsDisabledRefDoc(true);
+    
     setProducts((prevProducts) => {
-      const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
+  // หา index ของ product ที่ barcode ตรงกัน
+  const existingIndex = prevProducts.findIndex(
+    (p) => p.FTBarcode === barcode
+  );
 
-      const newProduct = {
-        FNId: newId,
-        FTBarcode: barcode,
-        FCCost: 0,
-        FNQuantity: parseInt(ptQty),
-        FTRefDoc: refDoc,
-        FTRefSeq: tRefSeq,
-        FTXthDocKey: "TCNTPdtTbxHD",
-        FTBchCode: oUserInfo?.FTBchCode || "",
-        FTAgnCode: oUserInfo?.FTAgnCode || "",
-        FTUsrName: oUserInfo?.FTUsrName || "",
-        FDCreateOn: C_SETxFormattedDate(),
-        FTPORef: searchText
-      };
-      C_INSxProductTmpToIndexedDB([newProduct]);
-      return [...prevProducts, newProduct];
-    });
+  if (existingIndex !== -1 && nListMerge === 1) {
+    // ถ้ามี และ nListMerge === 1 → บวกจำนวน
+    const updatedProducts = [...prevProducts];
+    const updatedQuantity = updatedProducts[existingIndex].FNQuantity + parseInt(ptQty);
+
+    updatedProducts[existingIndex] = {
+      ...updatedProducts[existingIndex],
+      FNQuantity: updatedQuantity
+    };
+
+    // อัปเดตใน IndexedDB
+    C_UPDxProductTmpToIndexedDB(barcode, updatedQuantity);
+
+    return updatedProducts;
+  } else {
+    // ถ้าไม่มี หรือ nListMerge !== 1 → สร้างใหม่
+    const newId = Math.max(...prevProducts.map((p) => p.FNId), 0) + 1;
+
+    const newProduct: Product = {
+      FNId: newId,
+      FTBarcode: barcode,
+      FCCost: 0,                                    // ตามเดิม
+      FNQuantity: parseInt(ptQty) || 1,             // fallback = 1 ถ้า NaN
+      FTRefDoc: refDoc || "",
+      FTRefSeq: tRefSeq || "",
+      FTXthDocKey: "TCNTPdtTbxHD",                 // ตาม context
+      FTBchCode: oUserInfo?.FTBchCode || "",
+      FTAgnCode: oUserInfo?.FTAgnCode || "",
+      FTUsrName: oUserInfo?.FTUsrName || "",
+      FDCreateOn: C_SETxFormattedDate(),
+      FTPORef: searchText || ""                     // ใช้ searchText แทน
+    };
+
+    // เพิ่มใน IndexedDB
+    C_INSxProductTmpToIndexedDB([newProduct]);
+
+    return [...prevProducts, newProduct];
+  }
+});
 
     setBarcode("");
     setQuantity("1");
@@ -369,6 +397,15 @@ export default function Transfer() {
     await C_INSxDataIndexedDB(oDb, "TCNTProductTransferTmp", data);
 
   };
+
+    const C_UPDxProductTmpToIndexedDB = async (barcode:string, data:number) => {
+        if (!oDb) {
+          console.log("❌ Database is not initialized");
+          return;
+        }
+        await C_UPDxDataIndexedDB(oDb, "TCNTProductTransferTmp", barcode , data);
+    
+      };
 
 
 

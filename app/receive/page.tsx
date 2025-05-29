@@ -8,7 +8,7 @@ import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaH
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CTransferreceiptoutToExcel';
 import { History, Product, UserInfo } from "@/models/models"
-import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_GETxConfig, C_DELoDataTmp, C_DELxProductTmpByFNId } from "@/hooks/CIndexedDB";
+import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_GETxConfig, C_DELoDataTmp, C_DELxProductTmpByFNId, C_UPDxDataIndexedDB } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
@@ -50,6 +50,9 @@ export default function Receive() {
 
   const [nFixPntShow, setFixPntShow] = useState(4);
   const oBarcodeRef = useRef<HTMLInputElement>(null);
+  const oQtyRef = useRef<HTMLInputElement>(null);
+
+  const nListMerge = 1; // รวมรายการ 1 รวม , 0 ไม่รวม  
 
   {/* เช็ค User */ }
   useAuth();
@@ -173,12 +176,14 @@ export default function Receive() {
         C_PRCxResumeScanner();
       }, countdown * 1000);
     } else {
+      // ให้เคอร์เซอร์ไปที่ input barcode
       setIsLoading(true);
       setTimeout(() => {
         C_PRCxResumeScanner();
         setIsLoading(false);
       }, 500);
-
+      setQty("");
+      oQtyRef.current?.focus();
     }
   };
 
@@ -302,8 +307,17 @@ export default function Receive() {
       return;
     }
 
-
     await C_INSxDataIndexedDB(oDb, "TCNTProductReceiveTmp", data);
+
+  };
+
+  const C_UPDxProductTmpToIndexedDB = async (barcode:string, data:number) => {
+    if (!oDb) {
+      console.log("❌ Database is not initialized");
+      return;
+    }
+    console.log("🔄 อัปเดตข้อมูลใน TCNTProductReceiveTmp สำหรับบาร์โค้ด:", barcode, "ด้วยจำนวน:", data);
+    await C_UPDxDataIndexedDB(oDb, "TCNTProductReceiveTmp", barcode , data);
 
   };
 
@@ -365,25 +379,44 @@ export default function Receive() {
     }
 
     setIsDisabledRefDoc(true);
-    setProducts((prevProducts) => {
-      const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
 
-      const newProduct = {
-        FNId: newId,
-        FTBarcode: ptBarcode,
-        FCCost: parseFloat(ptCost),
-        FNQuantity: parseInt(ptQty),
-        FTRefDoc: tRefDoc,
-        FTRefSeq: tRefSeq,
-        FTXthDocKey: "TAPTPiHD",
-        FTBchCode: oUserInfo?.FTBchCode || "",
-        FTAgnCode: oUserInfo?.FTAgnCode || "",
-        FTUsrName: oUserInfo?.FTUsrName || "",
-        FDCreateOn: C_SETxFormattedDate(),
-        FTPORef: tSearchPoText
-      };
-      C_INSxProductTmpToIndexedDB([newProduct])
-      return [...prevProducts, newProduct];
+    setProducts((prevProducts) => {
+      const existingIndex = prevProducts.findIndex(p => p.FTBarcode === ptBarcode && p.FCCost === parseFloat(ptCost));
+
+      if (existingIndex !== -1 && nListMerge === 1) {
+        // ถ้ามี barcode + cost ตรงกัน ให้ update FNQuantity
+        const updatedProducts = [...prevProducts];
+        updatedProducts[existingIndex] = {
+          ...updatedProducts[existingIndex],
+          FNQuantity: updatedProducts[existingIndex].FNQuantity + parseInt(ptQty)
+        };
+        const updatedQuantity = updatedProducts[existingIndex].FNQuantity;
+
+        // อัปเดต IndexedDB ด้วยข้อมูลที่อัปเดตแล้ว
+        C_UPDxProductTmpToIndexedDB(ptBarcode, updatedQuantity);
+        
+        return updatedProducts;
+      } else {
+        const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
+
+        const newProduct = {
+          FNId: newId,
+          FTBarcode: ptBarcode,
+          FCCost: parseFloat(ptCost),
+          FNQuantity: parseInt(ptQty),
+          FTRefDoc: tRefDoc,
+          FTRefSeq: tRefSeq,
+          FTXthDocKey: "TAPTPiHD",
+          FTBchCode: oUserInfo?.FTBchCode || "",
+          FTAgnCode: oUserInfo?.FTAgnCode || "",
+          FTUsrName: oUserInfo?.FTUsrName || "",
+          FDCreateOn: C_SETxFormattedDate(),
+          FTPORef: tSearchPoText
+        };
+
+        C_INSxProductTmpToIndexedDB([newProduct]);
+        return [...prevProducts, newProduct];
+      }
     });
 
     setBarcode("");
@@ -678,6 +711,7 @@ export default function Receive() {
           value={tQty}
           onChange={setQty}
           label={"จำนวนที่ได้รับ"}
+          inputRef={oQtyRef}
           icon={<FaPlus />}
           onClick={() => C_ADDxProduct(tBarcode, tCost, tQty)}
         />
