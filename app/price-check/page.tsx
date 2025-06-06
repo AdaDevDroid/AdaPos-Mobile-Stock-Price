@@ -272,7 +272,11 @@ const PricePromotionCheck = () => {
                     <div className="text-center md:text-right">
                       <p className="text-sm text-gray-600">ราคาปัจจุบัน</p>
                       <p className="text-3xl font-bold text-blue-600">
-                        ฿{productData.aoPdtPrice[0].rcPrice.toLocaleString()}
+                        ฿{productData.aoPdtPrice
+                        .find(price => 
+                        price.rtPunCode === productData.aoPdtBar?.[0]?.rtPunCode && 
+                        price.rtPghDocType === "1"
+                        )?.rcPrice.toLocaleString() ?? 'ไม่พบราคา'}
                       </p>
                     </div>
                   )}
@@ -287,7 +291,9 @@ const PricePromotionCheck = () => {
                     ราคาตามประเภท
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {productData.aoPdtPrice.map((price: Price, index: number) => (
+                    {productData.aoPdtPrice
+                    .filter(price => price.rtPunCode === productData.aoPdtBar?.[0]?.rtPunCode)
+                    .map((price: Price, index: number) => (
                       <div
                         key={index}
                         className="bg-white p-3 rounded-lg border"
