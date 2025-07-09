@@ -1,4 +1,3 @@
-
 "use client";
 
 
@@ -11,7 +10,7 @@ import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaH
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CAdjustStockToExcel';
 import { History, Product, UserInfo } from "@/models/models"
-import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_DELoDataTmp, C_DELxProductTmpByFNId } from "@/hooks/CIndexedDB";
+import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_DELoDataTmp, C_DELxProductTmpByFNId, C_UPDxDataIndexedDB } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
@@ -48,6 +47,9 @@ export default function Stock() {
   const isNetworkOnline = useNetworkStatus();
   const [isRepeat, setIsRepeat] = useState(false);
   const oBarcodeRef = useRef<HTMLInputElement>(null);
+  const oQtyRef = useRef<HTMLInputElement>(null);
+
+  const nListMerge = 1; // รวมรายการ 1 รวม , 0 ไม่รวม  
 
   {/* เช็ค User*/ }
   useAuth();
@@ -56,7 +58,7 @@ export default function Stock() {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         // .register("/sw.js")
-        .register(`${process.env.NEXT_PUBLIC_BASE_PATH}/sw.js`)
+        .register(`${process.env.NEXT_PUBLIC_BASE_PATH}/sw.js?basePath=${process.env.NEXT_PUBLIC_BASE_PATH}`)
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
     }
@@ -123,7 +125,7 @@ export default function Stock() {
 
         if (countdown === 0) {
           clearInterval(timer);
-          C_ADDxProduct(ptDecodedText,tQtyRef.current);
+          C_ADDxProduct(ptDecodedText, tQtyRef.current);
           setIsLoadingScanAuto(false);
         }
       }, 1000);
@@ -138,7 +140,7 @@ export default function Stock() {
         C_PRCxResumeScanner();
         setIsLoading(false);
       }, 500);
-
+      oQtyRef.current?.focus();
     }
   };
 
@@ -146,7 +148,7 @@ export default function Stock() {
   const C_PRCxScanBar = (ptDecodedText: string) => {
     setBarcode(ptDecodedText);
     setAddScan(true);
-    C_ADDxProduct(ptDecodedText,tQtyRef.current);
+    C_ADDxProduct(ptDecodedText, tQtyRef.current);
     setAddScan(false);
     setBarcode("");
   };
@@ -270,25 +272,47 @@ export default function Stock() {
 
     setIsDisabledRefDoc(true);
     setProducts((prevProducts) => {
-      const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
+      // หา index ของ product ที่มี barcode + cost ตรงกัน
+      const existingIndex = prevProducts.findIndex(
+        (p) => p.FTBarcode === ptBarcode
+      );
 
-      const newProduct: Product = {
-        FNId: newId,
-        FTBarcode: ptBarcode,
-        FCCost: 0,
-        FNQuantity: parseInt(ptQty),
-        FTRefDoc: tRefDoc,
-        FTRefSeq: tRefSeq,
-        FTXthDocKey: "TCNTPdtAdjStkHD",
-        FTBchCode: oUserInfo?.FTBchCode || "",
-        FTAgnCode: oUserInfo?.FTAgnCode || "",
-        FTUsrName: oUserInfo?.FTUsrName || "",
-        FDCreateOn: C_SETxFormattedDate(),
-        FTPORef: "",
-      };
+      if (existingIndex !== -1 && nListMerge === 1) {
+        const updatedProducts = [...prevProducts];
+        updatedProducts[existingIndex] = {
+          ...updatedProducts[existingIndex],
+          FNQuantity: updatedProducts[existingIndex].FNQuantity + parseInt(ptQty)
+        };
+        const updatedQuantity = updatedProducts[existingIndex].FNQuantity;
 
-      C_INSxProductTmpToIndexedDB([newProduct]);
-      return [...prevProducts, newProduct];
+        // อัปเดตใน IndexedDB
+        C_UPDxProductTmpToIndexedDB(ptBarcode, updatedQuantity);
+
+        return updatedProducts;
+      } else {
+        // สร้าง product ใหม่
+        const newId = Math.max(...prevProducts.map((p) => p.FNId), 0) + 1;
+
+        const newProduct: Product = {
+          FNId: newId,
+          FTBarcode: ptBarcode,
+          FCCost: 0,
+          FNQuantity: parseInt(ptQty) || 1,
+          FTRefDoc: tRefDoc || "",
+          FTRefSeq: tRefSeq || "",
+          FTXthDocKey: "TCNTPdtAdjStkHD",    // หรือ "TAPTPiHD" ตาม context ที่ต้องการ
+          FTBchCode: oUserInfo?.FTBchCode || "",
+          FTAgnCode: oUserInfo?.FTAgnCode || "",
+          FTUsrName: oUserInfo?.FTUsrName || "",
+          FDCreateOn: C_SETxFormattedDate(),
+          FTPORef: ""    // หรือ tSearchPoText ตาม context
+        };
+
+        // เพิ่มใน IndexedDB
+        C_INSxProductTmpToIndexedDB([newProduct]);
+
+        return [...prevProducts, newProduct];
+      }
     });
 
     setBarcode("");
@@ -383,12 +407,12 @@ export default function Stock() {
     setIsLoading(true);
     if (!oProducts || oProducts.length === 0) {
       setIsLoading(false);
-      alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
+      alert("❌ ไม่มีข้อมูลสินค้า");
       return;
     }
     if (!isNetworkOnline) {
       C_PRCxSaveDB(0);
-      alert("❌ ข้อความ: Upload ไม่สำเร็จ");
+      alert("❌ Upload ไม่สำเร็จ");
       setIsLoading(false);
       return;
     }
@@ -399,17 +423,21 @@ export default function Stock() {
       if (!oUserInfo) {
         throw new Error("ไม่พบข้อมูลผู้ใช้");
       }
-      await C_INSxStock(oProducts, oUserInfo);
+      const success = await C_INSxStock(oProducts, oUserInfo);
+      if (success) {
+        C_PRCxSaveDB(1);
+      } else {
+        C_PRCxSaveDB(0);
+        alert("❌ Upload ข้อมุลไม่สำเร็จ");
+        setIsLoading(false);
+        return;
+      }
     } catch (error) {
       console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
       alert("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล");
     } finally {
       setIsLoading(false); // ปิด loading progress
     }
-
-    // Save Data to IndexedDB
-    C_PRCxSaveDB(1);
-
     setIsLoading(false);
   }
 
@@ -469,8 +497,14 @@ export default function Stock() {
 
   };
 
-
-
+  const C_UPDxProductTmpToIndexedDB = async (barcode:string, data:number) => {
+      if (!oDb) {
+        console.log("❌ Database is not initialized");
+        return;
+      }
+      await C_UPDxDataIndexedDB(oDb, "TCNTProductStockTmp", barcode , data);
+  
+    };
 
   async function C_PRCxSaveClearTmpData() {
 
@@ -602,6 +636,8 @@ export default function Stock() {
             if (e.key === "Enter") {
               if (bCheckAutoScan) {
                 C_PRCxScanBar(barcode);
+              } else {
+                oQtyRef.current?.focus();
               }
             }
           }}
@@ -613,9 +649,10 @@ export default function Stock() {
           type="number"
           value={quantity}
           onChange={setQuantity}
+          inputRef={oQtyRef}
           label={"จำนวนที่นับได้"}
           icon={<FaPlus />}
-          onClick={() => C_ADDxProduct(barcode,tQtyRef.current)}
+          onClick={() => C_ADDxProduct(barcode, tQtyRef.current)}
         />
       </div>
 

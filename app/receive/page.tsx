@@ -8,7 +8,7 @@ import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaH
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CTransferreceiptoutToExcel';
 import { History, Product, UserInfo } from "@/models/models"
-import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_GETxConfig, C_DELoDataTmp, C_DELxProductTmpByFNId } from "@/hooks/CIndexedDB";
+import { C_PRCxOpenIndexedDB, C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_GETxConfig, C_DELoDataTmp, C_DELxProductTmpByFNId, C_UPDxDataIndexedDB } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
@@ -50,6 +50,9 @@ export default function Receive() {
 
   const [nFixPntShow, setFixPntShow] = useState(4);
   const oBarcodeRef = useRef<HTMLInputElement>(null);
+  const oQtyRef = useRef<HTMLInputElement>(null);
+
+  const nListMerge = 1; // รวมรายการ 1 รวม , 0 ไม่รวม  
 
   {/* เช็ค User */ }
   useAuth();
@@ -58,7 +61,7 @@ export default function Receive() {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         // .register("/sw.js")
-        .register(`${process.env.NEXT_PUBLIC_BASE_PATH}/sw.js`)
+        .register(`${process.env.NEXT_PUBLIC_BASE_PATH}/sw.js?basePath=${process.env.NEXT_PUBLIC_BASE_PATH}`)
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
     }
@@ -134,10 +137,10 @@ export default function Receive() {
   }, [bCheckAutoScan, tQty]);
   useEffect(() => {
     if (oPendingBarcode !== null) {
-      C_ADDxProduct(oPendingBarcode, tCost,tQty); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
+      C_ADDxProduct(oPendingBarcode, tCost, tQty); // ✅ รอจน `cost` เปลี่ยนก่อนค่อยทำงาน
       setPendingBarcode(null);
     }
-  }, [tCost,tQty]);
+  }, [tCost, tQty]);
 
 
 
@@ -163,7 +166,7 @@ export default function Receive() {
 
         if (countdown === 0) {
           clearInterval(timer);
-          C_ADDxProduct(ptDecodedText, tCostRef.current,tQtyRef.current);
+          C_ADDxProduct(ptDecodedText, tCostRef.current, tQtyRef.current);
           setIsLoadingScanAuto(false);
         }
       }, 1000);
@@ -173,19 +176,20 @@ export default function Receive() {
         C_PRCxResumeScanner();
       }, countdown * 1000);
     } else {
+      // ให้เคอร์เซอร์ไปที่ input barcode
       setIsLoading(true);
       setTimeout(() => {
         C_PRCxResumeScanner();
         setIsLoading(false);
       }, 500);
-
+      oQtyRef.current?.focus();
     }
   };
 
   const C_PRCxScanBar = (ptDecodedText: string) => {
     setBarcode(ptDecodedText);
     setAddScan(true);
-    C_ADDxProduct(ptDecodedText, tCostRef.current,tQtyRef.current);
+    C_ADDxProduct(ptDecodedText, tCostRef.current, tQtyRef.current);
     setAddScan(false);
     setBarcode("");
   };
@@ -302,8 +306,17 @@ export default function Receive() {
       return;
     }
 
-
     await C_INSxDataIndexedDB(oDb, "TCNTProductReceiveTmp", data);
+
+  };
+
+  const C_UPDxProductTmpToIndexedDB = async (barcode:string, data:number) => {
+    if (!oDb) {
+      console.log("❌ Database is not initialized");
+      return;
+    }
+    console.log("🔄 อัปเดตข้อมูลใน TCNTProductReceiveTmp สำหรับบาร์โค้ด:", barcode, "ด้วยจำนวน:", data);
+    await C_UPDxDataIndexedDB(oDb, "TCNTProductReceiveTmp", barcode , data);
 
   };
 
@@ -365,25 +378,44 @@ export default function Receive() {
     }
 
     setIsDisabledRefDoc(true);
-    setProducts((prevProducts) => {
-      const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
 
-      const newProduct = {
-        FNId: newId,
-        FTBarcode: ptBarcode,
-        FCCost: parseFloat(ptCost),
-        FNQuantity: parseInt(ptQty),
-        FTRefDoc: tRefDoc,
-        FTRefSeq: tRefSeq,
-        FTXthDocKey: "TAPTPiHD",
-        FTBchCode: oUserInfo?.FTBchCode || "",
-        FTAgnCode: oUserInfo?.FTAgnCode || "",
-        FTUsrName: oUserInfo?.FTUsrName || "",
-        FDCreateOn: C_SETxFormattedDate(),
-        FTPORef: tSearchPoText
-      };
-      C_INSxProductTmpToIndexedDB([newProduct])
-      return [...prevProducts, newProduct];
+    setProducts((prevProducts) => {
+      const existingIndex = prevProducts.findIndex(p => p.FTBarcode === ptBarcode && p.FCCost === parseFloat(ptCost));
+
+      if (existingIndex !== -1 && nListMerge === 1) {
+        // ถ้ามี barcode + cost ตรงกัน ให้ update FNQuantity
+        const updatedProducts = [...prevProducts];
+        updatedProducts[existingIndex] = {
+          ...updatedProducts[existingIndex],
+          FNQuantity: updatedProducts[existingIndex].FNQuantity + parseInt(ptQty)
+        };
+        const updatedQuantity = updatedProducts[existingIndex].FNQuantity;
+
+        // อัปเดต IndexedDB ด้วยข้อมูลที่อัปเดตแล้ว
+        C_UPDxProductTmpToIndexedDB(ptBarcode, updatedQuantity);
+        
+        return updatedProducts;
+      } else {
+        const newId = Math.max(...prevProducts.map(p => p.FNId), 0) + 1;
+
+        const newProduct = {
+          FNId: newId,
+          FTBarcode: ptBarcode,
+          FCCost: parseFloat(ptCost),
+          FNQuantity: parseInt(ptQty),
+          FTRefDoc: tRefDoc,
+          FTRefSeq: tRefSeq,
+          FTXthDocKey: "TAPTPiHD",
+          FTBchCode: oUserInfo?.FTBchCode || "",
+          FTAgnCode: oUserInfo?.FTAgnCode || "",
+          FTUsrName: oUserInfo?.FTUsrName || "",
+          FDCreateOn: C_SETxFormattedDate(),
+          FTPORef: tSearchPoText
+        };
+
+        C_INSxProductTmpToIndexedDB([newProduct]);
+        return [...prevProducts, newProduct];
+      }
     });
 
     setBarcode("");
@@ -452,7 +484,7 @@ export default function Receive() {
       setRefDoc("");
       setSearchText("");
       setIsDisabledRefDoc(false);
-      if (isNetworkOnline) {
+      if (pnType === 1) {
         alert("✅ บันทึกข้อมูลสำเร็จ");
       }
     }
@@ -461,12 +493,12 @@ export default function Receive() {
     setIsLoading(true);
     if (!oProducts || oProducts.length === 0) {
       setIsLoading(false);
-      alert("❌ ข้อความ: ไม่มีข้อมูลสินค้า");
+      alert("❌ ไม่มีข้อมูลสินค้า");
       return;
     }
     if (!isNetworkOnline) {
       C_PRCxSaveDB(0);
-      alert("❌ ข้อความ: Upload ไม่สำเร็จ");
+      alert("❌ Upload ไม่สำเร็จ Internet ไม่พร้อมใช้งาน");
       setIsLoading(false);
       return;
     }
@@ -477,21 +509,24 @@ export default function Receive() {
       if (!oUserInfo) {
         throw new Error("User info is not available");
       }
-      await C_INSxProducts(oProducts, oUserInfo); // รอให้ฟังก์ชันทำงานสำเร็จ
+      const success = await C_INSxProducts(oProducts, oUserInfo);
+      if (success) {
+        C_PRCxSaveDB(1);
+      } else {
+        C_PRCxSaveDB(0);
+        alert("❌ Upload ข้อมูลไม่สำเร็จ");
+        setIsLoading(false);
+        return;
+      }
     } catch (error) {
       console.error("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล:", error);
       alert("❌ เกิดข้อผิดพลาดในการอัพโหลดข้อมูล");
     } finally {
       setIsLoading(false); // ปิด loading progress
     }
-
-    // Save Data to IndexedDB
-    C_PRCxSaveDB(1);
-
     setIsLoading(false);
-
-
   };
+
   async function C_PRCxExportExcel() {
     setIsLoading(true);
     if (!oProducts || oProducts.length === 0) {
@@ -652,9 +687,12 @@ export default function Receive() {
           onClick={bScanning ? C_PRCxStopScanner : C_PRCxStartScanner}
           inputRef={oBarcodeRef}
           onKeyDown={(e) => {
+            console.log("Key pressed:", e.key);
             if (e.key === "Enter") {
               if (bCheckAutoScan) {
                 C_PRCxScanBar(tBarcode);
+              }else {
+                oQtyRef.current?.focus();
               }
             }
           }}
@@ -675,8 +713,9 @@ export default function Receive() {
           value={tQty}
           onChange={setQty}
           label={"จำนวนที่ได้รับ"}
+          inputRef={oQtyRef}
           icon={<FaPlus />}
-          onClick={() => C_ADDxProduct(tBarcode, tCost,tQty)}
+          onClick={() => C_ADDxProduct(tBarcode, tCost, tQty)}
         />
       </div>
 
