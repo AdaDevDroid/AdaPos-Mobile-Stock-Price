@@ -6,7 +6,7 @@ import NetworkStatus from "@/components/NetworkStatus";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import NameCompany from "@/components/NameCompany";
-import BottomNav from "@/components/BottomNav"; // 1. Import BottomNav
+import BottomNav from "@/components/BottomNav";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -15,7 +15,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean | null>(null);
 
-  // useEffect for Service Worker registration
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
@@ -25,13 +24,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     }
   }, []);
 
-  // useEffect to load sidebar state from localStorage
   useEffect(() => {
     const storedValue = localStorage.getItem("sidebarOpen");
-    setIsSidebarOpen(storedValue ? JSON.parse(storedValue) : false);
+    // Default to true on desktop if no value is stored
+    if (storedValue === null && window.innerWidth >= 768) {
+      setIsSidebarOpen(true);
+    } else {
+      setIsSidebarOpen(storedValue ? JSON.parse(storedValue) : false);
+    }
   }, []);
 
-  // useEffect to save sidebar state to localStorage
   useEffect(() => {
     if (isSidebarOpen !== null) {
       localStorage.setItem("sidebarOpen", JSON.stringify(isSidebarOpen));
@@ -52,42 +54,35 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <NetworkStatusProvider>
-          <div className="flex h-screen bg-gray-50">
-            {/* 2. Sidebar for Desktop: Hidden on mobile */}
+          <div className="relative min-h-screen md:flex">
+            {/* Sidebar for Desktop */}
             {shouldShowNav && isSidebarOpen !== null && (
-               <div className="hidden md:block">
-                 <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-               </div>
+              <div className="hidden md:block">
+                <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+              </div>
             )}
 
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <main
-                className={`flex-1 overflow-y-auto transition-all duration-300 
-                  ${shouldShowNav ? 'pb-24 md:pb-4' : ''}
-                  ${shouldShowNav && isSidebarOpen ? 'md:ml-64' : ''}
-                  ${shouldShowNav && !isSidebarOpen ? 'md:ml-16' : ''}
-                `}
-              >
-                {children}
-              </main>
-            </div>
+            {/* Main Content */}
+            {/* 🔥 แก้ไข: เพิ่ม padding (p-4 md:p-6) เพื่อสร้างระยะห่าง */}
+            <main className={`flex-1 p-4 md:p-6 ${shouldShowNav ? 'pb-20 md:pb-6' : ''}`}>
+              {children}
+            </main>
 
-            {/* 3. Bottom Navigation for Mobile */}
+            {/* Bottom Navigation for Mobile */}
             {shouldShowNav && <BottomNav />}
 
-            {/* Company Name Display */}
-            {shouldShowNav && (
-               <div className={`fixed z-10 bg-white p-2 rounded-md shadow-sm
-                  md:bottom-2 
-                  bottom-20 left-4 md:left-auto
-                  ${isSidebarOpen ? 'md:left-64' : 'md:left-16'}
-                  transition-all duration-300`}
-                >
-                 <NameCompany />
-               </div>
-            )}
+             {/* Company Name & Network Status */}
+             <div className="fixed bottom-0 left-0 right-0 md:right-auto md:left-auto p-4 flex justify-between items-center md:justify-start pointer-events-none">
+                {shouldShowNav && (
+                    <div className={`pointer-events-auto transition-all duration-300 ${isSidebarOpen ? 'md:ml-64' : 'md:ml-16'} mb-16 md:mb-0`}>
+                        <NameCompany />
+                    </div>
+                )}
+                <div className="md:fixed md:bottom-4 md:right-4 pointer-events-auto">
+                    <NetworkStatus />
+                </div>
+            </div>
           </div>
-          <NetworkStatus />
         </NetworkStatusProvider>
       </body>
     </html>

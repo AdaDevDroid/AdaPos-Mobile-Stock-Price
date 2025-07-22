@@ -598,7 +598,7 @@ export default function Receive() {
 
 
   return (
-    <div className="p-4 ms-1 mx-auto bg-white" onClick={C_SETxCloseDropdown}>
+    <div className="p-4 ms-1  bg-white" onClick={C_SETxCloseDropdown}>
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
         <div className="flex flex-row w-full py-2">
           {/* หัวข้อ */}

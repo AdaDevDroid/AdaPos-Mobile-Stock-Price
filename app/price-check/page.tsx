@@ -119,7 +119,7 @@ const PricePromotionCheck = () => {
   );
 
   return (
-    <div className="p-4 ms-1 mx-auto bg-white" >
+    <div className="p-4 ms-1  bg-white" >
       <div className="flex flex-col items-start md:items-center pb-6">
 
         {/* Page Title */}

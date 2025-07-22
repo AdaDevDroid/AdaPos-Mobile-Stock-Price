@@ -543,7 +543,7 @@ export default function MainPage() {
         <span className="text-l ml-auto">ชื่อผู้ใช้งาน : {oUserInfo?.FTUsrName} </span>
       </div>
 
-      <div className="container mx-auto p-2 space-y-2">
+      <div className="container  p-2 space-y-2">
         <h1 className="text-xl font-bold mb-4 ps-2 text-gray-800">ประวัติการทำรายการล่าสุด</h1>
 
         {(oReceiveDataHistory.length === 0 && oTranferDataHistory.length === 0 && oStockDataHistory.length === 0 &&
