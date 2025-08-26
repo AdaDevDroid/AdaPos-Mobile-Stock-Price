@@ -9,7 +9,7 @@ export async function POST() {
       SELECT DISTINCT 
         FTSysCode,
         FTSysStaUsrValue
-      FROM TsysConfig
+      FROM TsysConfig WITH (NOLOCK)
       WHERE FTSysCode IN ('ADecPntSav', 'ADecPntShw', 'nVB_LimitTmp');
     `);
 

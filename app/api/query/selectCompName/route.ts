@@ -11,7 +11,7 @@ export async function POST() {
           const oPool = await C_CTDoConnectToDatabase();
           const aResult = await oPool.request()
           .query(`
-          SELECT FTCmpName FROM TCNMComp_L
+          SELECT FTCmpName FROM TCNMComp_L WITH (NOLOCK)
           WHERE FNLngID = 1
           `);
                  

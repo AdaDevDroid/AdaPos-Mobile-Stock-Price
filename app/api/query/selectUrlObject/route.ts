@@ -20,7 +20,7 @@ export async function POST() {
         FTLastUpdBy,
         FDCreateOn,
         FTCreateBy
-      FROM TCNTUrlObject
+      FROM TCNTUrlObject WITH (NOLOCK)
       WHERE FNUrlID = 5;
     `);
 

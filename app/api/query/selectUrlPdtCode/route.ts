@@ -14,8 +14,8 @@ export async function POST(req: NextRequest) {
                          SELECT pl.FTPdtCode
                               ,pl.FTPdtName
                               ,pb.FTBarCode
-                         FROM TCNMPdt_L pl
-                         LEFT JOIN TCNMPdtBar pb 
+                         FROM TCNMPdt_L pl WITH (NOLOCK)
+                         LEFT JOIN TCNMPdtBar pb WITH (NOLOCK)
                          ON pl.FTPdtCode = pb.FTPdtCode
                          AND pl.FTAgnCode = pb.FTAgnCode
                          WHERE pl.FNLngID = 1

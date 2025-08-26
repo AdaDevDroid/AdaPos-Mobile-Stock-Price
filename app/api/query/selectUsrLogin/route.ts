@@ -34,24 +34,24 @@ export async function POST(req: Request) {
                USRG.FTMerCode,
                ISNULL(IMGAGY.FTImgObj, IMGCOMP.FTImgObj) AS FTImgObj
                FROM TCNMUsrLogin USRLI WITH (NOLOCK)
-               INNER JOIN TCNMUser_L USRL
+               INNER JOIN TCNMUser_L USRL WITH (NOLOCK)
                ON USRL.FTUsrCode = USRLI.FTUsrCode
                AND USRL.FTAgnCode = USRLI.FTAgnCode
-               INNER JOIN TCNTUsrGroup USRG
+               INNER JOIN TCNTUsrGroup USRG WITH (NOLOCK)
                ON USRG.FTUsrCode = USRLI.FTUsrCode
                AND USRG.FTAgnCode = USRLI.FTAgnCode
-               LEFT JOIN TCNMBranch_L BCHL
+               LEFT JOIN TCNMBranch_L BCHL WITH (NOLOCK)
                ON BCHL.FTBchCode = USRG.FTBchCode
-               LEFT JOIN TCNMAgency_L AGNL
+               LEFT JOIN TCNMAgency_L AGNL WITH (NOLOCK)
                ON AGNL.FTAgnCode = USRLI.FTAgnCode
                OUTER APPLY (
                SELECT TOP 1 FTImgObj
-               FROM TCNMImgObj
+               FROM TCNMImgObj WITH (NOLOCK)
                WHERE FTAgnCode = USRLI.FTAgnCode AND FTImgTable = 'TCNMAgency'
                ) IMGAGY
                OUTER APPLY (
                SELECT TOP 1 FTImgObj
-               FROM TCNMImgObj
+               FROM TCNMImgObj WITH (NOLOCK)
                WHERE FTImgTable = 'TCNMComp'
                ) IMGCOMP
                WHERE
