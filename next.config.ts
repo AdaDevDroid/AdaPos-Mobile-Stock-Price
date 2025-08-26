@@ -23,7 +23,7 @@ const nextConfig: NextConfig = {
   images: {
     path: `${basePath}/_next/image`,
   },
-  output: 'standalone',
+  // output: 'standalone', // ปิดใช้งาน standalone mode
   ...pwaConfig,
   webpack: (config, { dev }) => {
     if (dev) {
