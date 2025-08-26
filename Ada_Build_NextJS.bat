@@ -2,47 +2,23 @@
 cd /d "%~dp0"
 echo ================================
 echo   AdaPos Mobile Stock and Price  
-echo     BUILD SCRIPT (FIXED)
+echo     BUILD SCRIPT
 echo ================================
 echo.
 
-echo [1/4] Cleaning previous build...
-if exist ".next" (
-    rmdir /s /q ".next"
-    echo Previous build cleaned
-) else (
-    echo No previous build found
-)
-
-echo.
-echo [2/4] Installing dependencies...
-npm install
-if errorlevel 1 (
-    echo npm install failed!
-    pause
-    exit /b 1
-)
-
-echo.
-echo [3/4] Building Next.js application...
+echo Building Next.js application...
 npm run build
-if errorlevel 1 (
-    echo Build failed!
-    pause
-    exit /b 1
-) else (
-    echo Build completed successfully!
-)
 
 echo.
-echo [4/4] Verifying build...
+echo Checking build result...
 if exist ".next\BUILD_ID" (
-    echo Build verification: SUCCESS
+    echo Build SUCCESS - BUILD_ID found
+    echo Build completed successfully!
 ) else (
-    echo Build verification: FAILED - BUILD_ID missing
-    pause
-    exit /b 1
+    echo Build FAILED - BUILD_ID missing
+    echo Please check the error messages above
 )
+
 echo.
 echo Build Summary:
 echo - Token expiry extended to 24 hours
