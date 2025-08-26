@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const currentTime = new Date().toISOString();
     const uptime = process.uptime();
@@ -43,6 +43,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function HEAD(req: NextRequest) {
+export async function HEAD() {
   return new NextResponse(null, { status: 200 });
 }

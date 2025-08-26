@@ -4,7 +4,7 @@ const { parse } = require("url");
 const next = require("next");
 const fs = require("fs");
 const path = require("path");
-const { spawn } = require("child_process");
+const { spawn, exec } = require("child_process");
 
 const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev });
@@ -33,21 +33,22 @@ function scheduleRestart() {
     console.log('🔄 Auto-restart initiated at 1:00 AM...');
     console.log('🧹 Clearing cache before restart...');
     
-    // Clear cache process
-    const clearCache = spawn('cmd', ['/c', 'Clear_Cache.bat'], {
-      cwd: __dirname,
-      stdio: 'inherit'
-    });
+    // Clear cache directly without external batch file
+    const { exec } = require('child_process');
+    const clearCommands = [
+      'rmdir /s /q ".next\\cache" 2>nul',
+      'del /q "*.log" 2>nul',
+      'npm cache clean --force'
+    ].join(' && ');
     
-    clearCache.on('close', (code) => {
-      console.log('✅ Cache cleared, restarting server...');
+    exec(clearCommands, { cwd: __dirname }, (error, stdout, stderr) => {
+      if (error) {
+        console.log('⚠️ Cache clear had some issues, continuing restart...');
+      } else {
+        console.log('✅ Cache cleared successfully');
+      }
+      console.log('🔄 Restarting server...');
       process.exit(0); // ปิดเซิร์ฟเวอร์เพื่อให้ restart
-    });
-    
-    clearCache.on('error', (err) => {
-      console.error('❌ Clear cache failed:', err);
-      console.log('🔄 Restarting without cache clear...');
-      process.exit(0);
     });
     
   }, timeUntilRestart);

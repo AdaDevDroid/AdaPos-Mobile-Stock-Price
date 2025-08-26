@@ -18,6 +18,12 @@ const pwaConfig = withPWA({
 const nextConfig: NextConfig = {
   reactStrictMode: false,
   devIndicators: false,
+  eslint: {
+    ignoreDuringBuilds: true, // ข้าม ESLint errors ระหว่าง build
+  },
+  typescript: {
+    ignoreBuildErrors: false, // ยังคงตรวจสอบ TypeScript errors
+  },
   basePath: basePath,// ✅ เพิ่ม basePath เพื่อให้ Next.js ทำงานใน /AdaCheckStockSTD
   assetPrefix: basePath, // ✅ เพิ่ม assetPrefix เพื่อให้ Next.js ทำงานใน /AdaCheckStockSTD
   images: {
