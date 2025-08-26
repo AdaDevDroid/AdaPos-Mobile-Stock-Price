@@ -190,7 +190,7 @@ export default function Login() {
       return;
     }
     if (tokenExpiry) {
-      const nowMinutes = Date.now() / (60 * 1000);
+      const nowMinutes = Math.floor(Date.now() / 1000 / 60); // แก้ไขการคำนวณให้ถูกต้อง
       console.log(tokenExpiry, nowMinutes)
       if (nowMinutes > Number(tokenExpiry)) {
         return;
@@ -202,10 +202,11 @@ export default function Login() {
   }, [router]);
 
   const C_SETxToken = (token: string) => {
-    const nExpToken = 60; // เวลาหมดอายุในหน่วยนาที
-    const tokenExpiry = Math.floor(Date.now() / 1000 / 60) + nExpToken; // แปลงเวลาปัจจุบันเป็นนาที และเพิ่มเวลาหมดอายุ 60 นาที
+    const nExpToken = 24 * 60; // เพิ่มเวลาเป็น 24 ชั่วโมง (1440 นาที) สำหรับการใช้งานระยะยาว
+    const tokenExpiry = Math.floor(Date.now() / 1000 / 60) + nExpToken; // แปลงเวลาปัจจุบันเป็นนาที และเพิ่มเวลาหมดอายุ
     localStorage.setItem("session_token", token);
     localStorage.setItem("session_expiry", tokenExpiry.toString()); // เก็บเวลาในหน่วยนาที
+    localStorage.setItem("last_activity", Date.now().toString()); // เก็บเวลาล่าสุดที่ใช้งาน
     console.log("✅ Token Stored with Expiry:", new Date(tokenExpiry * 60 * 1000).toLocaleString()); // แปลงกลับเป็นมิลลิวินาทีเพื่อแสดงผล
   };
 

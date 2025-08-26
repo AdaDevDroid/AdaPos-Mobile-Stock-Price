@@ -14,10 +14,20 @@ export const NetworkStatusProvider = ({ children }: { children: React.ReactNode 
       if (onlineStatus) {
         try {
           // 🔥 เช็คอินเทอร์เน็ตโดยใช้ API ที่เราควบคุมได้
-          // const response = await fetch("/test-network.ts", { method: "HEAD", cache: "no-store" });
-          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/test-network.ts`, { method: "HEAD", cache: "no-store" });
+          // เพิ่ม timeout เพื่อป้องกันการค้าง
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/test-network.ts`, { 
+            method: "HEAD", 
+            cache: "no-store",
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
           onlineStatus = response.ok;
         } catch (error) {
+          console.log("🔴 Network check failed:", error);
           onlineStatus = false;
         }
       }
@@ -26,12 +36,13 @@ export const NetworkStatusProvider = ({ children }: { children: React.ReactNode 
     };
 
     const updateOnlineStatus = () => {
+      console.log("🌐 Network status changed:", navigator.onLine ? "Online" : "Offline");
       setIsOnline(navigator.onLine);
       checkOnlineStatus(); // เช็คซ้ำให้แน่ใจ
     };
 
-    // ✅ เช็คสถานะทุก 5 วินาทีเผื่ออินเทอร์เน็ตตัดแล้วกลับมา
-    const interval = setInterval(checkOnlineStatus, 5000);
+    // ✅ เช็คสถานะทุก 10 วินาทีแทน 5 วินาที เพื่อลดโหลด
+    const interval = setInterval(checkOnlineStatus, 10000);
 
     window.addEventListener("online", updateOnlineStatus);
     window.addEventListener("offline", updateOnlineStatus);

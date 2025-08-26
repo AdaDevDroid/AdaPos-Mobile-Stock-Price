@@ -4,19 +4,59 @@ const { parse } = require("url");
 const next = require("next");
 const fs = require("fs");
 const path = require("path");
+const { spawn } = require("child_process");
 
 const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "/AdaCheckStockSTD";
-
 const port = process.env.PORT || 3001;
+
+// ฟังก์ชันสำหรับ restart server
+function scheduleRestart() {
+  const now = new Date();
+  const restart = new Date();
+  restart.setHours(1, 0, 0, 0); // ตั้งเวลาตี 1
+  
+  // ถ้าเวลาปัจจุบันผ่านตี 1 แล้ว ให้ restart วันถัดไป
+  if (now >= restart) {
+    restart.setDate(restart.getDate() + 1);
+  }
+  
+  const timeUntilRestart = restart.getTime() - now.getTime();
+  
+  console.log(`🕐 Auto-restart scheduled at ${restart.toLocaleString('th-TH')}`);
+  console.log(`⏰ Time until restart: ${Math.floor(timeUntilRestart / (1000 * 60 * 60))}h ${Math.floor((timeUntilRestart % (1000 * 60 * 60)) / (1000 * 60))}m`);
+  
+  setTimeout(() => {
+    console.log('🔄 Auto-restart initiated at 1:00 AM...');
+    console.log('🧹 Clearing cache before restart...');
+    
+    // Clear cache process
+    const clearCache = spawn('cmd', ['/c', 'Clear_Cache.bat'], {
+      cwd: __dirname,
+      stdio: 'inherit'
+    });
+    
+    clearCache.on('close', (code) => {
+      console.log('✅ Cache cleared, restarting server...');
+      process.exit(0); // ปิดเซิร์ฟเวอร์เพื่อให้ restart
+    });
+    
+    clearCache.on('error', (err) => {
+      console.error('❌ Clear cache failed:', err);
+      console.log('🔄 Restarting without cache clear...');
+      process.exit(0);
+    });
+    
+  }, timeUntilRestart);
+}
 
 app
   .prepare()
   .then(() => {
-    createServer((req, res) => {
+    const server = createServer((req, res) => {
       const parsedUrl = parse(req.url, true);
 
       // จัดการกับ URLs ที่มี basePath
@@ -35,7 +75,9 @@ app
         res.writeHead(301, { Location: basePath });
         res.end();
       }
-    }).listen(port, (err) => {
+    });
+
+    server.listen(port, (err) => {
       if (err) throw err;
       console.log(`> Environment: ${process.env.NODE_ENV}`);
       console.log(`> Mode: ${dev ? "DEVELOPMENT" : "PRODUCTION"}`);
@@ -43,6 +85,26 @@ app
       console.log(
         `> Or access via http://dev.ada-soft.com:${port}${basePath} if DNS is configured`
       );
+      
+      // กำหนดเวลา restart อัตโนมัติ
+      scheduleRestart();
+    });
+
+    // Handle graceful shutdown
+    process.on('SIGINT', () => {
+      console.log('\n🛑 Received SIGINT, shutting down gracefully...');
+      server.close(() => {
+        console.log('✅ Server closed');
+        process.exit(0);
+      });
+    });
+
+    process.on('SIGTERM', () => {
+      console.log('\n🛑 Received SIGTERM, shutting down gracefully...');
+      server.close(() => {
+        console.log('✅ Server closed');
+        process.exit(0);
+      });
     });
   })
   .catch((err) => {

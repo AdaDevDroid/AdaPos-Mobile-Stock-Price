@@ -15,8 +15,17 @@ export function useAuth() {
             return;
           }
           if (tokenExpiry) {
-            const nowMinutes = Date.now() / (60 * 1000); // เวลาปัจจุบันเป็น "นาที"
+            const nowMinutes = Math.floor(Date.now() / 1000 / 60); // แก้ไขการคำนวณให้ถูกต้อง
             console.log(tokenExpiry, nowMinutes)
+            
+            // ตรวจสอบว่าจะหมดอายุในอีก 30 นาที
+            if ((Number(tokenExpiry) - nowMinutes) <= 30) {
+              console.log("⚠️ Token จะหมดอายุเร็วๆ นี้ - ต่ออายุ Token อัตโนมัติ");
+              const newTokenExpiry = nowMinutes + (24 * 60); // ต่ออายุ 24 ชั่วโมง
+              localStorage.setItem("session_expiry", newTokenExpiry.toString());
+              console.log("✅ Token ถูกต่ออายุแล้ว");
+            }
+            
             if (nowMinutes > Number(tokenExpiry)) {
               console.log("❌ Token หมดอายุ → Redirect ไปหน้า Login");
               localStorage.removeItem("session_token");
@@ -37,5 +46,12 @@ export function useAuth() {
     };
 
     checkAuth();
+    
+    // ตรวจสอบ Token ทุก 5 นาที
+    const tokenCheckInterval = setInterval(checkAuth, 5 * 60 * 1000);
+    
+    return () => {
+      clearInterval(tokenCheckInterval);
+    };
   }, []);
 }
