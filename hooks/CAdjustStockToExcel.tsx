@@ -1,5 +1,4 @@
-import * as XLSX from 'xlsx';
-
+import ExcelJS from 'exceljs';
 
 interface oData {
   tProductCode: string;
@@ -9,8 +8,12 @@ interface oData {
   dCreateOn: string;
 }
 
-const exportToExcel = (data: oData[]) => {
-  const suggestionHeaderNote = [
+const exportToExcel = async (data: oData[]) => {
+  const workbook = new ExcelJS.Workbook();
+
+  // Suggestion Sheet
+  const suggestionSheet = workbook.addWorksheet('Suggestion');
+  const suggestionData = [
     ["วิธีการกรอกข้อมูล"],
     [],
     ["ต้องระบุค่า (ห้ามซ้ำ) กรณีมีมากกว่า 1 คอลัม คิดรวมกันห้ามซ้ำ"],
@@ -25,31 +28,36 @@ const exportToExcel = (data: oData[]) => {
     ["          ", "\\", "Backslash", "แนะนำให้ใช้ slash แทน"],
     [],
   ];
-
-
-  const formattedProducts = data.map((oProduct) => ({
-    Barcode: oProduct.tBarcode,
-    StockControlCode: oProduct.tStockCode,
-    Quantity: parseFloat(oProduct.tQTY.toString()).toFixed(4), // แปลงเป็นทศนิยม 4 ตำแหน่ง
-    CreateOn: oProduct.dCreateOn,
-  }));
-    const header1 = [["*Bar Code Text[25]", "Stock Control Code[50]", " * Qty  Decimal[18,4] "," *Date / Time [datetime]"]];
-    const suggestionSheet = XLSX.utils.aoa_to_sheet(suggestionHeaderNote);
-
   
+  suggestionData.forEach((row, index) => {
+    suggestionSheet.addRow(row);
+  });
 
-   
-    // const worksheet1 = XLSX.utils.json_to_sheet(sheet1Data);
-   
-
-    const worksheet1 = XLSX.utils.aoa_to_sheet(header1);
-    XLSX.utils.sheet_add_json(worksheet1, formattedProducts, { origin: "A2", skipHeader: true });
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, suggestionSheet, "Suggestion");
-    XLSX.utils.book_append_sheet(workbook, worksheet1, "Adjust Stock_lite");
+  // Adjust Stock Sheet
+  const worksheet = workbook.addWorksheet('Adjust Stock_lite');
   
-    XLSX.writeFile(workbook, "AdjustStock.xlsx");
+  // Add header
+  worksheet.addRow(["*Bar Code Text[25]", "Stock Control Code[50]", " * Qty  Decimal[18,4] "," *Date / Time [datetime]"]);
+  
+  // Add data
+  data.forEach((oProduct) => {
+    worksheet.addRow([
+      oProduct.tBarcode,
+      oProduct.tStockCode,
+      parseFloat(oProduct.tQTY.toString()).toFixed(4),
+      oProduct.dCreateOn
+    ]);
+  });
+
+  // Save file
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'AdjustStock.xlsx';
+  link.click();
+  window.URL.revokeObjectURL(url);
   };
 
 export default exportToExcel;

@@ -24,6 +24,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false, // ยังคงตรวจสอบ TypeScript errors
   },
+  outputFileTracingRoot: __dirname, // แก้ไข warning เรื่อง multiple lockfiles
   basePath: basePath,// ✅ เพิ่ม basePath เพื่อให้ Next.js ทำงานใน /AdaCheckStockSTD
   assetPrefix: basePath, // ✅ เพิ่ม assetPrefix เพื่อให้ Next.js ทำงานใน /AdaCheckStockSTD
   images: {

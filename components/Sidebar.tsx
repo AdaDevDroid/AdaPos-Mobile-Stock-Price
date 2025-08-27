@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import Image from "next/image";
 import { FaHome, FaBoxOpen, FaExchangeAlt, FaClipboardCheck, FaTags, FaSignOutAlt, FaBars } from "react-icons/fa";
 import { C_PRCxOpenIndexedDB, C_GETxUserData } from "@/hooks/CIndexedDB";
 
@@ -58,9 +59,11 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
           {isOpen ? (
             <FaBars size={24} />
           ) : (
-            <img
+            <Image
               src={tUrlImg && tUrlImg !== "" ? tUrlImg : `${process.env.NEXT_PUBLIC_BASE_PATH}/icons/logoAda.png`}
               alt="Logo"
+              width={32}
+              height={32}
               className="w-8 h-8"
             />
           )}
