@@ -752,7 +752,7 @@ export default function Login() {
 
       <Image
         // src="/icons/logoAdaLogin.png"
-        src={`${process.env.NEXT_PUBLIC_BASE_PATH}/icons/logoAdaLogin.png`}
+        src={tUrlImg && tUrlImg !== "" ? tUrlImg : `${process.env.NEXT_PUBLIC_BASE_PATH}/icons/logoAdaLogin.png`}
         alt="Logo"
         width={80}
         height={0}
