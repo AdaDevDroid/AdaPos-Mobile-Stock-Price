@@ -538,7 +538,7 @@ export default function MainPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col ">
       <div className="flex p-4 justify-between items-center shadow-sm text-gray-500">
         <span className="text-l ml-auto">ชื่อผู้ใช้งาน : {oUserInfo?.FTUsrName} </span>
       </div>

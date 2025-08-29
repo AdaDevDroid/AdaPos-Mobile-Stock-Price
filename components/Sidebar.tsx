@@ -1,11 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import Image from "next/image";
-import { FaHome, FaBoxOpen, FaExchangeAlt, FaClipboardCheck, FaTags, FaSignOutAlt, FaBars } from "react-icons/fa";
+import { FaHome, FaBoxOpen, FaExchangeAlt, FaClipboardCheck, FaTags, FaBars, FaSignOutAlt } from "react-icons/fa";
 import { C_PRCxOpenIndexedDB, C_GETxUserData } from "@/hooks/CIndexedDB";
 
-// ✅ ย้าย menuItems มาไว้ข้างนอกเพื่อการจัดการที่ง่ายขึ้น
 const menuItems = [
   { name: "หน้าหลัก", icon: <FaHome />, path: "/main" },
   { name: "รับสินค้าจากผู้จำหน่าย", icon: <FaBoxOpen />, path: "/receive" },
@@ -35,11 +33,9 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
 
   const handleLogout = async () => {
     try {
-      if (localStorage.getItem("session_token")) {
-        localStorage.removeItem("session_token");
-        localStorage.removeItem("session_expiry");
-        localStorage.removeItem("sidebarOpen");
-      }
+      localStorage.removeItem("session_token");
+      localStorage.removeItem("session_expiry");
+      localStorage.removeItem("sidebarOpen");
       console.log("✅ Logout สำเร็จ");
     } catch (error) {
       console.log("❌ ไม่สามารถ Logout:", error);
@@ -48,10 +44,10 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   };
 
   return (
-    // ✅ เพิ่ม flex flex-col เพื่อให้ item เรียงในแนวตั้ง
+    // ✅ ใช้ flex-col และ h-full เพื่อให้ layout ยืดเต็มความสูง
     <div className={`h-full hidden md:flex flex-col bg-white shadow-md text-white whitespace-nowrap ${isOpen ? "w-64" : "w-16"} transition-all duration-300`}>
-      {/* ส่วนหัวของ Sidebar */}
-      <div className={`flex items-center justify-between p-4 ${isOpen ? "bg-blue-600" : "bg-white justify-center"}`}>
+      {/* Header section */}
+      <div className={`flex items-center p-4 ${isOpen ? "bg-blue-600 justify-between" : "bg-white justify-center"}`}>
         {isOpen && (
           <span className="text-l font-bold">AdaPos+ Stock & Price</span>
         )}
@@ -59,18 +55,16 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
           {isOpen ? (
             <FaBars size={24} />
           ) : (
-            <Image
+            <img
               src={tUrlImg && tUrlImg !== "" ? tUrlImg : `${process.env.NEXT_PUBLIC_BASE_PATH}/icons/logoAda.png`}
               alt="Logo"
-              width={32}
-              height={32}
               className="w-8 h-8"
             />
           )}
         </button>
       </div>
 
-      {/* เมนู (ปรับปรุงให้ flex-grow เพื่อดัน logout ไปล่างสุด) */}
+      {/* Menu - ใช้ flex-grow เพื่อดันปุ่ม Logout ไปด้านล่าง */}
       <nav className="mt-2 flex-grow">
         {menuItems.map((item) => {
           const isActive = pathname === item.path;
@@ -82,7 +76,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
                 ${isOpen ? "p-4 justify-start" : "p-4 justify-center"}
                 ${isActive ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100 text-gray-700"}`}
             >
-              <span title={isOpen ? "" : item.name} className={`transition-all duration-200 ${isOpen ? "text-[28px]" : "text-[28px]"}`}>
+              <span title={isOpen ? "" : item.name} className="transition-all duration-200 text-[28px]">
                 {item.icon}
               </span>
               <span className={`ml-4 whitespace-nowrap transition-opacity duration-200 ${!isOpen ? "opacity-0 hidden" : "opacity-100"}`}>
@@ -93,13 +87,13 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
         })}
       </nav>
 
-      {/* ปุ่มออกจากระบบ */}
+      {/* 🔥 ปุ่ม Logout สำหรับ Desktop - นำกลับมาไว้ที่นี่ */}
       <div
         onClick={handleLogout}
         className={`flex items-center cursor-pointer transition-colors duration-200 text-gray-700 hover:bg-gray-100
           ${isOpen ? "p-4 justify-start" : "p-4 justify-center"}`}
       >
-        <span title={isOpen ? "" : "ออกจากระบบ"} className={`transition-all duration-200 ${isOpen ? "text-[24px]" : "text-[28px]"}`}>
+        <span title={isOpen ? "" : "ออกจากระบบ"} className="transition-all duration-200 text-[28px]">
           <FaSignOutAlt />
         </span>
         <span className={`ml-4 whitespace-nowrap transition-opacity duration-200 ${!isOpen ? "opacity-0 hidden" : "opacity-100"}`}>

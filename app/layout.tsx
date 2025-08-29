@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import NameCompany from "@/components/NameCompany";
 import BottomNav from "@/components/BottomNav";
+import MobileHeader from "@/components/MobileHeader";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -26,7 +27,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     const storedValue = localStorage.getItem("sidebarOpen");
-    // Default to true on desktop if no value is stored
     if (storedValue === null && window.innerWidth >= 768) {
       setIsSidebarOpen(true);
     } else {
@@ -55,6 +55,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <NetworkStatusProvider>
           <div className="relative min-h-screen md:flex">
+            {/* Mobile Header */}
+            {shouldShowNav && <MobileHeader />}
+
             {/* Sidebar for Desktop */}
             {shouldShowNav && isSidebarOpen !== null && (
               <div className="hidden md:block">
@@ -63,18 +66,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             )}
 
             {/* Main Content */}
-            {/* 🔥 แก้ไข: เพิ่ม padding (p-4 md:p-6) เพื่อสร้างระยะห่าง */}
-            <main className={`flex-1 p-4 md:p-6 ${shouldShowNav ? 'pb-20 md:pb-6' : ''}`}>
-              {children}
+            <main className={`flex-1 ${shouldShowNav ? 'pt-16 md:pt-0 pb-20 md:pb-0' : ''}`}>
+              <div className="p-4 md:p-6 h-full">
+                {children}
+              </div>
             </main>
 
             {/* Bottom Navigation for Mobile */}
             {shouldShowNav && <BottomNav />}
 
-             {/* Company Name & Network Status */}
+             {/* Company Name (Desktop) & Network Status */}
              <div className="fixed bottom-0 left-0 right-0 md:right-auto md:left-auto p-4 flex justify-between items-center md:justify-start pointer-events-none">
                 {shouldShowNav && (
-                    <div className={`pointer-events-auto transition-all duration-300 ${isSidebarOpen ? 'md:ml-64' : 'md:ml-16'} mb-16 md:mb-0`}>
+                    // ---- จุดที่แก้ไข ----
+                    // เพิ่มคลาส hidden md:block เพื่อซ่อนในโหมดมือถือ
+                    <div className={`hidden md:block pointer-events-auto transition-all duration-300 ${isSidebarOpen ? 'md:ml-64' : 'md:ml-16'} mb-16 md:mb-0`}>
                         <NameCompany />
                     </div>
                 )}
