@@ -32,7 +32,6 @@ echo Server Information:
 echo - Environment: Production
 echo - Port: 3001 (or from environment)
 echo - Base Path: /AdaCheckStockSTD
-echo - Auto-restart: Available
 echo.
 echo Access URLs:
 echo - Local: http://localhost:3001/AdaCheckStockSTD
