@@ -8,6 +8,7 @@ import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import { Price, Promotion, ProductData } from "@/models/price-check";
 import { C_GetoUrlObject } from "../../hooks/CConfig";
+import { C_GEToDatabaseHeaders, C_GETtPartUrl } from "@/hooks/CDatabaseSettings";
 
 const PricePromotionCheck = () => {
   useAuth();
@@ -44,10 +45,11 @@ const PricePromotionCheck = () => {
         return;
       }
 
-      const responseCode = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectUrlPdtCode`, {
+      const responseCode = await fetch(C_GETtPartUrl("/api/query/selectUrlPdtCode"), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...C_GEToDatabaseHeaders(),
         },
         body: JSON.stringify({ searchType, searchQuery, agnCode: oUserData.FTAgnCode })
       });
@@ -76,10 +78,11 @@ const PricePromotionCheck = () => {
       // Get URL object
       const urlMaster = await C_GetoUrlObject();
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/call-promotion`, {
+      const response = await fetch(C_GETtPartUrl("/api/call-promotion"), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...C_GEToDatabaseHeaders(),
         },
         body: JSON.stringify({
           ...pdtData,

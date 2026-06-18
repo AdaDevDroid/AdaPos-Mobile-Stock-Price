@@ -27,7 +27,7 @@ const exportToExcel = async (data: oData[]) => {
     [],
   ];
   
-  suggestionData.forEach((row, index) => {
+  suggestionData.forEach((row) => {
     suggestionSheet.addRow(row);
   });
 

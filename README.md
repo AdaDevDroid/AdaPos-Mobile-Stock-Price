@@ -1,5 +1,46 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Docker Deploy
+
+Build and run with Docker Compose:
+
+```bash
+docker compose --env-file .env.local up -d --build
+```
+
+Open:
+
+```text
+http://localhost:3001/AdaCheckStockSTD
+```
+
+Runtime settings saved from `/setting` are stored in the `adapos_runtime` Docker volume at `/app/.runtime`, so they survive container recreate.
+
+Important environment variables:
+
+- `NEXT_PUBLIC_BASE_PATH` is used at image build time and runtime.
+- `APP_PORT` is the host port.
+- `PORT` is the container app port.
+- `USER_DB`, `PASSWORD_DB`, `SERVER_DB`, `PORT_DB`, `NAME_DB`, and `DATABASE_NAME_BY_PATH` configure SQL Server. `DATABASE_NAME_BY_PATH` supports either the old `"Part":"Database"` format or per-part objects with `database`, `server`, `port`, `user`, and `password`.
+- `/setting` saves runtime per-part database settings in `/app/.runtime/database-paths.json`; password values are stored server-side and are not returned in the settings list.
+- `SESSION_SECRET`, `SETTINGS_ADMIN_USER`, and `SETTINGS_ADMIN_PASSWORD` are required in production.
+- `PROMOTION_URL_ALLOWLIST` is required when promotion URLs point to private/internal hosts.
+
+Useful commands:
+
+```bash
+docker compose --env-file .env.local ps
+docker compose --env-file .env.local logs -f
+docker compose --env-file .env.local down
+```
+
+When the image is built on another machine and loaded on the server, run the
+server-only compose file so the server does not build:
+
+```bash
+docker compose -f docker-compose.server.yml --env-file .env.local up -d
+```
+
 ## Getting Started
 
 First, run the development server:

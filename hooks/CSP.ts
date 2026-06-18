@@ -1,4 +1,5 @@
 import { Product, UserInfo } from "@/models/models";
+import { C_GEToDatabaseHeaders, C_GETtPartUrl } from "@/hooks/CDatabaseSettings";
 
 export function C_SETxFormattedDate(): string {
   const now = new Date();
@@ -17,9 +18,9 @@ export function C_SETxFormattedDate(): string {
 
 export const C_INSxProducts = async (oProducts: Product[], oUserInfo: UserInfo): Promise<boolean> => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/insertDataProduct`, {
+    const response = await fetch(C_GETtPartUrl("/api/query/insertDataProduct"), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders() },
       body: JSON.stringify({
         products: oProducts,
         userInfo: oUserInfo,
@@ -44,9 +45,9 @@ export const C_INSxProducts = async (oProducts: Product[], oUserInfo: UserInfo):
 
 export const C_INSxStock = async (oProducts: Product[], oUserInfo: UserInfo): Promise<boolean> => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/insertDataAdjStk`, {
+    const response = await fetch(C_GETtPartUrl("/api/query/insertDataAdjStk"), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders() },
       body: JSON.stringify({
         products: oProducts,
         userInfo: oUserInfo

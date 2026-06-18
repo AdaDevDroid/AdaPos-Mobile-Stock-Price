@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 import { C_CTDoConnectToDatabase } from '../../database/connect_db';
+import { C_GEToRequiredSession } from "../../auth/session";
 
 
 
 
 
 
-export async function POST() {
+export async function POST(req: Request) {
      try {
-          const oPool = await C_CTDoConnectToDatabase();
+          const { response } = C_GEToRequiredSession(req);
+          if (response) return response;
+
+          const oPool = await C_CTDoConnectToDatabase(req);
           const aResult = await oPool.request()
           .query(`
           SELECT FTCmpName FROM TCNMComp_L WITH (NOLOCK)
@@ -16,9 +20,7 @@ export async function POST() {
           `);
                  
           const aData = aResult.recordset;
-          console.log(" 🟢 aData:", aData);
           const oBchData = aData.map(item => item.FTCmpName).join(", ");
-          console.log(" 🟢 oBchData:", oBchData);
           if (oBchData.length === 0) {
                return new NextResponse(JSON.stringify({ message: "ไม่มีข้อมูล" }), { status: 404 });
              }
@@ -26,7 +28,7 @@ export async function POST() {
 
             return new NextResponse(JSON.stringify({ message: "Query Success", comp: oBchData }), { status: 200 });
      } catch (error) {
-          console.log("Database error:", error);
+          console.error("Database error:", error);
           return new NextResponse(JSON.stringify({ message: "เกิดข้อผิดพลาด", error: (error as Error).message }), {
                status: 500,
           });

@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
+import { C_GETtPartUrl } from "@/hooks/CDatabaseSettings";
 
 // ✅ สร้าง Context
 const NetworkStatusContext = createContext<boolean>(true);
@@ -18,7 +19,7 @@ export const NetworkStatusProvider = ({ children }: { children: React.ReactNode 
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000);
           
-          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/test-network.ts`, { 
+          const response = await fetch(C_GETtPartUrl("/test-network.ts"), {
             method: "HEAD", 
             cache: "no-store",
             signal: controller.signal

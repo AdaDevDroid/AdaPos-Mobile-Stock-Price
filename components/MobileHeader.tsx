@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { FaSignOutAlt } from "react-icons/fa";
 import { C_PRCxOpenIndexedDB, C_GETxUserData } from "@/hooks/CIndexedDB";
 import { UserInfo } from "@/models/models";
+import { C_GETtPartUrl } from "@/hooks/CDatabaseSettings";
 
 export default function MobileHeader() {
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -29,7 +30,7 @@ export default function MobileHeader() {
     } catch (error) {
       console.log("❌ ไม่สามารถ Logout:", error);
     }
-    window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/`;
+    window.location.href = C_GETtPartUrl("/login");
   };
 
   return (

@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { FaHome, FaBoxOpen, FaExchangeAlt, FaClipboardCheck, FaTags, FaBars, FaSignOutAlt } from "react-icons/fa";
 import { C_PRCxOpenIndexedDB, C_GETxUserData } from "@/hooks/CIndexedDB";
+import { C_GETtPartUrl, C_GETtRoutePathFromPathname } from "@/hooks/CDatabaseSettings";
 
 const menuItems = [
   { name: "หน้าหลัก", icon: <FaHome />, path: "/main" },
@@ -18,8 +19,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
-  const router = useRouter();
   const pathname = usePathname();
+  const routePath = C_GETtRoutePathFromPathname(pathname);
   const [tUrlImg, setUrlImg] = useState("");
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     } catch (error) {
       console.log("❌ ไม่สามารถ Logout:", error);
     }
-    window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/`;
+    window.location.href = C_GETtPartUrl("/login");
   };
 
   return (
@@ -56,7 +57,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
             <FaBars size={24} />
           ) : (
             <img
-              src={tUrlImg && tUrlImg !== "" ? tUrlImg : `${process.env.NEXT_PUBLIC_BASE_PATH}/icons/logoAda.png`}
+              src={tUrlImg && tUrlImg !== "" ? tUrlImg : C_GETtPartUrl("/icons/logoAda.png")}
               alt="Logo"
               className="w-8 h-8"
             />
@@ -67,11 +68,11 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
       {/* Menu - ใช้ flex-grow เพื่อดันปุ่ม Logout ไปด้านล่าง */}
       <nav className="mt-2 flex-grow">
         {menuItems.map((item) => {
-          const isActive = pathname === item.path;
+          const isActive = routePath === item.path;
           return (
             <div
               key={item.name}
-              onClick={() => router.push(item.path)}
+              onClick={() => { window.location.href = C_GETtPartUrl(item.path); }}
               className={`flex items-center cursor-pointer transition-colors duration-200 
                 ${isOpen ? "p-4 justify-start" : "p-4 justify-center"}
                 ${isActive ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100 text-gray-700"}`}

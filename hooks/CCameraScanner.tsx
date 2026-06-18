@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 
 
 export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
@@ -97,7 +97,7 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
         navigator.mediaDevices.enumerateDevices().then((devices) => {
           devices
             .filter((device) => device.kind === "videoinput")
-            .forEach(async (device) => {
+            .forEach(async () => {
 
               navigator.mediaDevices.getUserMedia({ video: true })
                 .then((stream) => {

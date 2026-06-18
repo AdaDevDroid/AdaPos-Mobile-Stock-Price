@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaUser, FaLock } from "react-icons/fa";
 import { C_PRCxOpenIndexedDB, C_INSxUserToDB, C_INSoSysConfigToDB, C_DELoSysConfigData, C_GETxUserData } from "@/hooks/CIndexedDB";
@@ -10,6 +10,38 @@ import Image from "next/image";
 import BrancheModal from "@/components/BchModal";
 import { UserInfo, BranchInfo } from "@/models/models";
 import { FaWrench, FaCheckCircle, FaSpinner } from "react-icons/fa";
+import {
+  C_GEToDatabaseHeaders,
+  C_GEToDatabaseSettings,
+  C_GETtPartUrl,
+  C_REGxServiceWorkerForActivePart,
+  C_SEToDatabaseSettings,
+  C_SYNCxDatabasePartFromUrl,
+} from "@/hooks/CDatabaseSettings";
+
+const REQUIRED_OFFLINE_CACHE_ITEMS = 9;
+const MIN_STATIC_CACHE_ITEMS = 3;
+
+const C_GETbOfflineCacheReady = (offlineCount: number, staticCount: number) => {
+  return offlineCount >= REQUIRED_OFFLINE_CACHE_ITEMS && staticCount >= MIN_STATIC_CACHE_ITEMS;
+};
+
+const C_GETnJwtExpiryMinutes = (token: string): number | null => {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) {
+      return null;
+    }
+
+    const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const paddedPayload = normalizedPayload.padEnd(Math.ceil(normalizedPayload.length / 4) * 4, "=");
+    const decoded = JSON.parse(atob(paddedPayload)) as { exp?: unknown };
+
+    return typeof decoded.exp === "number" ? Math.floor(decoded.exp / 60) : null;
+  } catch {
+    return null;
+  }
+};
 
 export default function Login() {
   const router = useRouter();
@@ -26,12 +58,17 @@ export default function Login() {
   const [oBranchInfo, setBranchInfo] = useState<BranchInfo[]>([]);
   const [tCompName, setCompName] = useState("");
   const [tUrlImg, setUrlImg] = useState("");
+  const tServerTokenRef = useRef("");
   const VERSION = process.env.NEXT_PUBLIC_VERSION as string;
 
   const { workboxCount, staticCount, isReady } = usePWACacheStatus();
   const [showWrench, setShowWrench] = useState(false);
 
   const [showOfflineText, setShowOfflineText] = useState(true);
+
+  useEffect(() => {
+    C_SYNCxDatabasePartFromUrl();
+  }, []);
 
   useEffect(() => {
     const checkVersion = async () => {
@@ -52,7 +89,11 @@ export default function Login() {
           }
 
           // ล้าง localStorage/sessionStorage
+          const databaseSettings = C_GEToDatabaseSettings();
           localStorage.clear();
+          if (databaseSettings.part || databaseSettings.database) {
+            C_SEToDatabaseSettings(databaseSettings.part, databaseSettings.database);
+          }
           // อัปเดต version ใหม่
           localStorage.setItem("app_version", version);
 
@@ -71,7 +112,7 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
-    if (workboxCount === 9 && staticCount >= 25) {
+    if (C_GETbOfflineCacheReady(workboxCount, staticCount)) {
       setShowOfflineText(true);
       const timer = setTimeout(() => setShowOfflineText(false), 5000);
       return () => clearTimeout(timer);
@@ -92,9 +133,7 @@ export default function Login() {
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
-        // .register("/sw.js")
-        .register(`${process.env.NEXT_PUBLIC_BASE_PATH}/sw.js?basePath=${process.env.NEXT_PUBLIC_BASE_PATH}`)
+      C_REGxServiceWorkerForActivePart()
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
 
@@ -130,15 +169,15 @@ export default function Login() {
             const cache = await caches.open(cacheName);
             const requests = await cache.keys();
 
-            if (cacheName.startsWith('workbox-precache')) {
-              workboxCount = requests.length;
+            if (cacheName.startsWith('adapos-offline') || cacheName.startsWith('workbox-precache')) {
+              workboxCount += requests.length;
             }
             if (cacheName.startsWith('static-resources')) {
-              staticCount = requests.length;
+              staticCount += requests.length;
             }
           }
 
-          const isReady = (workboxCount === 9 && staticCount >= 25);
+          const isReady = C_GETbOfflineCacheReady(workboxCount, staticCount);
           setStatus({ workboxCount, staticCount, isReady });
         } catch (error) {
           console.error('❌ ตรวจสอบ cache ผิดพลาด:', error);
@@ -197,13 +236,13 @@ export default function Login() {
       }
     }
     console.log("login แล้ว");
-    router.push("/main");
+    window.location.href = C_GETtPartUrl("/main");
 
   }, [router]);
 
   const C_SETxToken = (token: string) => {
     const nExpToken = 24 * 60; // เพิ่มเวลาเป็น 24 ชั่วโมง (1440 นาที) สำหรับการใช้งานระยะยาว
-    const tokenExpiry = Math.floor(Date.now() / 1000 / 60) + nExpToken; // แปลงเวลาปัจจุบันเป็นนาที และเพิ่มเวลาหมดอายุ
+    const tokenExpiry = C_GETnJwtExpiryMinutes(token) || Math.floor(Date.now() / 1000 / 60) + nExpToken;
     localStorage.setItem("session_token", token);
     localStorage.setItem("session_expiry", tokenExpiry.toString()); // เก็บเวลาในหน่วยนาที
     localStorage.setItem("last_activity", Date.now().toString()); // เก็บเวลาล่าสุดที่ใช้งาน
@@ -229,13 +268,22 @@ export default function Login() {
     }
 
     console.log("🟢 Online Mode: Validating User via API");
-    const userResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectUsrLogin`, {
+    const userResponse = await fetch(C_GETtPartUrl("/api/query/selectUsrLogin"), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders() },
       body: JSON.stringify({ username, password }),
     });
     if (!userResponse.ok) return false;
-    const { user } = await userResponse.json();
+    const { user, token } = await userResponse.json();
+
+    if (!Array.isArray(user) || user.length === 0) {
+      return false;
+    }
+
+    if (token) {
+      tServerTokenRef.current = token;
+      C_SETxToken(token);
+    }
 
     if (user.length > 1) {
 
@@ -266,9 +314,9 @@ export default function Login() {
       else {
         if (user[0].FTAgnCode) {
           console.log("🟢 Online Mode: Validating User via API");
-          const BchResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectBchByAgn`, {
+          const BchResponse = await fetch(C_GETtPartUrl("/api/query/selectBchByAgn"), {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders() },
             body: JSON.stringify({ FTAgnCode: user[0].FTAgnCode }), // ส่งค่า FTAgnCode ไปยัง API
           });
           if (!BchResponse.ok) return false;
@@ -332,18 +380,18 @@ export default function Login() {
           console.log("✅User 009 ");
           console.log("🟢 Online Mode: Validating User via API");
           // const BchResponse = await fetch("/api/query/selectBchAll", {
-          const BchResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectBchAll`, {
+          const BchResponse = await fetch(C_GETtPartUrl("/api/query/selectBchAll"), {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders() },
 
           });
 
           if (!BchResponse.ok) return false;
           const { bch } = await BchResponse.json();
 
-          const CompResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectCompName`, {
+          const CompResponse = await fetch(C_GETtPartUrl("/api/query/selectCompName"), {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders() },
           });
           if (!CompResponse.ok) return false;
           const { comp } = await CompResponse.json();
@@ -414,9 +462,9 @@ export default function Login() {
   const C_PRCxSyncConfig = async (oDatabase: IDBDatabase) => {
     try {
       console.log("🔄 Syncing SysConfig...");
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectSysConfig`, {
+      const response = await fetch(C_GETtPartUrl("/api/query/selectSysConfig"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders() },
       });
 
       if (!response.ok) throw new Error("Failed to fetch SysConfig");
@@ -462,13 +510,13 @@ export default function Login() {
       }
 
       console.log("🔓 Generating token...");
-      const token = await C_GETtGenToken(tUsername);
+      const token = isOnline && tServerTokenRef.current ? tServerTokenRef.current : await C_GETtGenToken(tUsername);
       if (!token) {
         throw new Error("❌ Token Generation Failed");
       }
 
       C_SETxToken(token);
-      router.push("/main");
+      window.location.href = C_GETtPartUrl("/main");
 
       document.cookie = serialize("rememberedUsername", rememberMe ? tUsername : "", {
         maxAge: rememberMe ? 7 * 24 * 60 * 60 : -1,
@@ -540,13 +588,13 @@ export default function Login() {
       }
 
       console.log("🔓 Generating token...");
-      const token = await C_GETtGenToken(tUsername);
+      const token = isOnline && tServerTokenRef.current ? tServerTokenRef.current : await C_GETtGenToken(tUsername);
       if (!token) {
         throw new Error("❌ Token Generation Failed");
       }
 
       C_SETxToken(token);
-      router.push("/main");
+      window.location.href = C_GETtPartUrl("/main");
 
       document.cookie = serialize("rememberedUsername", rememberMe ? tUsername : "", {
         maxAge: rememberMe ? 7 * 24 * 60 * 60 : -1,
@@ -579,24 +627,28 @@ export default function Login() {
         const cache = await caches.open(cacheName);
         const requests = await cache.keys();
 
-        if (cacheName.startsWith('workbox-precache')) {
-          workboxCount = requests.length;
+        if (cacheName.startsWith('adapos-offline') || cacheName.startsWith('workbox-precache')) {
+          workboxCount += requests.length;
         }
 
         if (cacheName.startsWith('static-resources')) {
-          staticCount = requests.length;
+          staticCount += requests.length;
         }
       }
 
-      console.log(`📦 จำนวนไฟล์ workbox-precache: ${workboxCount}`);
+      console.log(`📦 จำนวนไฟล์ offline-cache: ${workboxCount}`);
       console.log(`📦 จำนวนไฟล์ static-resources: ${staticCount}`);
 
-      if (workboxCount === 9 && staticCount >= 25) {
+      if (C_GETbOfflineCacheReady(workboxCount, staticCount)) {
         alert('✅ พร้อมใช้งานออฟไลน์แล้ว! 🎉');
       } else {
         const missing = [];
-        if (workboxCount !== 9) missing.push(`workbox-precache (${workboxCount}/9)`);
-        if (staticCount < 25) missing.push(`static-resources (${staticCount}/25)`);
+        if (workboxCount < REQUIRED_OFFLINE_CACHE_ITEMS) {
+          missing.push(`offline-cache (${workboxCount}/${REQUIRED_OFFLINE_CACHE_ITEMS})`);
+        }
+        if (staticCount < MIN_STATIC_CACHE_ITEMS) {
+          missing.push(`static-resources (${staticCount}/${MIN_STATIC_CACHE_ITEMS})`);
+        }
 
         const confirmClear = confirm(`ไฟล์สำหรับ Offline ไม่ครบ: ${missing.join(', ')}\n\nคุณต้องการซ่อมแซมไฟล์และโหลดใหม่หรือไม่?`);
 
@@ -635,7 +687,7 @@ export default function Login() {
         <div className="text-white text-2xl font-bold flex items-center justify-center w-16 h-16 rounded-md">
           <Image
             // src="/icons/logoAda.png"
-            src={tUrlImg && tUrlImg !== "" ? tUrlImg : `${process.env.NEXT_PUBLIC_BASE_PATH}/icons/logoAda.png`}
+            src={tUrlImg && tUrlImg !== "" ? tUrlImg : C_GETtPartUrl("/icons/logoAda.png")}
             alt="Logo"
             width={64}
             height={64}
@@ -702,7 +754,7 @@ export default function Login() {
           <div className="flex flex-col items-center justify-center">
 
             <div className="relative flex items-center justify-center">
-              {workboxCount === 9 && staticCount >= 25 ? (
+              {C_GETbOfflineCacheReady(workboxCount, staticCount) ? (
                 <div className="group relative">
                   <FaCheckCircle className="text-green-500" size={20} />
                   <div className="absolute left-8 bottom-1 bg-white text-gray-800 shadow p-2 rounded text-xs min-w-max whitespace-nowrap opacity-0 group-hover:opacity-100 transition">
@@ -724,19 +776,19 @@ export default function Login() {
                   )}
                   <div className="absolute left-8 bottom-1 bg-white text-gray-800 shadow p-2 rounded text-xs min-w-max whitespace-nowrap opacity-0 group-hover:opacity-100 transition">
                     ⚡ Offline ไม่พร้อมใช้งาน<br />
-                    workbox: {workboxCount}/9<br />
-                    static: {staticCount}/25
+                    offline: {workboxCount}/{REQUIRED_OFFLINE_CACHE_ITEMS}<br />
+                    static: {staticCount}/{MIN_STATIC_CACHE_ITEMS}
                   </div>
                 </div>
               )}
             </div>
-            <div className={`mt-1 text-xs text-center leading-snug ${workboxCount === 9 && staticCount >= 25
+            <div className={`mt-1 text-xs text-center leading-snug ${C_GETbOfflineCacheReady(workboxCount, staticCount)
               ? 'text-green-600'
               : showWrench
                 ? 'text-yellow-500'
                 : 'text-yellow-500'
               }`}>
-              {workboxCount === 9 && staticCount >= 25 ? (
+              {C_GETbOfflineCacheReady(workboxCount, staticCount) ? (
                 <>Offline Mode<br />พร้อมใช้งาน</>
               ) : showWrench ? (
                 <>Offline Mode<br />โหลดข้อมูลไม่สำเร็จ<br />กรุณาซ่อมแซมไฟล์</>
@@ -752,7 +804,7 @@ export default function Login() {
 
       <Image
         // src="/icons/logoAdaLogin.png"
-        src={tUrlImg && tUrlImg !== "" ? tUrlImg : `${process.env.NEXT_PUBLIC_BASE_PATH}/icons/logoAdaLogin.png`}
+        src={tUrlImg && tUrlImg !== "" ? tUrlImg : C_GETtPartUrl("/icons/logoAdaLogin.png")}
         alt="Logo"
         width={80}
         height={0}

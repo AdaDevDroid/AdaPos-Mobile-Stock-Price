@@ -248,10 +248,10 @@ export const C_DELxLimitData = async (oDb: IDBDatabase, ptHistoryName: string, p
 
   console.log("Limit Data: ",nLimitData)
 
-  const deletedRefDocs = await C_DELxHistoryData(oDb!!, ptHistoryName, nLimitData);
+  const deletedRefDocs = await C_DELxHistoryData(oDb, ptHistoryName, nLimitData);
   if (deletedRefDocs.length > 0) {
     console.log("รายการที่จะลบ", deletedRefDocs);
-    await C_DELxProductsByRefDocs(oDb!!, deletedRefDocs, ptDataList);
+    await C_DELxProductsByRefDocs(oDb, deletedRefDocs, ptDataList);
   }
 }
 

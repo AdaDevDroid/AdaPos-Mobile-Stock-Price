@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { C_CTDoConnectToDatabase } from '../../database/connect_db';
+import { C_GEToRequiredSession } from "../../auth/session";
 import { TsysConfig } from "@/models/tsys-config";
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
-    const oPool = await C_CTDoConnectToDatabase();
+    const { response } = C_GEToRequiredSession(req);
+    if (response) return response;
+
+    const oPool = await C_CTDoConnectToDatabase(req);
     const aResult = await oPool.request().query(`
       SELECT DISTINCT 
         FTSysCode,

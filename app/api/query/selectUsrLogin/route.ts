@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { C_CTDoConnectToDatabase } from '../../database/connect_db';
 import { CEncrypt } from '../../../../hooks/CEncrypt';
+import { C_GETtSessionToken } from "../../auth/session";
 
 interface User {
      FTUsrCode: string | null;
@@ -16,9 +17,14 @@ interface User {
 }
 
 export async function POST(req: Request) {
-     const { username, password } = await req.json();
      try {
-          const oPool = await C_CTDoConnectToDatabase();
+          const { username, password } = await req.json();
+
+          if (!username || !password) {
+               return new NextResponse(JSON.stringify({ message: "Username and password are required" }), { status: 400 });
+          }
+
+          const oPool = await C_CTDoConnectToDatabase(req);
           const aResult = await oPool.request()
                .input("username", username)
                .query(`
@@ -64,32 +70,27 @@ export async function POST(req: Request) {
                `);
                  
           const aData = aResult.recordset;
-          console.log(" 🟢 aData:", aData);
           const oUserData = aData.map((user: User) => ({ ...user }));
-          console.log(" 🟢 oUserData:", oUserData);
           
           const tEncryptedPassword = new CEncrypt("2").C_PWDtASE128Encrypt(password);
-        
-          console.log(" 🟢 tEncryptedPassword:", tEncryptedPassword);
 
-            const oUser = oUserData.filter(
+          const oUser = oUserData.filter(
                   (oUserData) => oUserData.FTUsrLoginPwd === tEncryptedPassword
-            );
-          console.log(" 🟢 oUser:", oUser);
+          );
 
-
-
-          if (!oUser) {
+          if (oUser.length === 0) {
                return new NextResponse(JSON.stringify({ message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }), { status: 401 });
           }
 
+          const token = C_GETtSessionToken(oUser[0]);
+
           return new NextResponse(
-               JSON.stringify({ message: "Query Success", user: oUser }),
+               JSON.stringify({ message: "Query Success", user: oUser, token }),
                { status: 200 }
           );
      } catch (error) {
-          console.log("Database error:", error);
-          return new NextResponse(JSON.stringify({ message: "เกิดข้อผิดพลาด", error: (error as Error).message }), {
+          console.error("Login error:", error);
+          return new NextResponse(JSON.stringify({ message: "เกิดข้อผิดพลาด" }), {
                status: 500,
           });
      }

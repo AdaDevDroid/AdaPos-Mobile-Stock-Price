@@ -12,15 +12,78 @@ const handle = app.getRequestHandler();
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "/AdaCheckStockSTD";
 const port = process.env.PORT || 3001;
+const basePart = basePath.replace(/^\/+/, "").split("/")[0] || "";
+const safePathPart = /^[A-Za-z0-9_-]+$/;
+const pageRoutes = new Set(["/", "/login", "/main", "/price-check", "/receive", "/setting", "/stock", "/transfer"]);
+
+const C_GEToDynamicPartRoute = (pathname) => {
+  if (!pathname || pathname === "/") {
+    return null;
+  }
+
+  const parts = pathname.split("/").filter(Boolean);
+  const part = parts[0] || "";
+  if (!part || part === basePart || part === "_next" || part === "api" || part === "setting") {
+    return null;
+  }
+
+  if (!safePathPart.test(part)) {
+    return null;
+  }
+
+  const routePath = parts.length > 1 ? `/${parts.slice(1).join("/")}` : "/";
+  const pagePath = routePath.replace(/\/$/, "") || "/";
+  if (
+    pageRoutes.has(pagePath) ||
+    routePath.startsWith("/api/") ||
+    routePath.startsWith("/_next/") ||
+    routePath.startsWith("/icons/") ||
+    routePath === "/favicon.ico" ||
+    routePath === "/manifest.json" ||
+    routePath === "/sw.js" ||
+    routePath === "/test-network.ts"
+  ) {
+    return { part, routePath };
+  }
+
+  return null;
+};
+
+const C_SETxDatabasePartHeaders = (req, part) => {
+  req.headers["x-forwarded-prefix"] = `/${part}`;
+  if (!req.headers["x-ada-db-part"]) {
+    req.headers["x-ada-db-part"] = part;
+  }
+};
+
+const C_SETxNoStoreHeaders = (res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+};
 
 app
   .prepare()
   .then(() => {
     const server = createServer((req, res) => {
       const parsedUrl = parse(req.url, true);
+      const dynamicPartRoute = C_GEToDynamicPartRoute(parsedUrl.pathname);
 
-      // จัดการกับ URLs ที่มี basePath
-      if (parsedUrl.pathname && parsedUrl.pathname.startsWith(basePath)) {
+      if (parsedUrl.pathname === `${basePath}/setting` || parsedUrl.pathname === `${basePath}/setting/`) {
+        res.writeHead(301, { Location: `/setting${parsedUrl.search || ""}` });
+        res.end();
+      } else if (parsedUrl.pathname === "/setting" || parsedUrl.pathname === "/setting/") {
+        const correctedUrl = parse(`${basePath}${parsedUrl.path}`, true);
+        handle(req, res, correctedUrl);
+      } else if (dynamicPartRoute && dynamicPartRoute.routePath === "/setting") {
+        res.writeHead(301, { Location: `/setting${parsedUrl.search || ""}` });
+        res.end();
+      } else if (dynamicPartRoute) {
+        C_SETxNoStoreHeaders(res);
+        C_SETxDatabasePartHeaders(req, dynamicPartRoute.part);
+        const correctedUrl = parse(`${basePath}${dynamicPartRoute.routePath}${parsedUrl.search || ""}`, true);
+        handle(req, res, correctedUrl);
+      } else if (parsedUrl.pathname && parsedUrl.pathname.startsWith(basePath)) {
         // URLs ที่มี basePath
         handle(req, res, parsedUrl);
       } else if (

@@ -11,11 +11,10 @@ import { C_GETtGenerateRandomID, C_INSxProducts, C_INSxStock, C_SETxFormattedDat
 import exportPurcaseInvoiceToExcel from "@/hooks/CTransferreceiptoutToExcel";
 import exportjustStockToExcel from "@/hooks/CAdjustStockToExcel";
 import exportTransferbetweenbranchToExcel from "@/hooks/CProducttransferwahouseToExcel";
-import { useRouter } from "next/navigation";
+import { C_GETtPartUrl, C_REGxServiceWorkerForActivePart } from "@/hooks/CDatabaseSettings";
 
 
 export default function MainPage() {
-  const router = useRouter();
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [oReceiveDataHistory, setReceiveDataHistory] = useState<History[]>([]);
   const [oTranferDataHistory, setTranferDataHistory] = useState<History[]>([]);
@@ -54,9 +53,7 @@ export default function MainPage() {
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
-        // .register("/sw.js")
-        .register(`${process.env.NEXT_PUBLIC_BASE_PATH}/sw.js?basePath=${process.env.NEXT_PUBLIC_BASE_PATH}`)
+      C_REGxServiceWorkerForActivePart()
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
     }
@@ -557,7 +554,7 @@ export default function MainPage() {
             <div
               key={index}
               className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-stretch border cursor-pointer"
-              onClick={() => router.push("/receive")}
+              onClick={() => { window.location.href = C_GETtPartUrl("/receive"); }}
             >
               {/* ซ้าย: เนื้อหา */}
               <div className="flex flex-col justify-between flex-1 pr-4">
@@ -596,7 +593,7 @@ export default function MainPage() {
             <div
               key={index}
               className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-stretch border cursor-pointer"
-              onClick={() => router.push("/transfer")}
+              onClick={() => { window.location.href = C_GETtPartUrl("/transfer"); }}
             >
               {/* ซ้าย: เนื้อหา */}
               <div className="flex flex-col justify-between flex-1 pr-4">
@@ -635,7 +632,7 @@ export default function MainPage() {
             <div
               key={index}
               className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-stretch border cursor-pointer"
-              onClick={() => router.push("/stock")}
+              onClick={() => { window.location.href = C_GETtPartUrl("/stock"); }}
             >
               {/* ซ้าย: เนื้อหา */}
               <div className="flex flex-col justify-between flex-1 pr-4">
