@@ -16,6 +16,8 @@ http://localhost:3001/AdaCheckStockSTD
 
 Runtime settings saved from `/setting` are stored in the `adapos_runtime` Docker volume at `/app/.runtime`, so they survive container recreate.
 
+Part/database setup guide: [docs/part-database-settings.md](docs/part-database-settings.md)
+
 Important environment variables:
 
 - `NEXT_PUBLIC_BASE_PATH` is used at image build time and runtime.

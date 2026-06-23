@@ -1,6 +1,6 @@
 {
   "name": "AdaPos+ Mobile Stock & Price",
-  "version": "0.1.0",
+  "version": "1.0.8",
   "private": true,
   "scripts": {
     "dev": "node -e \"process.env.NODE_ENV='development'; require('./server.js')\"",

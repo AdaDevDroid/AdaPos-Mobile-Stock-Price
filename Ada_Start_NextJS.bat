@@ -33,13 +33,13 @@ echo ================================================
 echo Starting/Restarting application via PM2...
 echo.
 
-pm2 describe "%APP_NAME%" >nul 2>&1
+call pm2 describe "%APP_NAME%" >nul 2>&1
 if errorlevel 1 (
     echo PM2 process "%APP_NAME%" not found. Starting it for the first time...
-    pm2 start "%ENTRY_FILE%" --name "%APP_NAME%" --time --cwd "%CD%"
+    call pm2 start "%ENTRY_FILE%" --name "%APP_NAME%" --time --cwd "%CD%"
 ) else (
     echo PM2 process "%APP_NAME%" found. Restarting with updated environment...
-    pm2 restart "%APP_NAME%" --update-env
+    call pm2 restart "%APP_NAME%" --update-env
 )
 
 if errorlevel 1 (
@@ -53,7 +53,7 @@ if errorlevel 1 (
 
 echo.
 echo Saving process list to memory...
-pm2 save
+call pm2 save
 if errorlevel 1 (
     echo.
     echo WARNING: pm2 save failed. The app may be running, but PM2 startup memory was not saved.
@@ -63,7 +63,7 @@ echo.
 echo ================================================
 echo Application Status:
 echo.
-pm2 list
+call pm2 list
 
 echo.
 echo Process has been handed over to PM2. You can now close this window.

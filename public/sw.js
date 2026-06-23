@@ -1,4 +1,4 @@
-const VERSION = "1.0.7-offline-cache-2";
+const VERSION = "1.0.8-offline-cache-2";
 const serviceWorkerUrl = new URL(self.location.href);
 const fallbackBasePath = serviceWorkerUrl.pathname.replace(/\/sw\.js$/, "") || "/AdaCheckStockSTD";
 const basePathParam = serviceWorkerUrl.searchParams.get("basePath") || fallbackBasePath;

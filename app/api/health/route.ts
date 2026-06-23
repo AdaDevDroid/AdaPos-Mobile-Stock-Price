@@ -15,7 +15,7 @@ export async function GET() {
     return NextResponse.json({
       status: 'healthy',
       timestamp: currentTime,
-      version: process.env.NEXT_PUBLIC_VERSION || '0.1.0',
+      version: process.env.NEXT_PUBLIC_VERSION || '1.0.8',
       basePath: process.env.NEXT_PUBLIC_BASE_PATH || '/AdaCheckStockSTD',
       nextAutoRestart: nextRestart.toISOString(),
       timeUntilRestart: `${Math.floor((nextRestart.getTime() - now.getTime()) / (1000 * 60 * 60))}h ${Math.floor(((nextRestart.getTime() - now.getTime()) % (1000 * 60 * 60)) / (1000 * 60))}m`
