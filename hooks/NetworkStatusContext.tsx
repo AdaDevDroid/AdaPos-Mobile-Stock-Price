@@ -19,7 +19,7 @@ export const NetworkStatusProvider = ({ children }: { children: React.ReactNode 
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000);
           
-          const response = await fetch(C_GETtPartUrl("/test-network.ts"), {
+          const response = await fetch(C_GETtPartUrl("/api/health"), {
             method: "HEAD", 
             cache: "no-store",
             signal: controller.signal

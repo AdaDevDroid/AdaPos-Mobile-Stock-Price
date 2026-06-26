@@ -13,7 +13,23 @@ const handle = app.getRequestHandler();
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "/AdaCheckStockSTD";
 const port = process.env.PORT || 3001;
 const basePart = basePath.replace(/^\/+/, "").split("/")[0] || "";
-const safePathPart = /^[A-Za-z0-9_-]+$/;
+const safePathPart = /^[A-Za-z0-9._-]+$/;
+const reservedPathParts = new Set([
+  "_next",
+  "api",
+  "favicon.ico",
+  "icons",
+  "login",
+  "main",
+  "manifest.json",
+  "price-check",
+  "receive",
+  "setting",
+  "stock",
+  "sw.js",
+  "test-network.ts",
+  "transfer",
+]);
 const pageRoutes = new Set(["/", "/login", "/main", "/price-check", "/receive", "/setting", "/stock", "/transfer"]);
 
 const C_GEToDynamicPartRoute = (pathname) => {
@@ -23,7 +39,7 @@ const C_GEToDynamicPartRoute = (pathname) => {
 
   const parts = pathname.split("/").filter(Boolean);
   const part = parts[0] || "";
-  if (!part || part === basePart || part === "_next" || part === "api" || part === "setting") {
+  if (!part || part === basePart || reservedPathParts.has(part.toLowerCase())) {
     return null;
   }
 

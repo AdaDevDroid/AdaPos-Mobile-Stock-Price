@@ -28,6 +28,15 @@ const STATIC_URLS = [
   `${BASE_PATH}/icons/icon-512x512.png`,
 ];
 
+const putInCache = async (cacheName, request, response) => {
+  if (!response.ok) {
+    return;
+  }
+
+  const cache = await caches.open(cacheName);
+  await cache.put(request, response.clone());
+};
+
 const cacheUrls = async (cacheName, urls) => {
   const cache = await caches.open(cacheName);
 
@@ -95,20 +104,32 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  const cacheName = request.destination === "document" ? OFFLINE_CACHE_NAME : STATIC_CACHE_NAME;
+  if (request.destination === "document") {
+    event.respondWith(
+      fetch(request)
+        .then(async (networkResponse) => {
+          await putInCache(OFFLINE_CACHE_NAME, request, networkResponse);
+          return networkResponse;
+        })
+        .catch(async () => (
+          (await caches.match(request)) ||
+          (await caches.match(`${BASE_PATH}/login`)) ||
+          Response.error()
+        ))
+    );
+    return;
+  }
+
+  const cacheName = STATIC_CACHE_NAME;
 
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       const fetchAndCache = fetch(request)
         .then(async (networkResponse) => {
-          if (networkResponse.ok) {
-            const cache = await caches.open(cacheName);
-            await cache.put(request, networkResponse.clone());
-          }
-
+          await putInCache(cacheName, request, networkResponse);
           return networkResponse;
         })
-        .catch(() => cachedResponse);
+        .catch(() => cachedResponse || Response.error());
 
       return cachedResponse || fetchAndCache;
     })

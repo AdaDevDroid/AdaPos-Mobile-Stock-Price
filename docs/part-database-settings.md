@@ -134,7 +134,7 @@ https://mobile-check.makhamlab.com/AdaCheckStockAgn/login
 ใช้ได้เฉพาะ:
 
 ```text
-A-Z, a-z, 0-9, _, -
+A-Z, a-z, 0-9, ., _, -
 ```
 
 ตัวอย่างที่ถูกต้อง:
@@ -142,6 +142,7 @@ A-Z, a-z, 0-9, _, -
 ```text
 AdaCheckStockSTD
 AdaCheckStockAgn
+AdaPos5.0StoreBackSTDAgencyMobileCheckStock
 AdaCheckStock_UAT
 AdaCheckStock-Branch01
 ```

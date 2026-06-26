@@ -9,7 +9,7 @@ services:
       NODE_ENV: production
       PORT: ${PORT:-3001}
       NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/AdaCheckStockSTD}
-      NEXT_PUBLIC_VERSION: ${NEXT_PUBLIC_VERSION:-0.1.0}
+      NEXT_PUBLIC_VERSION: ${NEXT_PUBLIC_VERSION:-1.0.8}
     ports:
       - "${APP_PORT:-3001}:${PORT:-3001}"
     read_only: true

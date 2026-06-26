@@ -4,7 +4,7 @@ import { C_ISbValidSettingsAdmin } from "../admin";
 import { C_CLRxDatabasePools } from "../../database/connect_db";
 import { C_GEToRuntimeDatabaseSettings, SETTINGS_DIR, SETTINGS_PATH } from "../config";
 
-const SAFE_PART = /^[A-Za-z0-9_-]+$/;
+const SAFE_PART = /^[A-Za-z0-9._-]+$/;
 
 export async function POST(req: Request) {
   try {

@@ -8,9 +8,16 @@ export async function POST(req: Request) {
     const { response } = C_GEToRequiredSession(req);
     if (response) return response;
 
+    const configuredUrlObjectId = Number(process.env.PRICE_CHECK_URL_OBJECT_ID || "5");
+    const urlObjectId = Number.isInteger(configuredUrlObjectId) && configuredUrlObjectId > 0
+      ? configuredUrlObjectId
+      : 5;
+
     const oPool = await C_CTDoConnectToDatabase(req);
-    const aResult = await oPool.request().query(`
-      SELECT 
+    const aResult = await oPool.request()
+      .input("urlObjectId", urlObjectId)
+      .query(`
+      SELECT TOP 1
         FNUrlID,
         FTUrlRefID,
         FNUrlSeq,
@@ -25,7 +32,15 @@ export async function POST(req: Request) {
         FDCreateOn,
         FTCreateBy
       FROM TCNTUrlObject WITH (NOLOCK)
-      WHERE FNUrlID = 5;
+      WHERE FNUrlID = @urlObjectId
+         OR UPPER(FTUrlAddress) LIKE '%/API2PSMASTER/%'
+      ORDER BY
+        CASE
+          WHEN FNUrlID = @urlObjectId THEN 0
+          WHEN UPPER(FTUrlAddress) LIKE '%/API2PSMASTER/%' THEN 1
+          ELSE 2
+        END,
+        FNUrlID;
     `);
 
     const aData = aResult.recordset;

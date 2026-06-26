@@ -11,7 +11,7 @@ import {
   SETTINGS_PATH,
 } from "./config";
 
-const SAFE_PART = /^[A-Za-z0-9_-]+$/;
+const SAFE_PART = /^[A-Za-z0-9._-]+$/;
 const SAFE_DATABASE = /^[A-Za-z0-9_-]+$/;
 const SAFE_SERVER = /^[A-Za-z0-9._-]*$/;
 const RESERVED_PARTS = new Set([

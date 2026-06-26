@@ -8,6 +8,16 @@ export const C_GETtNormalizedPathPart = (part: string): string => {
 
 const BASE_PART = C_GETtNormalizedPathPart(BASE_PATH).split("/")[0] || "";
 const APP_ROUTE_PARTS = new Set(["login", "main", "price-check", "receive", "setting", "stock", "transfer"]);
+const RESERVED_PATH_PARTS = new Set([
+  "_next",
+  "api",
+  "favicon.ico",
+  "icons",
+  "manifest.json",
+  "sw.js",
+  "test-network.ts",
+  ...APP_ROUTE_PARTS,
+]);
 
 export const C_GETtNormalizedDatabaseName = (database: string): string => {
   return database.trim();
@@ -41,7 +51,7 @@ export const C_GETtPathPartFromPathname = (pathname: string): string => {
   const parts = pathname.split("/").filter(Boolean);
   const firstPart = parts[0] || "";
   const secondPart = parts[1] || "";
-  if (!firstPart || firstPart === "_next" || firstPart === "api" || firstPart === "setting") {
+  if (!firstPart || RESERVED_PATH_PARTS.has(firstPart.toLowerCase())) {
     return "";
   }
 

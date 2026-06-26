@@ -27,6 +27,7 @@ Important environment variables:
 - `/setting` saves runtime per-part database settings in `/app/.runtime/database-paths.json`; password values are stored server-side and are not returned in the settings list.
 - `SESSION_SECRET`, `SETTINGS_ADMIN_USER`, and `SETTINGS_ADMIN_PASSWORD` are required in production.
 - `PROMOTION_URL_ALLOWLIST` is required when promotion URLs point to private/internal hosts.
+- `PRICE_CHECK_URL_OBJECT_ID` optionally selects the preferred `TCNTUrlObject.FNUrlID` for price/promotion lookup; if it is missing, the app falls back to an `API2PSMaster` URL.
 
 Useful commands:
 
