@@ -11,11 +11,10 @@ import { C_GETtGenerateRandomID, C_INSxProducts, C_INSxStock, C_SETxFormattedDat
 import exportPurcaseInvoiceToExcel from "@/hooks/CTransferreceiptoutToExcel";
 import exportjustStockToExcel from "@/hooks/CAdjustStockToExcel";
 import exportTransferbetweenbranchToExcel from "@/hooks/CProducttransferwahouseToExcel";
-import { useRouter } from "next/navigation";
+import { C_GETtPartUrl, C_REGxServiceWorkerForActivePart } from "@/hooks/CDatabaseSettings";
 
 
 export default function MainPage() {
-  const router = useRouter();
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [oReceiveDataHistory, setReceiveDataHistory] = useState<History[]>([]);
   const [oTranferDataHistory, setTranferDataHistory] = useState<History[]>([]);
@@ -54,9 +53,7 @@ export default function MainPage() {
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
-        // .register("/sw.js")
-        .register(`${process.env.NEXT_PUBLIC_BASE_PATH}/sw.js?basePath=${process.env.NEXT_PUBLIC_BASE_PATH}`)
+      C_REGxServiceWorkerForActivePart()
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
     }
@@ -538,12 +535,12 @@ export default function MainPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col ">
       <div className="flex p-4 justify-between items-center shadow-sm text-gray-500">
         <span className="text-l ml-auto">ชื่อผู้ใช้งาน : {oUserInfo?.FTUsrName} </span>
       </div>
 
-      <div className="container mx-auto p-2 space-y-2">
+      <div className="container  p-2 space-y-2">
         <h1 className="text-xl font-bold mb-4 ps-2 text-gray-800">ประวัติการทำรายการล่าสุด</h1>
 
         {(oReceiveDataHistory.length === 0 && oTranferDataHistory.length === 0 && oStockDataHistory.length === 0 &&
@@ -557,7 +554,7 @@ export default function MainPage() {
             <div
               key={index}
               className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-stretch border cursor-pointer"
-              onClick={() => router.push("/receive")}
+              onClick={() => { window.location.href = C_GETtPartUrl("/receive"); }}
             >
               {/* ซ้าย: เนื้อหา */}
               <div className="flex flex-col justify-between flex-1 pr-4">
@@ -596,7 +593,7 @@ export default function MainPage() {
             <div
               key={index}
               className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-stretch border cursor-pointer"
-              onClick={() => router.push("/transfer")}
+              onClick={() => { window.location.href = C_GETtPartUrl("/transfer"); }}
             >
               {/* ซ้าย: เนื้อหา */}
               <div className="flex flex-col justify-between flex-1 pr-4">
@@ -635,7 +632,7 @@ export default function MainPage() {
             <div
               key={index}
               className="bg-white shadow-sm rounded-lg p-4 flex justify-between items-stretch border cursor-pointer"
-              onClick={() => router.push("/stock")}
+              onClick={() => { window.location.href = C_GETtPartUrl("/stock"); }}
             >
               {/* ซ้าย: เนื้อหา */}
               <div className="flex flex-col justify-between flex-1 pr-4">

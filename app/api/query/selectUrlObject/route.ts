@@ -1,12 +1,23 @@
 import { NextResponse } from "next/server";
 import { C_CTDoConnectToDatabase } from '../../database/connect_db';
+import { C_GEToRequiredSession } from "../../auth/session";
 import { TCNTUrlObject } from "@/models/url-object";
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
-    const oPool = await C_CTDoConnectToDatabase();
-    const aResult = await oPool.request().query(`
-      SELECT 
+    const { response } = C_GEToRequiredSession(req);
+    if (response) return response;
+
+    const configuredUrlObjectId = Number(process.env.PRICE_CHECK_URL_OBJECT_ID || "5");
+    const urlObjectId = Number.isInteger(configuredUrlObjectId) && configuredUrlObjectId > 0
+      ? configuredUrlObjectId
+      : 5;
+
+    const oPool = await C_CTDoConnectToDatabase(req);
+    const aResult = await oPool.request()
+      .input("urlObjectId", urlObjectId)
+      .query(`
+      SELECT TOP 1
         FNUrlID,
         FTUrlRefID,
         FNUrlSeq,
@@ -20,8 +31,16 @@ export async function POST() {
         FTLastUpdBy,
         FDCreateOn,
         FTCreateBy
-      FROM TCNTUrlObject
-      WHERE FNUrlID = 5;
+      FROM TCNTUrlObject WITH (NOLOCK)
+      WHERE FNUrlID = @urlObjectId
+         OR UPPER(FTUrlAddress) LIKE '%/API2PSMASTER/%'
+      ORDER BY
+        CASE
+          WHEN FNUrlID = @urlObjectId THEN 0
+          WHEN UPPER(FTUrlAddress) LIKE '%/API2PSMASTER/%' THEN 1
+          ELSE 2
+        END,
+        FNUrlID;
     `);
 
     const aData = aResult.recordset;

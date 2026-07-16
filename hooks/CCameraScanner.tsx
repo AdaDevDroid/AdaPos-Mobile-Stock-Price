@@ -1,23 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
-
+import { Html5Qrcode } from "html5-qrcode";
 
 export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
   const [bScanning, setIsScanning] = useState(false);
   const oHtml5QrCode = useRef<Html5Qrcode | null>(null);
   const oScannerRef = useRef<HTMLDivElement | null>(null);
+  const bStartingRef = useRef(false);
+  const bStoppingRef = useRef(false);
+  const bMountedRef = useRef(true);
+  const onScanRef = useRef(onScan);
 
   useEffect(() => {
-    return () => {
-      if (oHtml5QrCode.current) {
-        oHtml5QrCode.current.stop().then(() => {
-          console.log("📴 Scanner auto-stopped from hook cleanup");
-          setIsScanning(false);
-          oHtml5QrCode.current = null;
-        }).catch((err) => console.log("🚨 Failed to auto-stop:", err));
-      }
-    };
-  }, []);
+    onScanRef.current = onScan;
+  }, [onScan]);
 
   const C_GETxQrBoxSize = () => {
     const screenWidth = window.innerWidth;
@@ -26,20 +21,58 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
     return { width: 250, height: 150 }; // Mobile
   };
 
-  const C_PRCxStartScanner = async () => {
+  const C_PRCxStopScanner = async () => {
+    if (bStoppingRef.current || !oHtml5QrCode.current) return;
+
+    bStoppingRef.current = true;
+    const scanner = oHtml5QrCode.current;
+
     try {
-      if (bScanning && oHtml5QrCode.current) {
-        await oHtml5QrCode.current.stop();
-        console.log("📴 Scanner stopped");
-        setIsScanning(false);
+      await scanner.stop();
+      console.log("Scanner stopped");
+    } catch (err) {
+      console.log("Error stopping scanner:", err);
+    } finally {
+      try {
+        scanner.clear();
+      } catch (clearError) {
+        console.log("Error clearing scanner:", clearError);
+      }
+
+      if (oHtml5QrCode.current === scanner) {
         oHtml5QrCode.current = null;
+      }
+      if (bMountedRef.current) {
+        setIsScanning(false);
+      }
+      bStoppingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    bMountedRef.current = true;
+    return () => {
+      bMountedRef.current = false;
+      void C_PRCxStopScanner();
+    };
+  }, []);
+  const C_PRCxStartScanner = async () => {
+    let qrScanner: Html5Qrcode | null = null;
+
+    try {
+      if (bStartingRef.current || bStoppingRef.current) return;
+
+      if (bScanning && oHtml5QrCode.current) {
+        void C_PRCxStopScanner();
         return;
       }
-  
+
       if (!oScannerRef.current || oHtml5QrCode.current) return;
-  
-      const qrScanner = new Html5Qrcode("reader");
-  
+
+      bStartingRef.current = true;
+      qrScanner = new Html5Qrcode("reader");
+      oHtml5QrCode.current = qrScanner;
+
       await qrScanner.start(
         { facingMode: "environment" },
         {
@@ -47,71 +80,65 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
           qrbox: C_GETxQrBoxSize(),
         },
         (decodedText, decodedResult) => {
+          if (!bMountedRef.current) return;
+
           const formatName = decodedResult?.result?.format?.formatName;
-  
           const allowedFormats = ["EAN_13", "CODE_128", "CODE_39", "UPC_A", "UPC_E"];
-  
+
           if (formatName && allowedFormats.includes(formatName)) {
-            console.log("✅ Barcode Scanned:", decodedText, `(${formatName})`);
-            onScan(decodedText);
+            console.log("Barcode scanned:", decodedText, `(${formatName})`);
+            onScanRef.current(decodedText);
           } else {
-            console.log("❌ Ignored format:", formatName);
+            console.log("Ignored format:", formatName);
           }
         },
         (errorMessage) => {
-           console.log("Error:", errorMessage);
-        }
+          console.log("Scanner error:", errorMessage);
+        },
       );
-  
-  
-      console.log("✅ Scanner started");
-      oHtml5QrCode.current = qrScanner;
+
+      if (!bMountedRef.current || oHtml5QrCode.current !== qrScanner) {
+        try {
+          await qrScanner.stop();
+        } catch {
+          // The scanner may already have been stopped during cleanup.
+        }
+        qrScanner.clear();
+        return;
+      }
+
       setIsScanning(true);
+      console.log("Scanner started");
     } catch (error) {
-      console.log("🚨 Error starting scanner:", error);
+      if (qrScanner) {
+        try {
+          qrScanner.clear();
+        } catch {
+          // Ignore cleanup errors after a failed camera start.
+        }
+        if (oHtml5QrCode.current === qrScanner) {
+          oHtml5QrCode.current = null;
+        }
+      }
+      if (bMountedRef.current) {
+        setIsScanning(false);
+      }
+      console.log("Error starting scanner:", error);
+    } finally {
+      bStartingRef.current = false;
     }
   };
-
   const C_PRCxPauseScanner = () => {
     if (oHtml5QrCode.current) {
       oHtml5QrCode.current.pause(true);
-      console.log("⏸ Scanner paused");
+      console.log("Scanner paused");
     }
   };
 
   const C_PRCxResumeScanner = () => {
     if (oHtml5QrCode.current) {
       oHtml5QrCode.current.resume();
-      console.log("▶ Scanner resumed");
-    }
-  };
-
-  const C_PRCxStopScanner = () => {
-    if (oHtml5QrCode.current) {
-      oHtml5QrCode.current.stop().then(() => {
-        console.log("📴 Scanner stopped");
-        setIsScanning(false);
-        oHtml5QrCode.current = null;
-  
-        // ✅ ดึง video stream ที่กำลังใช้งานอยู่ แล้วปิดกล้อง
-        navigator.mediaDevices.enumerateDevices().then((devices) => {
-          devices
-            .filter((device) => device.kind === "videoinput")
-            .forEach(async (device) => {
-
-              navigator.mediaDevices.getUserMedia({ video: true })
-                .then((stream) => {
-                  stream.getTracks().forEach((track) => track.stop());
-                  console.log("📸 Camera stream stopped");
-                })
-                .catch((err) => {
-                  console.log("❌ Could not stop camera stream", err);
-                });
-                
-            });
-        });
-  
-      }).catch((err) => console.log("Error stopping scanner:", err));
+      console.log("Scanner resumed");
     }
   };
 

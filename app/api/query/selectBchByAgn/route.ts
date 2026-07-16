@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { C_CTDoConnectToDatabase } from '../../database/connect_db';
+import { C_GEToRequiredSession } from "../../auth/session";
 import { BranchInfo } from "@/models/models";
 
 
@@ -7,9 +8,12 @@ import { BranchInfo } from "@/models/models";
 
 
 export async function POST(req: Request) {
-     const { FTAgnCode} = await req.json();
      try {
-          const oPool = await C_CTDoConnectToDatabase();
+          const { response } = C_GEToRequiredSession(req);
+          if (response) return response;
+
+          const { FTAgnCode} = await req.json();
+          const oPool = await C_CTDoConnectToDatabase(req);
           const aResult = await oPool.request()
           .input('FTAgnCode', FTAgnCode)
           .query(`
@@ -20,7 +24,6 @@ export async function POST(req: Request) {
           `);
                  
           const aData = aResult.recordset;
-          console.log(" 🟢 aData: byagn", aData);
           const oBchData = aData.map((bch: BranchInfo) => ({ ...bch }));
 
           
@@ -32,7 +35,7 @@ export async function POST(req: Request) {
 
             return new NextResponse(JSON.stringify({ message: "Query Success", bch: oBchData }), { status: 200 });
      } catch (error) {
-          console.log("Database error:", error);
+          console.error("Database error:", error);
           return new NextResponse(JSON.stringify({ message: "เกิดข้อผิดพลาด", error: (error as Error).message }), {
                status: 500,
           });

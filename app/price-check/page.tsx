@@ -8,6 +8,7 @@ import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import { Price, Promotion, ProductData } from "@/models/price-check";
 import { C_GetoUrlObject } from "../../hooks/CConfig";
+import { C_GEToDatabaseHeaders, C_GETtPartUrl } from "@/hooks/CDatabaseSettings";
 
 const PricePromotionCheck = () => {
   useAuth();
@@ -44,22 +45,24 @@ const PricePromotionCheck = () => {
         return;
       }
 
-      const responseCode = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/query/selectUrlPdtCode`, {
+      const responseCode = await fetch(C_GETtPartUrl("/api/query/selectUrlPdtCode"), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...C_GEToDatabaseHeaders(),
         },
         body: JSON.stringify({ searchType, searchQuery, agnCode: oUserData.FTAgnCode })
       });
 
       if (!responseCode.ok) {
         alert('ไม่พบข้อมูลสินค้า');
-        throw new Error('Network response was not ok');
+        return;
       }
 
       const dataCode = await responseCode.json();
       if (!dataCode.data || dataCode.data.length === 0) {
-        throw new Error('No product code found');
+        alert('ไม่พบข้อมูลสินค้า');
+        return;
       }
 
       const pdtCode = dataCode.data[0].FTPdtCode;
@@ -76,10 +79,11 @@ const PricePromotionCheck = () => {
       // Get URL object
       const urlMaster = await C_GetoUrlObject();
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/call-promotion`, {
+      const response = await fetch(C_GETtPartUrl("/api/call-promotion"), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...C_GEToDatabaseHeaders(),
         },
         body: JSON.stringify({
           ...pdtData,
@@ -89,11 +93,13 @@ const PricePromotionCheck = () => {
 
       if (!response.ok) {
         alert('ไม่พบข้อมูลสินค้า');
+        return;
       }
 
       const data = await response.json();
       if (!data.roItem) {
         alert('ไม่พบข้อมูลสินค้า');
+        return;
       }
       setProductData(data.roItem);
     } catch (error) {
@@ -119,7 +125,7 @@ const PricePromotionCheck = () => {
   );
 
   return (
-    <div className="p-4 ms-1 mx-auto bg-white" >
+    <div className="p-4 ms-1  bg-white" >
       <div className="flex flex-col items-start md:items-center pb-6">
 
         {/* Page Title */}

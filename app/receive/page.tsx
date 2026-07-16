@@ -14,6 +14,7 @@ import HistoryModal from "@/components/HistoryModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
 import { C_GETtGenerateRandomID, C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
 import RepeatModal from "@/components/RepeatModal";
+import { C_REGxServiceWorkerForActivePart } from "@/hooks/CDatabaseSettings";
 
 
 export default function Receive() {
@@ -59,9 +60,7 @@ export default function Receive() {
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
-        // .register("/sw.js")
-        .register(`${process.env.NEXT_PUBLIC_BASE_PATH}/sw.js?basePath=${process.env.NEXT_PUBLIC_BASE_PATH}`)
+      C_REGxServiceWorkerForActivePart()
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
     }
@@ -372,7 +371,7 @@ export default function Receive() {
       return;
     }
 
-    if (!ptBarcode || !tQty) {
+    if (!ptBarcode || !ptQty) {
       alert("กรุณากรอกบาร์โค้ด หรือจำนวนให้ครบถ้วน");
       return;
     }
@@ -598,7 +597,7 @@ export default function Receive() {
 
 
   return (
-    <div className="p-4 ms-1 mx-auto bg-white" onClick={C_SETxCloseDropdown}>
+    <div className="p-4 ms-1  bg-white" onClick={C_SETxCloseDropdown}>
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
         <div className="flex flex-row w-full py-2">
           {/* หัวข้อ */}
