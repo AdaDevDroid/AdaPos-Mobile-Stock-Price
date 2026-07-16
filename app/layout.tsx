@@ -41,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     if (storedValue === null && window.innerWidth >= 768) {
       setIsSidebarOpen(true);
     } else {
-      setIsSidebarOpen(storedValue ? JSON.parse(storedValue) : false);
+      setIsSidebarOpen(storedValue === "true");
     }
   }, []);
 

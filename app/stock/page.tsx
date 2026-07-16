@@ -264,7 +264,7 @@ export default function Stock() {
   const C_ADDxProduct = (ptBarcode: string, ptQty: string) => {
 
 
-    if (!ptBarcode || !quantity) {
+    if (!ptBarcode || !ptQty) {
       alert("❌ กรุณากรอกข้อมูลให้ครบ");
       return;
     }

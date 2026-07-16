@@ -10,6 +10,9 @@ const PASSWORD_DB = process.env.PASSWORD_DB as string;
 const SERVER_DB = process.env.SERVER_DB as string;
 const PORT_DB = parseInt(process.env.PORT_DB as string, 10);
 const NAME_DB = process.env.NAME_DB as string;
+const DEFAULT_BASE_PART = (process.env.NEXT_PUBLIC_BASE_PATH || "/AdaCheckStockSTD")
+  .replace(/^\/+/, "")
+  .split("/")[0] || "";
 
 type SqlPool = InstanceType<typeof sql.ConnectionPool>;
 
@@ -47,6 +50,10 @@ const C_GEToDatabaseSetting = (request?: Request): DatabaseConnectionSetting => 
     if (setting) {
       return setting;
     }
+  }
+
+  if (pathPart && pathPart !== DEFAULT_BASE_PART) {
+    throw new Error(`Database mapping for "${pathPart}" is not configured`);
   }
 
   return { database: NAME_DB };

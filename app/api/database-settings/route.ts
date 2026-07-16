@@ -12,9 +12,14 @@ import {
 } from "./config";
 
 const SAFE_PART = /^[A-Za-z0-9._-]+$/;
-const SAFE_DATABASE = /^[A-Za-z0-9_-]+$/;
+const SAFE_DATABASE = /^[A-Za-z0-9._-]+$/;
 const SAFE_SERVER = /^[A-Za-z0-9._-]*$/;
 const RESERVED_PARTS = new Set([
+  ".",
+  "..",
+  "__proto__",
+  "constructor",
+  "prototype",
   "_next",
   "api",
   "favicon.ico",

@@ -1,7 +1,18 @@
 import { History, Product, UserInfo, SysConfig } from "@/models/models"
+import { C_GETtActiveDatabasePart, SESSION_PART_STORAGE_KEY } from "@/hooks/CDatabaseSettings";
+
+const LEGACY_DATABASE_PART_STORAGE_KEY = "ada_legacy_db_part";
 
 export const C_PRCxOpenIndexedDB = async () => {
-  const DB_NAME = "AdaDB";
+  const activePart = C_GETtActiveDatabasePart();
+  let legacyDatabasePart = localStorage.getItem(LEGACY_DATABASE_PART_STORAGE_KEY);
+  if (!legacyDatabasePart) {
+    legacyDatabasePart = activePart;
+    localStorage.setItem(LEGACY_DATABASE_PART_STORAGE_KEY, activePart);
+  }
+
+  const safePart = activePart.replace(/[^A-Za-z0-9._-]/g, "_") || "default";
+  const DB_NAME = activePart === legacyDatabasePart ? "AdaDB" : `AdaDB_${safePart}`;
   const DB_VERSION = 18;
 
   const shouldResetDB = async (): Promise<boolean> => {
@@ -38,6 +49,7 @@ export const C_PRCxOpenIndexedDB = async () => {
           if (localStorage.getItem("session_token")) {
             localStorage.removeItem("session_token");
             localStorage.removeItem("session_expiry");
+            localStorage.removeItem(SESSION_PART_STORAGE_KEY);
             localStorage.removeItem("sidebarOpen");
           };
           console.log("✅ Logout ผ่าน API สำเร็จ");

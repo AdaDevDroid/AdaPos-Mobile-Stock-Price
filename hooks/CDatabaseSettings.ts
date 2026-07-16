@@ -1,5 +1,6 @@
 export const DATABASE_PART_STORAGE_KEY = "ada_db_part";
 export const DATABASE_NAME_STORAGE_KEY = "ada_db_name";
+export const SESSION_PART_STORAGE_KEY = "session_part";
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "/AdaCheckStockSTD";
 
 export const C_GETtNormalizedPathPart = (part: string): string => {
@@ -9,6 +10,11 @@ export const C_GETtNormalizedPathPart = (part: string): string => {
 const BASE_PART = C_GETtNormalizedPathPart(BASE_PATH).split("/")[0] || "";
 const APP_ROUTE_PARTS = new Set(["login", "main", "price-check", "receive", "setting", "stock", "transfer"]);
 const RESERVED_PATH_PARTS = new Set([
+  ".",
+  "..",
+  "__proto__",
+  "constructor",
+  "prototype",
   "_next",
   "api",
   "favicon.ico",
@@ -138,14 +144,14 @@ export const C_GETtPartUrl = (path: string): string => {
   return `${activeBasePath}${normalizedPath}`;
 };
 
-export const C_GEToDatabaseHeaders = (): Record<string, string> => {
+export const C_GEToDatabaseHeaders = (tokenOverride?: string): Record<string, string> => {
   if (typeof window === "undefined") {
     return {};
   }
 
   const headers: Record<string, string> = {};
   const part = C_GETtActiveDatabasePart();
-  const token = localStorage.getItem("session_token");
+  const token = tokenOverride || localStorage.getItem("session_token");
 
   if (part) {
     headers["x-ada-db-part"] = part;

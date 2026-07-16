@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { FaSignOutAlt } from "react-icons/fa";
 import { C_PRCxOpenIndexedDB, C_GETxUserData } from "@/hooks/CIndexedDB";
 import { UserInfo } from "@/models/models";
-import { C_GETtPartUrl } from "@/hooks/CDatabaseSettings";
+import { C_GETtPartUrl, SESSION_PART_STORAGE_KEY } from "@/hooks/CDatabaseSettings";
 
 export default function MobileHeader() {
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -25,6 +25,7 @@ export default function MobileHeader() {
     try {
       localStorage.removeItem("session_token");
       localStorage.removeItem("session_expiry");
+      localStorage.removeItem(SESSION_PART_STORAGE_KEY);
       localStorage.removeItem("sidebarOpen");
       console.log("✅ Logout สำเร็จ");
     } catch (error) {

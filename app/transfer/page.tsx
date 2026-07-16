@@ -218,7 +218,7 @@ export default function Transfer() {
   {/* เพิ่มสินค้า */ }
   const C_ADDxProduct = (barcode: string, ptQty: string) => {
 
-    if (!barcode || !quantity) {
+    if (!barcode || !ptQty) {
       alert("กรุณากรอกบาร์โค้ด หรือจำนวนให้ครบถ้วน");
       return;
     }

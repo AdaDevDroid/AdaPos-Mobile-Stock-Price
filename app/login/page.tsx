@@ -12,15 +12,18 @@ import { UserInfo, BranchInfo } from "@/models/models";
 import { FaWrench, FaCheckCircle, FaSpinner } from "react-icons/fa";
 import {
   C_GEToDatabaseHeaders,
+  C_GETtActiveDatabasePart,
   C_GEToDatabaseSettings,
   C_GETtPartUrl,
   C_REGxServiceWorkerForActivePart,
   C_SEToDatabaseSettings,
   C_SYNCxDatabasePartFromUrl,
+  SESSION_PART_STORAGE_KEY,
 } from "@/hooks/CDatabaseSettings";
 
 const REQUIRED_OFFLINE_CACHE_ITEMS = 9;
 const MIN_STATIC_CACHE_ITEMS = 3;
+const BRANCH_SELECTION_REQUIRED = "branch-selection-required";
 
 const C_GETbOfflineCacheReady = (offlineCount: number, staticCount: number) => {
   return offlineCount >= REQUIRED_OFFLINE_CACHE_ITEMS && staticCount >= MIN_STATIC_CACHE_ITEMS;
@@ -223,19 +226,22 @@ export default function Login() {
 
     const cachedToken = localStorage.getItem("session_token");
     const tokenExpiry = localStorage.getItem("session_expiry");
+    const sessionPart = localStorage.getItem(SESSION_PART_STORAGE_KEY);
+    const expiryMinutes = Number(tokenExpiry);
 
-    if (!cachedToken) {
-      console.log("ยังไม่ login");
+    if (
+      !cachedToken ||
+      !tokenExpiry ||
+      !Number.isFinite(expiryMinutes) ||
+      Math.floor(Date.now() / 1000 / 60) > expiryMinutes ||
+      sessionPart !== C_GETtActiveDatabasePart()
+    ) {
+      localStorage.removeItem("session_token");
+      localStorage.removeItem("session_expiry");
+      localStorage.removeItem(SESSION_PART_STORAGE_KEY);
       return;
     }
-    if (tokenExpiry) {
-      const nowMinutes = Math.floor(Date.now() / 1000 / 60); // แก้ไขการคำนวณให้ถูกต้อง
-      console.log(tokenExpiry, nowMinutes)
-      if (nowMinutes > Number(tokenExpiry)) {
-        return;
-      }
-    }
-    console.log("login แล้ว");
+
     window.location.href = C_GETtPartUrl("/main");
 
   }, [router]);
@@ -245,226 +251,127 @@ export default function Login() {
     const tokenExpiry = C_GETnJwtExpiryMinutes(token) || Math.floor(Date.now() / 1000 / 60) + nExpToken;
     localStorage.setItem("session_token", token);
     localStorage.setItem("session_expiry", tokenExpiry.toString()); // เก็บเวลาในหน่วยนาที
+    localStorage.setItem(SESSION_PART_STORAGE_KEY, C_GETtActiveDatabasePart());
     localStorage.setItem("last_activity", Date.now().toString()); // เก็บเวลาล่าสุดที่ใช้งาน
     console.log("✅ Token Stored with Expiry:", new Date(tokenExpiry * 60 * 1000).toLocaleString()); // แปลงกลับเป็นมิลลิวินาทีเพื่อแสดงผล
   };
 
   const C_PRCbCheckUser = async (username: string, password: string, isOnline: boolean) => {
     if (!isOnline) {
-      console.log("🔴 Offline Mode: Validating User from IndexedDB");
       if (!oDatabase) {
         throw new Error("Database is not initialized");
       }
-      const oUserData = await C_GETxUserData(oDatabase);
-      console.log("oUserData:", oUserData);
 
+      const oUserData = await C_GETxUserData(oDatabase);
       const encryptedPassword = new CEncrypt("2").C_PWDtASE128Encrypt(password);
-      console.log("oUserData:", oUserData);
-      return (
+      return Boolean(
         oUserData &&
-        oUserData.FTUsrLogin?.toLowerCase() === tUsername.toLowerCase() &&
+        oUserData.FTUsrLogin?.toLowerCase() === username.toLowerCase() &&
         oUserData.FTUsrLoginPwd === encryptedPassword
       );
     }
 
-    console.log("🟢 Online Mode: Validating User via API");
     const userResponse = await fetch(C_GETtPartUrl("/api/query/selectUsrLogin"), {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders() },
+      headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders(tServerTokenRef.current) },
       body: JSON.stringify({ username, password }),
     });
     if (!userResponse.ok) return false;
-    const { user, token } = await userResponse.json();
 
-    if (!Array.isArray(user) || user.length === 0) {
+    const { user, token } = await userResponse.json();
+    if (!Array.isArray(user) || user.length === 0 || typeof token !== "string" || !token) {
       return false;
     }
 
-    if (token) {
-      tServerTokenRef.current = token;
-      C_SETxToken(token);
-    }
+    tServerTokenRef.current = token;
+    const primaryUser = user[0] as UserInfo;
 
-    if (user.length > 1) {
+    const C_STOxUserForBranch = async (branch: BranchInfo, companyName: string) => {
+      if (!branch?.FTBchCode) return false;
+      if (!oDatabase) {
+        throw new Error("Database is not initialized");
+      }
 
-      setUserInfo(user);
-      setBranchInfo(user);
-      setCompName(user[0].FTAgnName);
+      await C_INSxUserToDB(oDatabase, {
+        ...primaryUser,
+        FTBchCode: branch.FTBchCode,
+        FTBchName: branch.FTBchName,
+        FTAgnName: companyName || primaryUser.FTAgnName,
+      });
+      return true;
+    };
+
+    const C_SHWxBranchSelection = (branches: BranchInfo[], companyName: string) => {
+      setUserInfo(user as UserInfo[]);
+      setBranchInfo(branches);
+      setCompName(companyName);
       setIsBranchOpen(true);
+      return BRANCH_SELECTION_REQUIRED;
+    };
 
-    } else {
-      if (user[0].FTBchCode) {
-        if (oDatabase) {
-          await C_INSxUserToDB(oDatabase, {
-            FTUsrCode: user[0].FTUsrCode,
-            FTUsrLogin: user[0].FTUsrLogin,
-            FTUsrLoginPwd: user[0].FTUsrLoginPwd,
-            FTUsrName: user[0].FTUsrName,
-            FTBchCode: user[0].FTBchCode,
-            FTBchName: user[0].FTBchName,
-            FTAgnCode: user[0].FTAgnCode,
-            FTAgnName: user[0].FTAgnName,
-            FTMerCode: user[0].FTMerCode,
-            FTImgObj: user[0].FTImgObj,
-          });
-        }
-        console.log("✅ User validated & stored locally.");
-        return true;
-      }
-      else {
-        if (user[0].FTAgnCode) {
-          console.log("🟢 Online Mode: Validating User via API");
-          const BchResponse = await fetch(C_GETtPartUrl("/api/query/selectBchByAgn"), {
-            method: "POST",
-            headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders() },
-            body: JSON.stringify({ FTAgnCode: user[0].FTAgnCode }), // ส่งค่า FTAgnCode ไปยัง API
-          });
-          if (!BchResponse.ok) return false;
-          const { bch } = await BchResponse.json();
-          if (bch.length > 1) {
-            setUserInfo(user);
-            setBranchInfo(bch);
-            setCompName(user[0].FTAgnName);
-            setIsBranchOpen(true);
-          }
-          else {
-            if (bch[0].FTBchCode) {
-              if (oDatabase) {
-                await C_INSxUserToDB(oDatabase, {
-                  FTUsrCode: user[0].FTUsrCode,
-                  FTUsrLogin: user[0].FTUsrLogin,
-                  FTUsrLoginPwd: user[0].FTUsrLoginPwd,
-                  FTUsrName: user[0].FTUsrName,
-                  FTBchCode: bch[0].FTBchCode,
-                  FTBchName: bch[0].FTBchName,
-                  FTAgnCode: user[0].FTAgnCode,
-                  FTAgnName: user[0].FTAgnName,
-                  FTMerCode: user[0].FTMerCode,
-                  FTImgObj: user[0].FTImgObj,
-                });
-              }
-              console.log("✅ bch validated & stored locally.");
-              return true;
-            }
-          }
-
-          if (bch.length > 1) {
-            setUserInfo(user);
-            setBranchInfo(bch);
-            setCompName(user[0].FTAgnName);
-            setIsBranchOpen(true);
-          }
-          else {
-            if (bch[0].FTBchCode) {
-              if (oDatabase) {
-                await C_INSxUserToDB(oDatabase, {
-                  FTUsrCode: user[0].FTUsrCode,
-                  FTUsrLogin: user[0].FTUsrLogin,
-                  FTUsrLoginPwd: user[0].FTUsrLoginPwd,
-                  FTUsrName: user[0].FTUsrName,
-                  FTBchCode: bch[0].FTBchCode,
-                  FTBchName: bch[0].FTBchName,
-                  FTAgnCode: user[0].FTAgnCode,
-                  FTAgnName: user[0].FTAgnName,
-                  FTMerCode: user[0].FTMerCode,
-                  FTImgObj: user[0].FTImgObj,
-                });
-              }
-              console.log("✅ bch validated & stored locally.");
-              return true;
-            }
-          }
-
-        }
-        else {
-          console.log("✅User 009 ");
-          console.log("🟢 Online Mode: Validating User via API");
-          // const BchResponse = await fetch("/api/query/selectBchAll", {
-          const BchResponse = await fetch(C_GETtPartUrl("/api/query/selectBchAll"), {
-            method: "POST",
-            headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders() },
-
-          });
-
-          if (!BchResponse.ok) return false;
-          const { bch } = await BchResponse.json();
-
-          const CompResponse = await fetch(C_GETtPartUrl("/api/query/selectCompName"), {
-            method: "POST",
-            headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders() },
-          });
-          if (!CompResponse.ok) return false;
-          const { comp } = await CompResponse.json();
-
-          if (bch.length > 1) {
-
-          if (bch.length > 1) {
-
-            setUserInfo(user);
-            setCompName(comp);
-            setBranchInfo(bch);
-            setIsBranchOpen(true);
-          }
-          else {
-            if (bch[0].FTBchCode) {
-              if (oDatabase) {
-                await C_INSxUserToDB(oDatabase, {
-                  FTUsrCode: user[0].FTUsrCode,
-                  FTUsrLogin: user[0].FTUsrLogin,
-                  FTUsrLoginPwd: user[0].FTUsrLoginPwd,
-                  FTUsrName: user[0].FTUsrName,
-                  FTBchCode: bch[0].FTBchCode,
-                  FTBchName: bch[0].FTBchName,
-                  FTAgnCode: user[0].FTAgnCode,
-                  FTAgnName: user[0].FTAgnName,
-                  FTMerCode: user[0].FTMerCode,
-                  FTImgObj: user[0].FTImgObj,
-                });
-              }
-              console.log("✅ bch validated & stored locally.");
-              return true;
-            }
-          }
-            setUserInfo(user);
-            setCompName(comp);
-            setBranchInfo(bch);
-            setIsBranchOpen(true);
-          }
-          else {
-            if (bch[0].FTBchCode) {
-              if (oDatabase) {
-                await C_INSxUserToDB(oDatabase, {
-                  FTUsrCode: user[0].FTUsrCode,
-                  FTUsrLogin: user[0].FTUsrLogin,
-                  FTUsrLoginPwd: user[0].FTUsrLoginPwd,
-                  FTUsrName: user[0].FTUsrName,
-                  FTBchCode: bch[0].FTBchCode,
-                  FTBchName: bch[0].FTBchName,
-                  FTAgnCode: user[0].FTAgnCode,
-                  FTAgnName: user[0].FTAgnName,
-                  FTMerCode: user[0].FTMerCode,
-                  FTImgObj: user[0].FTImgObj,
-                });
-              }
-              console.log("✅ bch validated & stored locally.");
-              return true;
-            }
-          }
-
-        }
+    const assignedBranchMap = new Map<string, BranchInfo>();
+    for (const item of user as UserInfo[]) {
+      if (item.FTBchCode && !assignedBranchMap.has(item.FTBchCode)) {
+        assignedBranchMap.set(item.FTBchCode, {
+          FTBchCode: item.FTBchCode,
+          FTBchName: item.FTBchName,
+        });
       }
     }
 
+    const assignedBranches = Array.from(assignedBranchMap.values());
+    if (assignedBranches.length > 1) {
+      return C_SHWxBranchSelection(assignedBranches, primaryUser.FTAgnName);
+    }
+    if (assignedBranches.length === 1) {
+      return C_STOxUserForBranch(assignedBranches[0], primaryUser.FTAgnName);
+    }
 
+    let branchResponse: Response;
+    let companyName = primaryUser.FTAgnName || "";
+    if (primaryUser.FTAgnCode) {
+      branchResponse = await fetch(C_GETtPartUrl("/api/query/selectBchByAgn"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders(tServerTokenRef.current) },
+        body: JSON.stringify({ FTAgnCode: primaryUser.FTAgnCode }),
+      });
+    } else {
+      branchResponse = await fetch(C_GETtPartUrl("/api/query/selectBchAll"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders(tServerTokenRef.current) },
+      });
 
+      const companyResponse = await fetch(C_GETtPartUrl("/api/query/selectCompName"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders(tServerTokenRef.current) },
+      });
+      if (!companyResponse.ok) return false;
 
+      const companyData = await companyResponse.json();
+      companyName = typeof companyData.comp === "string" ? companyData.comp : "";
+    }
+
+    if (!branchResponse.ok) return false;
+    const branchData = await branchResponse.json();
+    const branches = Array.isArray(branchData.bch)
+      ? branchData.bch.filter((branch: BranchInfo) => Boolean(branch?.FTBchCode))
+      : [];
+
+    if (branches.length > 1) {
+      return C_SHWxBranchSelection(branches, companyName);
+    }
+    if (branches.length === 1) {
+      return C_STOxUserForBranch(branches[0], companyName);
+    }
+
+    return false;
   };
   const C_PRCxSyncConfig = async (oDatabase: IDBDatabase) => {
     try {
       console.log("🔄 Syncing SysConfig...");
       const response = await fetch(C_GETtPartUrl("/api/query/selectSysConfig"), {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders() },
+        headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders(tServerTokenRef.current) },
       });
 
       if (!response.ok) throw new Error("Failed to fetch SysConfig");
@@ -496,6 +403,10 @@ export default function Login() {
     try {
       const userValid = await C_PRCbCheckUser(tUsername, password, isOnline);
 
+      if (userValid === BRANCH_SELECTION_REQUIRED) {
+        return;
+      }
+
       if (!userValid) {
         setError("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
         return;
@@ -510,18 +421,18 @@ export default function Login() {
       }
 
       console.log("🔓 Generating token...");
-      const token = isOnline && tServerTokenRef.current ? tServerTokenRef.current : await C_GETtGenToken(tUsername);
+      const token = isOnline ? tServerTokenRef.current : await C_GETtGenToken(tUsername);
       if (!token) {
         throw new Error("❌ Token Generation Failed");
       }
 
       C_SETxToken(token);
-      window.location.href = C_GETtPartUrl("/main");
-
       document.cookie = serialize("rememberedUsername", rememberMe ? tUsername : "", {
         maxAge: rememberMe ? 7 * 24 * 60 * 60 : -1,
         path: "/",
       });
+
+      window.location.href = C_GETtPartUrl("/main");
 
     } catch (error) {
       console.log("⚠️ Login Error:", error);
@@ -556,60 +467,47 @@ export default function Login() {
   }
 
   const C_PRCxBchSelect = async (FTBchCode: string, FTBchName: string) => {
-    // alert("FTBchCode: " + FTBchCode + " FTBchName: " + FTBchName);
     setError("");
     setIsLoading(true);
 
-
-    if (oDatabase) {
-      await C_INSxUserToDB(oDatabase, {
-        FTUsrCode: oUserInfo[0]?.FTUsrCode,
-        FTUsrLogin: oUserInfo[0]?.FTUsrLogin,
-        FTUsrLoginPwd: oUserInfo[0]?.FTUsrLoginPwd,
-        FTUsrName: oUserInfo[0]?.FTUsrName,
-        FTBchCode: FTBchCode,
-        FTBchName: FTBchName,
-        FTAgnName: tCompName,
-        FTAgnCode: oUserInfo[0]?.FTAgnCode,
-        FTMerCode: oUserInfo[0]?.FTMerCode,
-        FTImgObj: oUserInfo[0]?.FTImgObj,
-      });
-    }
-    console.log("✅ User validated & stored locally.2");
-
-
     try {
-      if (isOnline) {
-        if (oDatabase) {
-          await C_PRCxSyncConfig(oDatabase);
-        } else {
-          throw new Error("Database is not initialized");
-        }
+      const selectedUser = oUserInfo[0];
+      if (!oDatabase || !selectedUser || !FTBchCode) {
+        throw new Error("Branch selection data is incomplete");
       }
 
-      console.log("🔓 Generating token...");
-      const token = isOnline && tServerTokenRef.current ? tServerTokenRef.current : await C_GETtGenToken(tUsername);
+      await C_INSxUserToDB(oDatabase, {
+        ...selectedUser,
+        FTBchCode,
+        FTBchName,
+        FTAgnName: tCompName || selectedUser.FTAgnName,
+      });
+
+      if (isOnline) {
+        await C_PRCxSyncConfig(oDatabase);
+      }
+
+      const token = isOnline ? tServerTokenRef.current : await C_GETtGenToken(tUsername);
       if (!token) {
-        throw new Error("❌ Token Generation Failed");
+        throw new Error("Token generation failed");
       }
 
       C_SETxToken(token);
-      window.location.href = C_GETtPartUrl("/main");
-
       document.cookie = serialize("rememberedUsername", rememberMe ? tUsername : "", {
         maxAge: rememberMe ? 7 * 24 * 60 * 60 : -1,
         path: "/",
       });
 
+      setIsBranchOpen(false);
+      window.location.href = C_GETtPartUrl("/main");
     } catch (error) {
-      console.log("⚠️ Login Error:", error);
-      setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
+      console.log("Branch selection error:", error);
+      setIsBranchOpen(false);
+      setError("เกิดข้อผิดพลาดในการเลือกสาขา กรุณาลองใหม่");
     } finally {
-      setError("");
       setIsLoading(false);
     }
   };
-
   async function checkPWACacheReady() {
     if (!('caches' in window)) {
       alert('❌ Browser นี้ไม่รองรับ Cache API');

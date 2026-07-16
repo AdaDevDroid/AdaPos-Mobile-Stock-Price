@@ -15,6 +15,11 @@ const port = process.env.PORT || 3001;
 const basePart = basePath.replace(/^\/+/, "").split("/")[0] || "";
 const safePathPart = /^[A-Za-z0-9._-]+$/;
 const reservedPathParts = new Set([
+  ".",
+  "..",
+  "__proto__",
+  "constructor",
+  "prototype",
   "_next",
   "api",
   "favicon.ico",
@@ -67,9 +72,7 @@ const C_GEToDynamicPartRoute = (pathname) => {
 
 const C_SETxDatabasePartHeaders = (req, part) => {
   req.headers["x-forwarded-prefix"] = `/${part}`;
-  if (!req.headers["x-ada-db-part"]) {
-    req.headers["x-ada-db-part"] = part;
-  }
+  req.headers["x-ada-db-part"] = part;
 };
 
 const C_SETxNoStoreHeaders = (res) => {
@@ -101,6 +104,7 @@ app
         handle(req, res, correctedUrl);
       } else if (parsedUrl.pathname && parsedUrl.pathname.startsWith(basePath)) {
         // URLs ที่มี basePath
+        C_SETxDatabasePartHeaders(req, basePart);
         handle(req, res, parsedUrl);
       } else if (
         parsedUrl.pathname &&

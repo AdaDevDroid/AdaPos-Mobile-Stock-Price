@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { C_CTDoConnectToDatabase } from '../../database/connect_db';
 import { CEncrypt } from '../../../../hooks/CEncrypt';
-import { C_GETtSessionToken } from "../../auth/session";
+import { C_GETtRequestDatabasePart, C_GETtSessionToken } from "../../auth/session";
 
 interface User {
      FTUsrCode: string | null;
@@ -82,7 +82,7 @@ export async function POST(req: Request) {
                return new NextResponse(JSON.stringify({ message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }), { status: 401 });
           }
 
-          const token = C_GETtSessionToken(oUser[0]);
+          const token = C_GETtSessionToken(oUser[0], C_GETtRequestDatabasePart(req));
 
           return new NextResponse(
                JSON.stringify({ message: "Query Success", user: oUser, token }),

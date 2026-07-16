@@ -10,9 +10,14 @@ import {
 } from "@/hooks/CDatabaseSettings";
 
 const SAFE_PART = /^[A-Za-z0-9._-]+$/;
-const SAFE_DATABASE = /^[A-Za-z0-9_-]+$/;
+const SAFE_DATABASE = /^[A-Za-z0-9._-]+$/;
 const SAFE_SERVER = /^[A-Za-z0-9._-]*$/;
 const RESERVED_PARTS = new Set([
+  ".",
+  "..",
+  "__proto__",
+  "constructor",
+  "prototype",
   "_next",
   "api",
   "favicon.ico",
@@ -139,7 +144,7 @@ export default function SettingPage() {
     setSaved("");
 
     if (!SAFE_PART.test(normalizedPart)) {
-      setError("พาร์ทใช้ได้เฉพาะตัวอักษร ตัวเลข _ และ -");
+      setError("พาร์ทใช้ได้เฉพาะตัวอักษร ตัวเลข จุด _ และ -");
       return;
     }
 
@@ -149,7 +154,7 @@ export default function SettingPage() {
     }
 
     if (!SAFE_DATABASE.test(normalizedDatabase)) {
-      setError("ฐานข้อมูลใช้ได้เฉพาะตัวอักษร ตัวเลข _ และ -");
+      setError("ฐานข้อมูลใช้ได้เฉพาะตัวอักษร ตัวเลข จุด _ และ -");
       return;
     }
 

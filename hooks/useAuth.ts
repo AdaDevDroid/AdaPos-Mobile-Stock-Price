@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { C_GETtPartUrl } from "@/hooks/CDatabaseSettings";
+import { C_GETtActiveDatabasePart, C_GETtPartUrl, SESSION_PART_STORAGE_KEY } from "@/hooks/CDatabaseSettings";
 
 export function useAuth() {
   useEffect(() => {
     const redirectToLogin = () => {
       localStorage.removeItem("session_token");
       localStorage.removeItem("session_expiry");
+      localStorage.removeItem(SESSION_PART_STORAGE_KEY);
       window.location.href = C_GETtPartUrl("/login");
     };
 
@@ -15,8 +16,9 @@ export function useAuth() {
       try {
         const cachedToken = localStorage.getItem("session_token");
         const tokenExpiry = localStorage.getItem("session_expiry");
+        const sessionPart = localStorage.getItem(SESSION_PART_STORAGE_KEY);
 
-        if (!cachedToken || !tokenExpiry) {
+        if (!cachedToken || !tokenExpiry || sessionPart !== C_GETtActiveDatabasePart()) {
           redirectToLogin();
           return;
         }

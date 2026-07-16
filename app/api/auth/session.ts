@@ -11,6 +11,7 @@ export type AdaSessionPayload = JwtPayload & {
   FTUsrCode: string;
   FTUsrLogin: string;
   FTAgnCode?: string | null;
+  FTDbPart: string;
 };
 
 const SESSION_TTL_SECONDS = 24 * 60 * 60;
@@ -28,12 +29,18 @@ const C_GETtSessionSecret = () => {
   return process.env.PASSWORD_DB || "AdaPos-Mobile-Stock-Price-Session";
 };
 
-export const C_GETtSessionToken = (user: SessionUser) => {
+export const C_GETtRequestDatabasePart = (request: Request): string => {
+  const selectedPath = request.headers.get("x-ada-db-part") || request.headers.get("x-forwarded-prefix") || "";
+  return selectedPath.replace(/^\/+/, "").split("/").filter(Boolean)[0] || "";
+};
+
+export const C_GETtSessionToken = (user: SessionUser, databasePart: string) => {
   return jwt.sign(
     {
       FTUsrCode: user.FTUsrCode || "",
       FTUsrLogin: user.FTUsrLogin || "",
       FTAgnCode: user.FTAgnCode || null,
+      FTDbPart: databasePart,
     },
     C_GETtSessionSecret(),
     { expiresIn: SESSION_TTL_SECONDS }
@@ -55,7 +62,12 @@ export const C_GEToSessionPayload = (request: Request): AdaSessionPayload | null
     }
 
     const session = payload as AdaSessionPayload;
-    if (!session.FTUsrCode || !session.FTUsrLogin) {
+    if (
+      !session.FTUsrCode ||
+      !session.FTUsrLogin ||
+      typeof session.FTDbPart !== "string" ||
+      session.FTDbPart !== C_GETtRequestDatabasePart(request)
+    ) {
       return null;
     }
 

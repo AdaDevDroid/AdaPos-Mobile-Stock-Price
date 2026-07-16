@@ -9,6 +9,10 @@ export const C_GetoUrlObject = async (): Promise<string> => {
       headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders() },
     });
 
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL object (${response.status})`);
+    }
+
     const data = await response.json();
     if (data.data && data.data.length > 0) {
       console.log('URL object:', data.data[0].FTUrlAddress);

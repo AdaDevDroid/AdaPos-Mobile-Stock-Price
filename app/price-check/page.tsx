@@ -56,12 +56,13 @@ const PricePromotionCheck = () => {
 
       if (!responseCode.ok) {
         alert('ไม่พบข้อมูลสินค้า');
-        throw new Error('Network response was not ok');
+        return;
       }
 
       const dataCode = await responseCode.json();
       if (!dataCode.data || dataCode.data.length === 0) {
-        throw new Error('No product code found');
+        alert('ไม่พบข้อมูลสินค้า');
+        return;
       }
 
       const pdtCode = dataCode.data[0].FTPdtCode;
@@ -92,11 +93,13 @@ const PricePromotionCheck = () => {
 
       if (!response.ok) {
         alert('ไม่พบข้อมูลสินค้า');
+        return;
       }
 
       const data = await response.json();
       if (!data.roItem) {
         alert('ไม่พบข้อมูลสินค้า');
+        return;
       }
       setProductData(data.roItem);
     } catch (error) {

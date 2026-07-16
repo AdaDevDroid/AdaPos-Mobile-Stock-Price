@@ -7,6 +7,12 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
   const oScannerRef = useRef<HTMLDivElement | null>(null);
   const bStartingRef = useRef(false);
   const bStoppingRef = useRef(false);
+  const bMountedRef = useRef(true);
+  const onScanRef = useRef(onScan);
+
+  useEffect(() => {
+    onScanRef.current = onScan;
+  }, [onScan]);
 
   const C_GETxQrBoxSize = () => {
     const screenWidth = window.innerWidth;
@@ -23,26 +29,36 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
 
     try {
       await scanner.stop();
-      scanner.clear();
       console.log("Scanner stopped");
     } catch (err) {
       console.log("Error stopping scanner:", err);
     } finally {
+      try {
+        scanner.clear();
+      } catch (clearError) {
+        console.log("Error clearing scanner:", clearError);
+      }
+
       if (oHtml5QrCode.current === scanner) {
         oHtml5QrCode.current = null;
       }
-      setIsScanning(false);
+      if (bMountedRef.current) {
+        setIsScanning(false);
+      }
       bStoppingRef.current = false;
     }
   };
 
   useEffect(() => {
+    bMountedRef.current = true;
     return () => {
+      bMountedRef.current = false;
       void C_PRCxStopScanner();
     };
   }, []);
-
   const C_PRCxStartScanner = async () => {
+    let qrScanner: Html5Qrcode | null = null;
+
     try {
       if (bStartingRef.current || bStoppingRef.current) return;
 
@@ -54,7 +70,8 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
       if (!oScannerRef.current || oHtml5QrCode.current) return;
 
       bStartingRef.current = true;
-      const qrScanner = new Html5Qrcode("reader");
+      qrScanner = new Html5Qrcode("reader");
+      oHtml5QrCode.current = qrScanner;
 
       await qrScanner.start(
         { facingMode: "environment" },
@@ -63,12 +80,14 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
           qrbox: C_GETxQrBoxSize(),
         },
         (decodedText, decodedResult) => {
+          if (!bMountedRef.current) return;
+
           const formatName = decodedResult?.result?.format?.formatName;
           const allowedFormats = ["EAN_13", "CODE_128", "CODE_39", "UPC_A", "UPC_E"];
 
           if (formatName && allowedFormats.includes(formatName)) {
             console.log("Barcode scanned:", decodedText, `(${formatName})`);
-            onScan(decodedText);
+            onScanRef.current(decodedText);
           } else {
             console.log("Ignored format:", formatName);
           }
@@ -78,16 +97,37 @@ export const CCameraScanner = (onScan: (ptDecodedText: string) => void) => {
         },
       );
 
-      oHtml5QrCode.current = qrScanner;
+      if (!bMountedRef.current || oHtml5QrCode.current !== qrScanner) {
+        try {
+          await qrScanner.stop();
+        } catch {
+          // The scanner may already have been stopped during cleanup.
+        }
+        qrScanner.clear();
+        return;
+      }
+
       setIsScanning(true);
       console.log("Scanner started");
     } catch (error) {
+      if (qrScanner) {
+        try {
+          qrScanner.clear();
+        } catch {
+          // Ignore cleanup errors after a failed camera start.
+        }
+        if (oHtml5QrCode.current === qrScanner) {
+          oHtml5QrCode.current = null;
+        }
+      }
+      if (bMountedRef.current) {
+        setIsScanning(false);
+      }
       console.log("Error starting scanner:", error);
     } finally {
       bStartingRef.current = false;
     }
   };
-
   const C_PRCxPauseScanner = () => {
     if (oHtml5QrCode.current) {
       oHtml5QrCode.current.pause(true);

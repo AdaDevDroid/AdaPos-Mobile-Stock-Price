@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { C_GETtPartUrl } from "@/hooks/CDatabaseSettings";
+import { C_GETtActiveDatabasePart, C_GETtPartUrl, SESSION_PART_STORAGE_KEY } from "@/hooks/CDatabaseSettings";
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
@@ -10,14 +10,16 @@ export default function Home() {
     const redirectToLogin = () => {
       localStorage.removeItem("session_token");
       localStorage.removeItem("session_expiry");
+      localStorage.removeItem(SESSION_PART_STORAGE_KEY);
       setLoading(false);
       window.location.replace(C_GETtPartUrl("/login"));
     };
 
     const cachedToken = localStorage.getItem("session_token");
     const tokenExpiry = localStorage.getItem("session_expiry");
+    const sessionPart = localStorage.getItem(SESSION_PART_STORAGE_KEY);
 
-    if (!cachedToken || !tokenExpiry) {
+    if (!cachedToken || !tokenExpiry || sessionPart !== C_GETtActiveDatabasePart()) {
       redirectToLogin();
       return;
     }

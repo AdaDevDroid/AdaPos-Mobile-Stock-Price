@@ -371,7 +371,7 @@ export default function Receive() {
       return;
     }
 
-    if (!ptBarcode || !tQty) {
+    if (!ptBarcode || !ptQty) {
       alert("กรุณากรอกบาร์โค้ด หรือจำนวนให้ครบถ้วน");
       return;
     }
