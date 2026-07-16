@@ -1,15 +1,17 @@
 // import { Product } from "@/models/models";
+import { C_GEToDatabaseHeaders, C_GETtPartUrl } from "@/hooks/CDatabaseSettings";
 
 export const C_GetoUrlObject = async (): Promise<string> => {
   try {
     
-    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/AdaCheckStockSTD';
-    const url = `${basePath}/api/query/selectUrlObject`;
-
-    const response = await fetch(url, {
+    const response = await fetch(C_GETtPartUrl("/api/query/selectUrlObject"), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders() },
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL object (${response.status})`);
+    }
 
     const data = await response.json();
     if (data.data && data.data.length > 0) {

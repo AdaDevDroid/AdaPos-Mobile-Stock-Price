@@ -1,31 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
+import mssql from "mssql";
 import { C_CTDoConnectToDatabase } from '../../database/connect_db';
+import { C_GEToRequiredSession } from "../../auth/session";
 
 
 export async function POST(req: NextRequest) {
     let newFTXthDocSeq = 0;
-    const { products, userInfo } = await req.json();
+    let transaction: mssql.Transaction | null = null;
     try {
+        const { session, response } = C_GEToRequiredSession(req);
+        if (response) return response;
+
+        const { products, userInfo } = await req.json();
+        const tUserCode = session?.FTUsrCode || userInfo?.FTUsrCode;
 
         if (!Array.isArray(products) || products.length === 0) {
             return NextResponse.json({ message: "Invalid Data" }, { status: 400 });
         }
 
-        const pool = await C_CTDoConnectToDatabase();
+        if (!tUserCode) {
+            return NextResponse.json({ message: "Invalid User" }, { status: 400 });
+        }
 
-        const res = await pool.request()
+        const pool = await C_CTDoConnectToDatabase(req);
+        transaction = new mssql.Transaction(pool);
+        await transaction.begin(mssql.ISOLATION_LEVEL.SERIALIZABLE);
+
+        const res = await new mssql.Request(transaction)
             .input("FTBchCode", products[0].FTBchCode)
             .input("FTAgnCode", products[0].FTAgnCode)
             .query(`
                 SELECT TOP 1 FTXthDocSeq
-                FROM TMBTDocDTTmp
+                FROM TMBTDocDTTmp WITH (UPDLOCK, HOLDLOCK)
                 WHERE FTBchCode = @FTBchCode
                   AND FTAgnCode = @FTAgnCode
                 ORDER BY TRY_CAST(FTXthDocSeq AS INT) DESC;
             `);
 
         newFTXthDocSeq = res?.recordset?.[0]?.FTXthDocSeq ? parseInt(res.recordset[0].FTXthDocSeq, 10) + 1 : 1;
-        console.log("🔍 res Data:", newFTXthDocSeq);
 
         const batchSize = 100;
 
@@ -33,7 +45,7 @@ export async function POST(req: NextRequest) {
             const batch = products.slice(batchStart, batchStart + batchSize);
             const values = [];
             const parameters = [];
-            const request = pool.request();
+            const request = new mssql.Request(transaction);
 
             request.input("FTXthDocSeq", newFTXthDocSeq); // ใช้เลขเดียวกันทั้งหมด
 
@@ -63,8 +75,8 @@ export async function POST(req: NextRequest) {
                     { name: `FCXtdCostIn${idx}`, value: FCCost },
                     { name: `FDLastUpdOn${idx}`, value: convertToCE(FDCreateOn) },
                     { name: `FDCreateOn${idx}`, value: convertToCE(FDCreateOn) },
-                    { name: `FTLastUpdBy${idx}`, value: userInfo.FTUsrCode },
-                    { name: `FTCreateBy${idx}`, value: userInfo.FTUsrCode },
+                    { name: `FTLastUpdBy${idx}`, value: tUserCode },
+                    { name: `FTCreateBy${idx}`, value: tUserCode },
                     { name: `FTAgnCode${idx}`, value: FTAgnCode },
                     { name: `FTPORef${idx}`, value: FTPORef }
                 );
@@ -72,7 +84,7 @@ export async function POST(req: NextRequest) {
 
             parameters.forEach(p => request.input(p.name, p.value));
 
-            const sql = `
+            const insertSql = `
         INSERT INTO dbo.TMBTDocDTTmp (
             FTBchCode, FTXthDocSeq, FTXthDocNo, FNXtdSeqNo, FTXthDocKey, FTXthDocType, 
             FTXtdBarCode, FCXtdQty, FCXtdQtyAll, FCXtdCostIn, FDLastUpdOn, 
@@ -81,34 +93,26 @@ export async function POST(req: NextRequest) {
         ${values.join(",\n")}
     `;
 
-            console.log(`🔄 Inserting batch ${batchStart}-${batchStart + batch.length - 1}`);
-            await request.query(sql);
+            await request.query(insertSql);
         }
+
+        await transaction.commit();
+        transaction = null;
 
         return NextResponse.json({ message: "Insert Success", count: products.length }, { status: 201 });
 
     } catch (error) {
-        console.log("Insert Error: ", error);
+        console.error("Insert Error: ", error);
 
-        // ✅ Rollback partial inserts if error happens
-        try {
-            const pool = await C_CTDoConnectToDatabase();
-            await pool.request()
-                .input("FTXthDocSeq", newFTXthDocSeq)
-                .input("FTBchCode", products[0].FTBchCode)
-                .input("FTAgnCode", products[0].FTAgnCode)
-                .query(`
-                    DELETE FROM TMBTDocDTTmp
-                    WHERE FTXthDocSeq = @FTXthDocSeq
-                    AND FTBchCode = @FTBchCode
-                    AND FTAgnCode = @FTAgnCode
-                `);
-            console.log(`🗑️ Rolled back data with FTXthDocSeq = ${newFTXthDocSeq}`);
-        } catch (rollbackError) {
-            console.error("❌ Rollback failed:", rollbackError);
+        if (transaction) {
+            try {
+                await transaction.rollback();
+            } catch (rollbackError) {
+                console.error("Rollback failed:", rollbackError);
+            }
         }
 
-        return NextResponse.json({ message: "Insert Failed", error }, { status: 500 });
+        return NextResponse.json({ message: "Insert Failed", error: (error as Error).message }, { status: 500 });
     }
 }
 

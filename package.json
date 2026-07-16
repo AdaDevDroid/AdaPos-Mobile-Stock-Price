@@ -1,37 +1,36 @@
 {
   "name": "AdaPos+ Mobile Stock & Price",
-  "version": "0.1.0",
+  "version": "1.0.8",
   "private": true,
   "scripts": {
-    "dev": "SET NODE_ENV=development&& node server.js",
+    "dev": "node -e \"process.env.NODE_ENV='development'; require('./server.js')\"",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "node -e \"process.env.NODE_ENV='production'; require('./server.js')\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "cookie": "^1.0.2",
     "dotenv": "^16.5.0",
+    "exceljs": "^4.4.0",
     "html5-qrcode": "^2.3.8",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.479.0",
     "mssql": "^11.0.1",
-    "next": "^15.3.2",
-    "next-pwa": "^5.6.0",
+    "next": "^15.5.19",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-icons": "^5.5.0",
-    "xlsx": "^0.18.5"
+    "react-icons": "^5.5.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/mssql": "^9.1.7",
-    "@types/next-pwa": "^5.6.9",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.1.7",
+    "eslint-config-next": "^15.5.19",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"

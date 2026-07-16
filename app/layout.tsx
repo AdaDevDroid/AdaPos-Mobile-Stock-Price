@@ -6,32 +6,43 @@ import NetworkStatus from "@/components/NetworkStatus";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import NameCompany from "@/components/NameCompany";
+import BottomNav from "@/components/BottomNav";
+import MobileHeader from "@/components/MobileHeader";
+import {
+  C_GETtActiveBasePath,
+  C_GETtBasePathFromPathname,
+  C_GETtRoutePathFromPathname,
+  C_REGxServiceWorkerForActivePart,
+} from "@/hooks/CDatabaseSettings";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const showSidebarPages = ["/main", "/receive", "/transfer", "/stock", "/price-check"];
+  const routePath = C_GETtRoutePathFromPathname(pathname);
+  const pathBasePath = C_GETtBasePathFromPathname(pathname);
+  const showNavPages = ["/main", "/receive", "/transfer", "/stock", "/price-check"];
+  const shouldShowNav = showNavPages.includes(routePath);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean | null>(null);
-
-  // useEffect(() => {
-  //     console.log = () => { };
-  //     console.warn = () => { };
-  //     console.error = () => { };
-  // }, []);
+  const [activeBasePath, setActiveBasePath] = useState(pathBasePath);
 
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
-        // .register("/sw.js")
-        .register(`${process.env.NEXT_PUBLIC_BASE_PATH}/sw.js?basePath=${process.env.NEXT_PUBLIC_BASE_PATH}`)
+    const nextBasePath = C_GETtActiveBasePath();
+    setActiveBasePath(nextBasePath);
+    document.querySelector('link[rel="manifest"]')?.setAttribute("href", `${nextBasePath}/manifest.json`);
+    document.querySelector('link[rel="icon"]')?.setAttribute("href", `${nextBasePath}/favicon.ico`);
+
+    C_REGxServiceWorkerForActivePart()
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
-    }
-  }, []);
+  }, [pathBasePath]);
 
   useEffect(() => {
     const storedValue = localStorage.getItem("sidebarOpen");
-    setIsSidebarOpen(storedValue ? JSON.parse(storedValue) : false);
+    if (storedValue === null && window.innerWidth >= 768) {
+      setIsSidebarOpen(true);
+    } else {
+      setIsSidebarOpen(storedValue === "true");
+    }
   }, []);
 
   useEffect(() => {
@@ -47,45 +58,48 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <link rel="manifest" href={`${process.env.NEXT_PUBLIC_BASE_PATH}/manifest.json`} />
+        <link rel="manifest" href={`${activeBasePath}/manifest.json`} />
         <meta name="theme-color" content="#000000" />
-        <link rel="icon" href={`${process.env.NEXT_PUBLIC_BASE_PATH}/favicon.ico`} />
+        <link rel="icon" href={`${activeBasePath}/favicon.ico`} />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
       </head>
       <body>
         <NetworkStatusProvider>
-          <div className="flex h-screen relative">
-            {showSidebarPages.includes(pathname) && isSidebarOpen !== null && (
-              <div className={`fixed h-full transition-width duration-300 ${isSidebarOpen ? 'w-64' : 'w-16'} z-10`}>
+          <div className="relative min-h-screen md:flex">
+            {/* Mobile Header */}
+            {shouldShowNav && <MobileHeader />}
+
+            {/* Sidebar for Desktop */}
+            {shouldShowNav && isSidebarOpen !== null && (
+              <div className="hidden md:block">
                 <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
               </div>
             )}
 
-            <main
-              className="flex-1 transition-margin duration-300"
-              style={{
-                marginLeft: showSidebarPages.includes(pathname) && isSidebarOpen !== null
-                  ? (isSidebarOpen ? '16rem' : '4rem')
-                  : 0
-              }}
-            >
-              {children}
+            {/* Main Content */}
+            <main className={`flex-1 ${shouldShowNav ? 'pt-16 md:pt-0 pb-20 md:pb-0' : ''}`}>
+              <div className="p-4 md:p-6 h-full">
+                {children}
+              </div>
             </main>
 
-            {/* ใช้ margin-left เพื่อให้ NameCompany ขยับตาม Sidebar */}
-            {showSidebarPages.includes(pathname) && (
-              <div
-                className="fixed bottom-2 left-2 z-20 bg-white"
-                style={{
-                  marginLeft: isSidebarOpen !== null
-                    ? (isSidebarOpen ? '16rem' : '4rem')
-                    : 0
-                }}
-              >
-                <NameCompany />
-              </div>
-            )}
+            {/* Bottom Navigation for Mobile */}
+            {shouldShowNav && <BottomNav />}
+
+             {/* Company Name (Desktop) & Network Status */}
+             <div className="fixed bottom-0 left-0 right-0 md:right-auto md:left-auto p-4 flex justify-between items-center md:justify-start pointer-events-none">
+                {shouldShowNav && (
+                    // ---- จุดที่แก้ไข ----
+                    // เพิ่มคลาส hidden md:block เพื่อซ่อนในโหมดมือถือ
+                    <div className={`hidden md:block pointer-events-auto transition-all duration-300 ${isSidebarOpen ? 'md:ml-64' : 'md:ml-16'} mb-16 md:mb-0`}>
+                        <NameCompany />
+                    </div>
+                )}
+                <div className="md:fixed md:bottom-4 md:right-4 pointer-events-auto">
+                    <NetworkStatus />
+                </div>
+            </div>
           </div>
-          <NetworkStatus />
         </NetworkStatusProvider>
       </body>
     </html>

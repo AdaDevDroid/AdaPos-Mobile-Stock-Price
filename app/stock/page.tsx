@@ -16,6 +16,7 @@ import HistoryModal from "@/components/HistoryModal";
 import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
 import { C_GETtGenerateRandomID, C_INSxStock, C_SETxFormattedDate } from "@/hooks/CSP";
 import RepeatModal from "@/components/RepeatModal";
+import { C_REGxServiceWorkerForActivePart } from "@/hooks/CDatabaseSettings";
 
 
 
@@ -56,9 +57,7 @@ export default function Stock() {
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
-        // .register("/sw.js")
-        .register(`${process.env.NEXT_PUBLIC_BASE_PATH}/sw.js?basePath=${process.env.NEXT_PUBLIC_BASE_PATH}`)
+      C_REGxServiceWorkerForActivePart()
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
     }
@@ -265,7 +264,7 @@ export default function Stock() {
   const C_ADDxProduct = (ptBarcode: string, ptQty: string) => {
 
 
-    if (!ptBarcode || !quantity) {
+    if (!ptBarcode || !ptQty) {
       alert("❌ กรุณากรอกข้อมูลให้ครบ");
       return;
     }
@@ -564,7 +563,7 @@ export default function Stock() {
     };
   };
   return (
-    <div className="p-4 ms-1 mx-auto bg-white" onClick={C_SETxCloseDropdown}>
+    <div className="p-4 ms-1  bg-white" onClick={C_SETxCloseDropdown}>
       <div className="flex flex-col md:flex-row items-start md:items-center pb-2">
         <div className="flex flex-row w-full py-2">
           {/* หัวข้อ */}

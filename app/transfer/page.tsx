@@ -14,6 +14,7 @@ import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
 import RepeatModal from "@/components/RepeatModal";
+import { C_REGxServiceWorkerForActivePart } from "@/hooks/CDatabaseSettings";
 
 export default function Transfer() {
   const [refDoc, setRefDoc] = useState("");
@@ -52,9 +53,7 @@ export default function Transfer() {
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
-        // .register("/sw.js")
-        .register(`${process.env.NEXT_PUBLIC_BASE_PATH}/sw.js?basePath=${process.env.NEXT_PUBLIC_BASE_PATH}`)
+      C_REGxServiceWorkerForActivePart()
         .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
         .catch((err) => console.log("Service Worker registration failed:", err));
     }
@@ -219,7 +218,7 @@ export default function Transfer() {
   {/* เพิ่มสินค้า */ }
   const C_ADDxProduct = (barcode: string, ptQty: string) => {
 
-    if (!barcode || !quantity) {
+    if (!barcode || !ptQty) {
       alert("กรุณากรอกบาร์โค้ด หรือจำนวนให้ครบถ้วน");
       return;
     }
@@ -561,7 +560,7 @@ export default function Transfer() {
     }
   };
   return (
-    <div className="p-4 ms-1 mx-auto bg-white" onClick={C_SETxCloseDropdown}>
+    <div className="p-4 ms-1  bg-white" onClick={C_SETxCloseDropdown}>
       <div className="flex flex-col md:flex-row items-start md:items-center pb-6">
         <div className="flex flex-row w-full py-2">
           {/* หัวข้อ */}
