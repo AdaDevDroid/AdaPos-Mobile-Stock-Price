@@ -41,6 +41,7 @@ type DatabaseSetting = {
   port: number | null;
   user: string;
   hasPassword: boolean;
+  connected?: boolean;
 };
 
 export default function SettingPage() {
@@ -289,7 +290,7 @@ export default function SettingPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
-      <div className="w-full max-w-5xl rounded-lg bg-white p-8 shadow-lg">
+      <div className="w-full max-w-[1400px] rounded-lg bg-white p-8 shadow-lg">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-blue-50 text-blue-600">
             <FaDatabase size={22} />
@@ -359,9 +360,10 @@ export default function SettingPage() {
                 <div className="rounded-md border px-3 py-4 text-center text-sm text-gray-500">กำลังโหลด...</div>
               ) : settingsList.length > 0 ? (
                 <div className="overflow-x-auto rounded-md border">
-                  <table className="w-full min-w-[960px] border-collapse text-left text-sm">
+                  <table className="w-full min-w-[1280px] border-collapse text-left text-sm">
                     <thead className="bg-gray-50 text-gray-600">
                       <tr>
+                        <th className="w-12 px-3 py-2 text-center font-bold">สถานะ</th>
                         <th className="w-14 px-3 py-2 font-bold">ลำดับ</th>
                         <th className="px-3 py-2 font-bold">พาร์ท</th>
                         <th className="px-3 py-2 font-bold">IP/Server</th>
@@ -375,13 +377,22 @@ export default function SettingPage() {
                     <tbody>
                       {settingsList.map((item, index) => (
                         <tr key={item.part} className="border-t">
+                          <td className="px-3 py-2 text-center">
+                            <span
+                              className={`inline-block h-3 w-3 rounded-full ${
+                                item.connected ? "bg-green-500" : "bg-red-500"
+                              }`}
+                              title={item.connected ? "เชื่อมต่อได้" : "เชื่อมต่อไม่ได้"}
+                              aria-label={item.connected ? "เชื่อมต่อได้" : "เชื่อมต่อไม่ได้"}
+                            />
+                          </td>
                           <td className="px-3 py-2 text-gray-600">{index + 1}</td>
-                          <td className="break-all px-3 py-2 font-bold text-gray-900">{item.part}</td>
-                          <td className="break-all px-3 py-2 text-gray-700">{C_GETtFallbackText(item.server)}</td>
-                          <td className="px-3 py-2 text-gray-700">{C_GETtFallbackText(item.port)}</td>
-                          <td className="break-all px-3 py-2 text-gray-700">{item.database}</td>
-                          <td className="break-all px-3 py-2 text-gray-700">{C_GETtFallbackText(item.user)}</td>
-                          <td className="px-3 py-2 text-gray-700">{item.hasPassword ? "ตั้งค่าแล้ว" : ""}</td>
+                          <td className="whitespace-nowrap px-3 py-2 font-bold text-gray-900">{item.part}</td>
+                          <td className="whitespace-nowrap px-3 py-2 text-gray-700">{C_GETtFallbackText(item.server)}</td>
+                          <td className="whitespace-nowrap px-3 py-2 text-gray-700">{C_GETtFallbackText(item.port)}</td>
+                          <td className="whitespace-nowrap px-3 py-2 text-gray-700">{item.database}</td>
+                          <td className="whitespace-nowrap px-3 py-2 text-gray-700">{C_GETtFallbackText(item.user)}</td>
+                          <td className="whitespace-nowrap px-3 py-2 text-gray-700">{item.hasPassword ? "ตั้งค่าแล้ว" : ""}</td>
                           <td className="px-3 py-2">
                             <div className="flex gap-2">
                               <button

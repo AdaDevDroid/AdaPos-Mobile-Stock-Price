@@ -24,6 +24,7 @@ import {
 const REQUIRED_OFFLINE_CACHE_ITEMS = 9;
 const MIN_STATIC_CACHE_ITEMS = 3;
 const BRANCH_SELECTION_REQUIRED = "branch-selection-required";
+const NO_BRANCH_AVAILABLE = "no-branch-available";
 
 const C_GETbOfflineCacheReady = (offlineCount: number, staticCount: number) => {
   return offlineCount >= REQUIRED_OFFLINE_CACHE_ITEMS && staticCount >= MIN_STATIC_CACHE_ITEMS;
@@ -345,13 +346,18 @@ export default function Login() {
         method: "POST",
         headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders(tServerTokenRef.current) },
       });
-      if (!companyResponse.ok) return false;
-
-      const companyData = await companyResponse.json();
-      companyName = typeof companyData.comp === "string" ? companyData.comp : "";
+      if (companyResponse.ok) {
+        const companyData = await companyResponse.json();
+        companyName = typeof companyData.comp === "string" ? companyData.comp : "";
+      }
     }
 
-    if (!branchResponse.ok) return false;
+    if (!branchResponse.ok) {
+      if (branchResponse.status === 404) {
+        return NO_BRANCH_AVAILABLE;
+      }
+      throw new Error("Failed to fetch branch data");
+    }
     const branchData = await branchResponse.json();
     const branches = Array.isArray(branchData.bch)
       ? branchData.bch.filter((branch: BranchInfo) => Boolean(branch?.FTBchCode))
@@ -364,7 +370,7 @@ export default function Login() {
       return C_STOxUserForBranch(branches[0], companyName);
     }
 
-    return false;
+    return NO_BRANCH_AVAILABLE;
   };
   const C_PRCxSyncConfig = async (oDatabase: IDBDatabase) => {
     try {
@@ -404,6 +410,11 @@ export default function Login() {
       const userValid = await C_PRCbCheckUser(tUsername, password, isOnline);
 
       if (userValid === BRANCH_SELECTION_REQUIRED) {
+        return;
+      }
+
+      if (userValid === NO_BRANCH_AVAILABLE) {
+        setError("ไม่พบข้อมูลสาขาในระบบ กรุณาติดต่อผู้ดูแล");
         return;
       }
 

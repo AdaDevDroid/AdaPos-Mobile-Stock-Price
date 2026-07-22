@@ -27,6 +27,7 @@ export type PublicDatabaseSetting = {
   port: number | null;
   user: string;
   hasPassword: boolean;
+  connected: boolean;
 };
 
 const C_ISbRecord = (value: unknown): value is Record<string, unknown> => {
@@ -86,6 +87,7 @@ export const C_GEToPublicDatabaseSetting = (
     port: setting.port || Number(process.env.PORT_DB) || null,
     user: setting.user || process.env.USER_DB || "",
     hasPassword: Boolean(setting.password || process.env.PASSWORD_DB),
+    connected: false,
   };
 };
 
