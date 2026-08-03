@@ -1,8 +1,14 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+
+rem Ensure Node.js / npm are available when launched by double-click
+if exist "%ProgramFiles%\nodejs\node.exe" set "PATH=%ProgramFiles%\nodejs;%PATH%"
+if exist "%ProgramFiles(x86)%\nodejs\node.exe" set "PATH=%ProgramFiles(x86)%\nodejs;%PATH%"
+if exist "%APPDATA%\npm\npm.cmd" set "PATH=%APPDATA%\npm;%PATH%"
+
 echo ================================
-echo   AdaPos Mobile Stock and Price  
+echo   AdaPos Mobile Stock and Price
 echo     BUILD SCRIPT
 echo ================================
 echo.

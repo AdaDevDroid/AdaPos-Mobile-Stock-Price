@@ -42,6 +42,7 @@ type DatabaseSetting = {
   user: string;
   hasPassword: boolean;
   connected?: boolean;
+  isDefault?: boolean;
 };
 
 export default function SettingPage() {
@@ -57,6 +58,7 @@ export default function SettingPage() {
   const [settingsList, setSettingsList] = useState<DatabaseSetting[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingPart, setEditingPart] = useState("");
+  const [editingIsDefault, setEditingIsDefault] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
   const [authenticating, setAuthenticating] = useState(false);
@@ -209,6 +211,7 @@ export default function SettingPage() {
       setSaved("บันทึกการตั้งค่าเรียบร้อย");
       setShowAddForm(false);
       setEditingPart("");
+      setEditingIsDefault(false);
       await C_PRCxLoadSettingsList();
     } catch (err) {
       setError((err as Error).message);
@@ -217,14 +220,20 @@ export default function SettingPage() {
     }
   };
 
+  const C_GEToDefaultSetting = () => {
+    return settingsList.find((item) => item.isDefault) || settingsList[0] || null;
+  };
+
   const C_PRCxOpenAddForm = () => {
+    const defaultSetting = C_GEToDefaultSetting();
     setPart("");
     setDatabase("");
-    setServer("");
-    setPort("");
-    setDbUser("");
+    setServer(defaultSetting?.server || "");
+    setPort(defaultSetting?.port ? String(defaultSetting.port) : "");
+    setDbUser(defaultSetting?.user || "");
     setDbPassword("");
     setEditingPart("");
+    setEditingIsDefault(false);
     setError("");
     setSaved("");
     setShowAddForm(true);
@@ -238,12 +247,18 @@ export default function SettingPage() {
     setDbUser(item.user || "");
     setDbPassword("");
     setEditingPart(item.part);
+    setEditingIsDefault(Boolean(item.isDefault));
     setError("");
     setSaved("");
     setShowAddForm(true);
   };
 
   const C_PRCxDeleteSettings = async (item: DatabaseSetting) => {
+    if (item.isDefault) {
+      setError("ไม่สามารถลบ Default จาก .env.local ได้ ให้แก้ที่ไฟล์ .env.local แทน");
+      return;
+    }
+
     if (!confirm(`ต้องการลบพาร์ท "${item.part}" หรือไม่?`)) {
       return;
     }
@@ -277,6 +292,7 @@ export default function SettingPage() {
 
       setShowAddForm(false);
       setEditingPart("");
+      setEditingIsDefault(false);
       setSaved("ลบการตั้งค่าเรียบร้อย");
       await C_PRCxLoadSettingsList();
     } catch (err) {
@@ -289,8 +305,8 @@ export default function SettingPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
-      <div className="w-full max-w-[1400px] rounded-lg bg-white p-8 shadow-lg">
+    <div className="min-h-screen w-full bg-gray-100 p-1 sm:p-2">
+      <div className="w-full rounded-lg bg-white p-4 shadow-lg sm:p-6">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-blue-50 text-blue-600">
             <FaDatabase size={22} />
@@ -344,6 +360,10 @@ export default function SettingPage() {
               เข้าสู่ระบบตั้งค่าแล้ว: {adminUser}
             </div>
 
+            <div className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-700">
+              ค่า Default ของ Path/Database จะดึงจาก `.env.local` ก่อน ส่วนรายการที่เพิ่มภายหลังจะ map ตาม URL path ตอน login
+            </div>
+
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold text-gray-800">พาร์ท/ฐานข้อมูลที่มีอยู่</h2>
@@ -359,24 +379,26 @@ export default function SettingPage() {
               {loadingSettings ? (
                 <div className="rounded-md border px-3 py-4 text-center text-sm text-gray-500">กำลังโหลด...</div>
               ) : settingsList.length > 0 ? (
-                <div className="overflow-x-auto rounded-md border">
-                  <table className="w-full min-w-[1280px] border-collapse text-left text-sm">
+                <div className="w-full overflow-x-auto rounded-md border">
+                  <table className="w-full min-w-full border-collapse text-left text-sm">
                     <thead className="bg-gray-50 text-gray-600">
                       <tr>
                         <th className="w-12 px-3 py-2 text-center font-bold">สถานะ</th>
                         <th className="w-14 px-3 py-2 font-bold">ลำดับ</th>
-                        <th className="px-3 py-2 font-bold">พาร์ท</th>
-                        <th className="px-3 py-2 font-bold">IP/Server</th>
-                        <th className="w-24 px-3 py-2 font-bold">Port</th>
-                        <th className="px-3 py-2 font-bold">ฐานข้อมูล</th>
-                        <th className="px-3 py-2 font-bold">User</th>
+                        <th className="min-w-[220px] px-3 py-2 font-bold">พาร์ท</th>
+                        <th className="min-w-[140px] px-3 py-2 font-bold">IP/Server</th>
+                        <th className="w-20 px-3 py-2 font-bold">Port</th>
+                        <th className="min-w-[180px] px-3 py-2 font-bold">ฐานข้อมูล</th>
+                        <th className="w-20 px-3 py-2 font-bold">User</th>
                         <th className="w-28 px-3 py-2 font-bold">Password</th>
-                        <th className="w-40 px-3 py-2 text-center font-bold">จัดการ</th>
+                        <th className="sticky right-0 z-10 min-w-[188px] bg-gray-50 px-3 py-2 text-center font-bold shadow-[-6px_0_8px_-4px_rgba(0,0,0,0.15)]">
+                          จัดการ
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {settingsList.map((item, index) => (
-                        <tr key={item.part} className="border-t">
+                        <tr key={item.part} className="border-t align-top">
                           <td className="px-3 py-2 text-center">
                             <span
                               className={`inline-block h-3 w-3 rounded-full ${
@@ -387,25 +409,35 @@ export default function SettingPage() {
                             />
                           </td>
                           <td className="px-3 py-2 text-gray-600">{index + 1}</td>
-                          <td className="whitespace-nowrap px-3 py-2 font-bold text-gray-900">{item.part}</td>
-                          <td className="whitespace-nowrap px-3 py-2 text-gray-700">{C_GETtFallbackText(item.server)}</td>
+                          <td className="px-3 py-2 font-bold text-gray-900">
+                            <div className="space-y-1">
+                              <div className="break-all">{item.part}</div>
+                              {item.isDefault && (
+                                <span className="inline-block rounded bg-blue-100 px-2 py-0.5 text-xs font-normal text-blue-700">
+                                  Default (.env.local)
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="break-all px-3 py-2 text-gray-700">{C_GETtFallbackText(item.server)}</td>
                           <td className="whitespace-nowrap px-3 py-2 text-gray-700">{C_GETtFallbackText(item.port)}</td>
-                          <td className="whitespace-nowrap px-3 py-2 text-gray-700">{item.database}</td>
+                          <td className="break-all px-3 py-2 text-gray-700">{item.database}</td>
                           <td className="whitespace-nowrap px-3 py-2 text-gray-700">{C_GETtFallbackText(item.user)}</td>
                           <td className="whitespace-nowrap px-3 py-2 text-gray-700">{item.hasPassword ? "ตั้งค่าแล้ว" : ""}</td>
-                          <td className="px-3 py-2">
-                            <div className="flex gap-2">
+                          <td className="sticky right-0 z-10 bg-white px-3 py-2 shadow-[-6px_0_8px_-4px_rgba(0,0,0,0.15)]">
+                            <div className="flex flex-col gap-2 sm:flex-row">
                               <button
                                 type="button"
-                                className="w-1/2 rounded-md border border-blue-300 py-1.5 text-sm font-bold text-blue-600 hover:bg-blue-50"
+                                className="min-w-[84px] whitespace-nowrap rounded-md border border-blue-300 px-3 py-1.5 text-sm font-bold text-blue-600 hover:bg-blue-50"
                                 onClick={() => C_PRCxOpenEditForm(item)}
                               >
                                 แก้ไข
                               </button>
                               <button
                                 type="button"
-                                className="w-1/2 rounded-md border border-red-300 py-1.5 text-sm font-bold text-red-600 hover:bg-red-50"
+                                className="min-w-[84px] whitespace-nowrap rounded-md border border-red-300 px-3 py-1.5 text-sm font-bold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
                                 onClick={() => C_PRCxDeleteSettings(item)}
+                                disabled={item.isDefault}
                               >
                                 ลบ
                               </button>
@@ -417,7 +449,9 @@ export default function SettingPage() {
                   </table>
                 </div>
               ) : (
-                <div className="rounded-md border px-3 py-4 text-center text-sm text-gray-500">ยังไม่มีรายการ</div>
+                <div className="rounded-md border px-3 py-4 text-center text-sm text-gray-500">
+                  ยังไม่มีรายการ — ตรวจสอบ `.env.local` ว่ามี `NEXT_PUBLIC_BASE_PATH`, `NAME_DB`, `SERVER_DB`, `PORT_DB`, `USER_DB`, `PASSWORD_DB` แล้วรัน build + restart PM2 ใหม่
+                </div>
               )}
             </div>
 
@@ -434,6 +468,7 @@ export default function SettingPage() {
                       type="text"
                       value={part}
                       onChange={(e) => setPart(e.target.value)}
+                      readOnly={editingIsDefault}
                       placeholder="AdaCheckStockSTD"
                       className="w-full rounded-md border px-3 py-2 focus:outline-none focus:ring focus:border-blue-400"
                       required
@@ -505,6 +540,7 @@ export default function SettingPage() {
                     onClick={() => {
                       setShowAddForm(false);
                       setEditingPart("");
+                      setEditingIsDefault(false);
                       setError("");
                       setSaved("");
                     }}

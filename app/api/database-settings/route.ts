@@ -4,8 +4,10 @@ import { C_ISbValidSettingsAdmin } from "./admin";
 import { C_CLRxDatabasePools } from "../database/connect_db";
 import {
   C_GEToDatabaseConnectionSetting,
+  C_GEToEnvDatabaseSettings,
   C_GEToMergedDatabaseSettings,
   C_GEToRuntimeDatabaseSettings,
+  C_ISbEnvDefaultPart,
   DatabaseConnectionSetting,
   SETTINGS_DIR,
   SETTINGS_PATH,
@@ -15,32 +17,14 @@ const SAFE_PART = /^[A-Za-z0-9._-]+$/;
 const SAFE_DATABASE = /^[A-Za-z0-9._-]+$/;
 const SAFE_SERVER = /^[A-Za-z0-9._-]*$/;
 const RESERVED_PARTS = new Set([
-  ".",
-  "..",
-  "__proto__",
-  "constructor",
-  "prototype",
-  "_next",
-  "api",
-  "favicon.ico",
-  "icons",
-  "login",
-  "main",
-  "manifest.json",
-  "price-check",
-  "receive",
-  "setting",
-  "stock",
-  "sw.js",
-  "test-network.ts",
-  "transfer",
+  ".", "..", "__proto__", "constructor", "prototype", "_next", "api",
+  "favicon.ico", "icons", "login", "main", "manifest.json", "price-check",
+  "receive", "setting", "stock", "sw.js", "test-network.ts", "transfer",
 ]);
 
 const C_GETnPort = (port: unknown): number | undefined => {
   const normalizedPort = String(port || "").trim();
-  if (!normalizedPort) {
-    return undefined;
-  }
+  if (!normalizedPort) return undefined;
 
   const parsedPort = Number(normalizedPort);
   if (!Number.isInteger(parsedPort) || parsedPort < 1 || parsedPort > 65535) {
@@ -63,12 +47,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    if (!SAFE_PART.test(normalizedPart)) {
+    if (!SAFE_PART.test(normalizedPart) || (normalizedOldPart && !SAFE_PART.test(normalizedOldPart))) {
       return NextResponse.json({ message: "Invalid path part" }, { status: 400 });
     }
 
     if (RESERVED_PARTS.has(normalizedPart.toLowerCase())) {
       return NextResponse.json({ message: "Reserved path part" }, { status: 400 });
+    }
+
+    if (normalizedOldPart && normalizedOldPart !== normalizedPart && C_ISbEnvDefaultPart(normalizedOldPart)) {
+      return NextResponse.json(
+        { message: "Default path part cannot be renamed; update .env.local and restart the application" },
+        { status: 409 },
+      );
     }
 
     if (!SAFE_DATABASE.test(normalizedDatabase)) {
@@ -82,30 +73,27 @@ export async function POST(req: Request) {
     const nextPort = C_GETnPort(port);
     const settings = await C_GEToRuntimeDatabaseSettings();
     const mergedSettings = C_GEToMergedDatabaseSettings();
+    const envSettings = C_GEToEnvDatabaseSettings();
     const existingPart = normalizedOldPart || normalizedPart;
     const existingSetting = C_GEToDatabaseConnectionSetting(
-      settings[existingPart] ?? mergedSettings[existingPart] ?? mergedSettings[`/${existingPart}`]
+      settings[existingPart] ?? mergedSettings[existingPart] ?? mergedSettings[`/${existingPart}`],
+    );
+    const envSetting = C_GEToDatabaseConnectionSetting(
+      envSettings[existingPart] ?? envSettings[normalizedPart],
     );
     const nextSetting: DatabaseConnectionSetting = {
       database: normalizedDatabase,
+      server: normalizedServer || existingSetting?.server || envSetting?.server,
+      port: nextPort || existingSetting?.port || envSetting?.port,
+      user: normalizedDbUser || existingSetting?.user || envSetting?.user,
     };
-
-    if (normalizedServer) {
-      nextSetting.server = normalizedServer;
-    }
-
-    if (nextPort) {
-      nextSetting.port = nextPort;
-    }
-
-    if (normalizedDbUser) {
-      nextSetting.user = normalizedDbUser;
-    }
 
     if (typeof dbPassword === "string" && dbPassword) {
       nextSetting.password = dbPassword;
     } else if (existingSetting?.password) {
       nextSetting.password = existingSetting.password;
+    } else if (envSetting?.password) {
+      nextSetting.password = envSetting.password;
     }
 
     if (normalizedOldPart && normalizedOldPart !== normalizedPart) {
@@ -121,7 +109,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       message: "Database setting saved",
       part: normalizedPart,
-      database: normalizedDatabase
+      database: normalizedDatabase,
     });
   } catch (error) {
     const errorMessage = (error as Error).message;
@@ -131,7 +119,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(
       { message: "Failed to save database setting", error: errorMessage },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

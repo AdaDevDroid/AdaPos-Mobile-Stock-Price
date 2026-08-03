@@ -1,59 +1,59 @@
 "use client";
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { C_GETtPartUrl } from "@/hooks/CDatabaseSettings";
 
-// ✅ สร้าง Context
 const NetworkStatusContext = createContext<boolean>(true);
 
+const C_GETbServerReachable = async (): Promise<boolean> => {
+  if (!navigator.onLine) return false;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+
+    try {
+      const response = await fetch(C_GETtPartUrl("/api/health"), {
+        method: "GET",
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      if (response.ok) return true;
+    } catch (error) {
+      console.log("Network health check failed:", error);
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  }
+
+  return false;
+};
+
 export const NetworkStatusProvider = ({ children }: { children: React.ReactNode }) => {
-  const [isOnline, setIsOnline] = useState<boolean>(true);
+  const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     const checkOnlineStatus = async () => {
-      let onlineStatus = navigator.onLine;
-
-      if (onlineStatus) {
-        try {
-          // 🔥 เช็คอินเทอร์เน็ตโดยใช้ API ที่เราควบคุมได้
-          // เพิ่ม timeout เพื่อป้องกันการค้าง
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000);
-          
-          const response = await fetch(C_GETtPartUrl("/api/health"), {
-            method: "HEAD", 
-            cache: "no-store",
-            signal: controller.signal
-          });
-          
-          clearTimeout(timeoutId);
-          onlineStatus = response.ok;
-        } catch (error) {
-          console.log("🔴 Network check failed:", error);
-          onlineStatus = false;
-        }
-      }
-
-      setIsOnline(onlineStatus);
+      const online = await C_GETbServerReachable();
+      if (active) setIsOnline(online);
     };
 
     const updateOnlineStatus = () => {
-      console.log("🌐 Network status changed:", navigator.onLine ? "Online" : "Offline");
-      setIsOnline(navigator.onLine);
-      checkOnlineStatus(); // เช็คซ้ำให้แน่ใจ
+      void checkOnlineStatus();
     };
 
-    // ✅ เช็คสถานะทุก 10 วินาทีแทน 5 วินาที เพื่อลดโหลด
-    const interval = setInterval(checkOnlineStatus, 10000);
-
+    const interval = window.setInterval(checkOnlineStatus, 15000);
     window.addEventListener("online", updateOnlineStatus);
     window.addEventListener("offline", updateOnlineStatus);
-
-    updateOnlineStatus(); // เช็คครั้งแรก
+    void checkOnlineStatus();
 
     return () => {
+      active = false;
       window.removeEventListener("online", updateOnlineStatus);
       window.removeEventListener("offline", updateOnlineStatus);
-      clearInterval(interval);
+      window.clearInterval(interval);
     };
   }, []);
 
@@ -64,5 +64,4 @@ export const NetworkStatusProvider = ({ children }: { children: React.ReactNode 
   );
 };
 
-// ✅ Custom Hook
 export const useNetworkStatus = () => useContext(NetworkStatusContext);

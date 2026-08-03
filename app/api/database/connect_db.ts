@@ -1,14 +1,11 @@
-import sql from 'mssql';
+import sql from "mssql";
 import {
   C_GEToDatabaseConnectionSetting,
   C_GEToMergedDatabaseSettings,
   DatabaseConnectionSetting,
 } from "../database-settings/config";
+import { C_GEToSqlConnectionConfig } from "../database-settings/sql-connection";
 
-const USER_DB = process.env.USER_DB as string;
-const PASSWORD_DB = process.env.PASSWORD_DB as string;
-const SERVER_DB = process.env.SERVER_DB as string;
-const PORT_DB = parseInt(process.env.PORT_DB as string, 10);
 const NAME_DB = process.env.NAME_DB as string;
 const DEFAULT_BASE_PART = (process.env.NEXT_PUBLIC_BASE_PATH || "/AdaCheckStockSTD")
   .replace(/^\/+/, "")
@@ -41,15 +38,8 @@ const C_GEToDatabaseSetting = (request?: Request): DatabaseConnectionSetting => 
       : "";
 
   if (databaseKey) {
-    const settingValue = databaseByPath[databaseKey];
-    if (settingValue === null) {
-      throw new Error(`Database mapping for "${pathPart}" was deleted`);
-    }
-
-    const setting = C_GEToDatabaseConnectionSetting(settingValue);
-    if (setting) {
-      return setting;
-    }
+    const setting = C_GEToDatabaseConnectionSetting(databaseByPath[databaseKey]);
+    if (setting) return setting;
   }
 
   if (pathPart && pathPart !== DEFAULT_BASE_PART) {
@@ -59,39 +49,7 @@ const C_GEToDatabaseSetting = (request?: Request): DatabaseConnectionSetting => 
   return { database: NAME_DB };
 };
 
-const C_GETnPort = (port?: number): number => {
-  if (Number.isInteger(port) && port && port > 0) {
-    return port;
-  }
-
-  if (Number.isInteger(PORT_DB) && PORT_DB > 0) {
-    return PORT_DB;
-  }
-
-  return 1433;
-};
-
-const C_GEToDatabaseConfig = (setting: DatabaseConnectionSetting) => {
-  const config = {
-    user: setting.user || USER_DB,
-    password: setting.password ?? PASSWORD_DB,
-    server: setting.server || SERVER_DB,
-    port: C_GETnPort(setting.port),
-    database: setting.database || NAME_DB,
-    options: {
-      encrypt: true,
-      trustServerCertificate: true
-    }
-  };
-
-  if (!config.user || !config.server || !config.database) {
-    throw new Error("Database configuration is incomplete");
-  }
-
-  return config;
-};
-
-const C_GETtPoolKey = (config: ReturnType<typeof C_GEToDatabaseConfig>): string => {
+const C_GETtPoolKey = (config: ReturnType<typeof C_GEToSqlConnectionConfig>): string => {
   return JSON.stringify([config.server, config.port, config.user, config.password, config.database]);
 };
 
@@ -103,21 +61,21 @@ export const C_CLRxDatabasePools = async () => {
     pools.map(async (poolPromise) => {
       const pool = await poolPromise;
       await pool.close();
-    })
+    }),
   );
 };
 
 export async function C_CTDoConnectToDatabase(request?: Request) {
-  const config = C_GEToDatabaseConfig(C_GEToDatabaseSetting(request));
+  const config = C_GEToSqlConnectionConfig(C_GEToDatabaseSetting(request));
   const poolKey = C_GETtPoolKey(config);
 
   try {
     if (!poolByConfig.has(poolKey)) {
       const pool = new sql.ConnectionPool(config)
         .connect()
-        .catch((err) => {
+        .catch((error) => {
           poolByConfig.delete(poolKey);
-          throw err;
+          throw error;
         });
 
       poolByConfig.set(poolKey, pool);
@@ -129,8 +87,8 @@ export async function C_CTDoConnectToDatabase(request?: Request) {
     }
 
     return await pool;
-  } catch (err) {
-    console.log('Database connection failed:', err);
-    throw err;
+  } catch (error) {
+    console.log("Database connection failed:", error);
+    throw error;
   }
 }

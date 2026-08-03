@@ -27,6 +27,7 @@ export interface UserInfo {
     FTAgnCode: string;
     FTAgnName: string
     FTMerCode: string;
+    FTStaHasGroup?: string;
     FTUsrLogin: string;
     FTUsrLoginPwd: string | null;
     FTUsrCode: string;  

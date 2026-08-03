@@ -21,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const pathBasePath = C_GETtBasePathFromPathname(pathname);
   const showNavPages = ["/main", "/receive", "/transfer", "/stock", "/price-check"];
   const shouldShowNav = showNavPages.includes(routePath);
+  const isSettingPage = routePath === "/setting";
 
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean | null>(null);
   const [activeBasePath, setActiveBasePath] = useState(pathBasePath);
@@ -78,7 +79,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             {/* Main Content */}
             <main className={`flex-1 ${shouldShowNav ? 'pt-16 md:pt-0 pb-20 md:pb-0' : ''}`}>
-              <div className="p-4 md:p-6 h-full">
+              <div className={`h-full ${isSettingPage ? "p-0" : "p-4 md:p-6"}`}>
                 {children}
               </div>
             </main>

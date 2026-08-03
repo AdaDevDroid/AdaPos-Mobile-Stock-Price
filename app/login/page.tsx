@@ -277,9 +277,15 @@ export default function Login() {
       headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders(tServerTokenRef.current) },
       body: JSON.stringify({ username, password }),
     });
-    if (!userResponse.ok) return false;
+    const userPayload = await userResponse.json().catch(() => ({}));
+    if (!userResponse.ok) {
+      if (userResponse.status === 409 && userPayload?.code === NO_BRANCH_AVAILABLE) {
+        return NO_BRANCH_AVAILABLE;
+      }
+      return false;
+    }
 
-    const { user, token } = await userResponse.json();
+    const { user, token } = userPayload;
     if (!Array.isArray(user) || user.length === 0 || typeof token !== "string" || !token) {
       return false;
     }
@@ -326,6 +332,10 @@ export default function Login() {
     }
     if (assignedBranches.length === 1) {
       return C_STOxUserForBranch(assignedBranches[0], primaryUser.FTAgnName);
+    }
+
+    if (primaryUser.FTStaHasGroup !== "1") {
+      return NO_BRANCH_AVAILABLE;
     }
 
     let branchResponse: Response;
