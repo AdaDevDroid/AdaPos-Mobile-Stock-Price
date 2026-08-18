@@ -9,25 +9,35 @@ import {
 
 const LEGACY_DATABASE_PART_STORAGE_KEY = "ada_legacy_db_part";
 
-export const C_PRCxOpenIndexedDB = async () => {
-  const activePart = C_GETtActiveDatabasePart();
+const C_GETtLegacyDatabasePart = () => {
   const legacySessionPart = C_GETtNormalizedPathPart(localStorage.getItem(SESSION_PART_STORAGE_KEY) || "");
   const legacyConfiguredPart = C_GETtNormalizedPathPart(localStorage.getItem(DATABASE_PART_STORAGE_KEY) || "");
   let legacyDatabasePart = C_GETtNormalizedPathPart(localStorage.getItem(LEGACY_DATABASE_PART_STORAGE_KEY) || "");
+  const explicitLegacyPart = legacySessionPart || legacyConfiguredPart;
 
-  // session_part มาจากข้อมูลผู้ใช้ชุดเดียวกับ AdaDB จึงใช้แก้ marker ที่เคยผูกกับ Part แรกผิดพลาด
-  if (legacySessionPart && legacyDatabasePart !== legacySessionPart) {
-    legacyDatabasePart = legacySessionPart;
+  if (explicitLegacyPart && legacyDatabasePart !== explicitLegacyPart) {
+    legacyDatabasePart = explicitLegacyPart;
   } else if (!legacyDatabasePart) {
-    legacyDatabasePart = legacyConfiguredPart || C_GETtConfiguredDatabasePart();
+    legacyDatabasePart = C_GETtConfiguredDatabasePart();
   }
 
   if (legacyDatabasePart) {
     localStorage.setItem(LEGACY_DATABASE_PART_STORAGE_KEY, legacyDatabasePart);
   }
 
-  const safePart = activePart.replace(/[^A-Za-z0-9._-]/g, "_") || "default";
-  const DB_NAME = activePart === legacyDatabasePart ? "AdaDB" : `AdaDB_${safePart}`;
+  return legacyDatabasePart;
+};
+
+export const C_GETtPartIndexedDBName = (part: string) => {
+  const normalizedPart = C_GETtNormalizedPathPart(part);
+  const safePart = normalizedPart.replace(/[^A-Za-z0-9._-]/g, "_") || "default";
+  return normalizedPart === C_GETtLegacyDatabasePart() ? "AdaDB" : `AdaDB_${safePart}`;
+};
+
+export const C_PRCxOpenIndexedDB = async () => {
+  const activePart = C_GETtActiveDatabasePart();
+  const DB_NAME = C_GETtPartIndexedDBName(activePart);
+
   const DB_VERSION = 18;
 
   const currentVersion = await new Promise<number>((resolve, reject) => {
@@ -214,6 +224,7 @@ export const C_PRCxOpenIndexedDB = async () => {
 
     request.onsuccess = () => {
       console.log("✅ เชื่อมต่อ IndexedDB สำเร็จ");
+      request.result.onversionchange = () => request.result.close();
       resolve(request.result);
     };
 
@@ -222,6 +233,38 @@ export const C_PRCxOpenIndexedDB = async () => {
       reject(request.error);
     };
   });
+};
+
+export const C_DELxPartIndexedDB = async (part: string): Promise<void> => {
+  if (typeof window === "undefined" || !("indexedDB" in window)) {
+    return;
+  }
+
+  const normalizedPart = C_GETtNormalizedPathPart(part);
+  const databaseName = C_GETtPartIndexedDBName(normalizedPart);
+
+  await new Promise<void>((resolve, reject) => {
+    let completed = false;
+    const finish = (error?: Error) => {
+      if (completed) return;
+      completed = true;
+      window.clearTimeout(timeoutId);
+      if (error) reject(error);
+      else resolve();
+    };
+    const timeoutId = window.setTimeout(
+      () => finish(new Error(`Timed out while deleting IndexedDB ${databaseName}`)),
+      5000,
+    );
+    const request = indexedDB.deleteDatabase(databaseName);
+    request.onsuccess = () => finish();
+    request.onerror = () => finish(request.error || new Error(`Unable to delete IndexedDB ${databaseName}`));
+    request.onblocked = () => finish(new Error(`IndexedDB ${databaseName} is open in another tab`));
+  });
+
+  if (localStorage.getItem(LEGACY_DATABASE_PART_STORAGE_KEY) === normalizedPart) {
+    localStorage.removeItem(LEGACY_DATABASE_PART_STORAGE_KEY);
+  }
 };
 
 export const C_DELxLimitData = async (oDb: IDBDatabase, ptHistoryName: string, ptDataList: string): Promise<void> => {

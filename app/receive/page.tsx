@@ -14,7 +14,6 @@ import HistoryModal from "@/components/HistoryModal";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
 import { C_GETtGenerateRandomID, C_INSxProducts, C_SETxFormattedDate } from "@/hooks/CSP";
 import RepeatModal from "@/components/RepeatModal";
-import { C_REGxServiceWorkerForActivePart } from "@/hooks/CDatabaseSettings";
 
 
 export default function Receive() {
@@ -57,14 +56,6 @@ export default function Receive() {
 
   {/* เช็ค User */ }
   useAuth();
-
-  useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      C_REGxServiceWorkerForActivePart()
-        .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
-        .catch((err) => console.log("Service Worker registration failed:", err));
-    }
-  }, []);
 
   useEffect(() => {
     // Focus ไปที่ input เมื่อ component โหลด

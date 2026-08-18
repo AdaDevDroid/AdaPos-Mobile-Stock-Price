@@ -43,7 +43,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     document.querySelector('link[rel="icon"]')?.setAttribute("href", `${nextBasePath}/favicon.ico`);
 
     C_ENSxActivePartBuild()
-      .then((isReloading) => isReloading ? null : C_REGxServiceWorkerForActivePart())
+      .then(async (isRepaired) => {
+        if (isRepaired) {
+          window.location.reload();
+          return null;
+        }
+        return C_REGxServiceWorkerForActivePart();
+      })
       .then((registration) => registration && console.log("Service Worker [ลงทะเบียนแล้ว]"))
       .catch((err) => console.log("Service Worker registration failed:", err));
   }, [pathBasePath]);
@@ -66,12 +72,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       if (C_GETbAssetLoadError(event.error || event.message)) {
-        void C_RPRxActivePartAssetsOnce("asset");
+        void C_RPRxActivePartAssetsOnce("asset")
+          .then((isRepaired) => isRepaired && window.location.reload())
+          .catch((error) => console.error("Asset repair failed:", error));
       }
     };
     const handleRejection = (event: PromiseRejectionEvent) => {
       if (C_GETbAssetLoadError(event.reason)) {
-        void C_RPRxActivePartAssetsOnce("asset");
+        void C_RPRxActivePartAssetsOnce("asset")
+          .then((isRepaired) => isRepaired && window.location.reload())
+          .catch((error) => console.error("Asset repair failed:", error));
       }
     };
 

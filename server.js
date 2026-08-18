@@ -36,6 +36,80 @@ const reservedPathParts = new Set([
   "transfer",
 ]);
 const pageRoutes = new Set(["/", "/login", "/main", "/price-check", "/receive", "/setting", "/stock", "/transfer"]);
+const runtimeSettingsPath = path.join(process.cwd(), ".runtime", "database-paths.json");
+
+const C_GETbDatabaseSetting = (value) => {
+  if (typeof value === "string") {
+    return Boolean(value.trim());
+  }
+  return Boolean(value && typeof value === "object" && !Array.isArray(value) && String(value.database || "").trim());
+};
+
+const C_GEToEnvPartSettings = () => {
+  const settings = {};
+  try {
+    const parsed = JSON.parse(process.env.DATABASE_NAME_BY_PATH || "{}");
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      for (const [rawPart, value] of Object.entries(parsed)) {
+        if (C_GETbDatabaseSetting(value)) {
+          settings[rawPart.replace(/^\/+/, "")] = value;
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Invalid DATABASE_NAME_BY_PATH:", error.message);
+  }
+
+  if (basePart && process.env.NAME_DB) {
+    settings[basePart] = settings[basePart] || process.env.NAME_DB;
+  }
+  return settings;
+};
+
+const envPartSettings = C_GEToEnvPartSettings();
+
+const C_GEToRuntimePartSettings = () => {
+  try {
+    if (!fs.existsSync(runtimeSettingsPath)) {
+      return {};
+    }
+    const parsed = JSON.parse(fs.readFileSync(runtimeSettingsPath, "utf8"));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch (error) {
+    console.error("Unable to read runtime database settings:", error.message);
+    return {};
+  }
+};
+
+const C_GEToPartResolution = (requestedPart) => {
+  const normalizedPart = String(requestedPart || "").replace(/^\/+/, "");
+  const normalizedLowerPart = normalizedPart.toLowerCase();
+  const runtimeSettings = C_GEToRuntimePartSettings();
+  const mergedSettings = { ...envPartSettings };
+
+  for (const [rawPart, value] of Object.entries(runtimeSettings)) {
+    const part = rawPart.replace(/^\/+/, "");
+    if (value === null) {
+      if (!Object.prototype.hasOwnProperty.call(envPartSettings, part)) {
+        delete mergedSettings[part];
+      }
+    } else if (C_GETbDatabaseSetting(value)) {
+      mergedSettings[part] = value;
+    }
+  }
+
+  const activePart = Object.keys(mergedSettings).find((part) => part.toLowerCase() === normalizedLowerPart);
+  if (activePart) {
+    return { status: "active", part: activePart };
+  }
+
+  const deletedPart = Object.keys(runtimeSettings).find(
+    (part) => part.toLowerCase() === normalizedLowerPart && runtimeSettings[part] === null
+  );
+  return deletedPart
+    ? { status: "deleted", part: deletedPart }
+    : { status: "unknown", part: normalizedPart };
+};
 
 const C_GEToDynamicPartRoute = (pathname) => {
   if (!pathname || pathname === "/") {
@@ -89,6 +163,25 @@ const C_GETbNoStoreRoute = (routePath) => {
     normalizedPath === "/sw.js";
 };
 
+const C_SNDxInvalidPart = (res, routePath, resolution) => {
+  const statusCode = resolution.status === "deleted" ? 410 : 404;
+  C_SETxNoStoreHeaders(res);
+  res.statusCode = statusCode;
+
+  if (routePath.startsWith("/api/")) {
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.end(JSON.stringify({
+      status: "invalid-part",
+      code: resolution.status === "deleted" ? "database-part-deleted" : "database-part-not-configured",
+      part: resolution.part,
+    }));
+    return;
+  }
+
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.end(statusCode === 410 ? "This Part has been deleted." : "This Part is not configured.");
+};
+
 app
   .prepare()
   .then(() => {
@@ -109,13 +202,29 @@ app
         res.writeHead(301, { Location: `/setting${parsedUrl.search || ""}` });
         res.end();
       } else if (dynamicPartRoute) {
+        const resolution = C_GEToPartResolution(dynamicPartRoute.part);
+        if (resolution.status !== "active") {
+          C_SNDxInvalidPart(res, dynamicPartRoute.routePath, resolution);
+          return;
+        }
+        if (resolution.part !== dynamicPartRoute.part) {
+          C_SETxNoStoreHeaders(res);
+          res.writeHead(308, {
+            Location: `/${resolution.part}${dynamicPartRoute.routePath}${parsedUrl.search || ""}`,
+          });
+          res.end();
+          return;
+        }
         if (C_GETbNoStoreRoute(dynamicPartRoute.routePath)) {
           C_SETxNoStoreHeaders(res);
         }
         C_SETxDatabasePartHeaders(req, dynamicPartRoute.part);
         const correctedUrl = parse(`${basePath}${dynamicPartRoute.routePath}${parsedUrl.search || ""}`, true);
         handle(req, res, correctedUrl);
-      } else if (parsedUrl.pathname && parsedUrl.pathname.startsWith(basePath)) {
+      } else if (
+        parsedUrl.pathname &&
+        (parsedUrl.pathname === basePath || parsedUrl.pathname.startsWith(`${basePath}/`))
+      ) {
         // URLs ที่มี basePath
         const baseRoutePath = parsedUrl.pathname.slice(basePath.length) || "/";
         if (C_GETbNoStoreRoute(baseRoutePath)) {

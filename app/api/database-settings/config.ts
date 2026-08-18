@@ -20,6 +20,11 @@ type RawDatabaseConnectionSetting = Omit<DatabaseConnectionSetting, "port"> & {
 export type DatabaseSettingValue = string | RawDatabaseConnectionSetting | null;
 export type DatabaseSettings = Record<string, DatabaseSettingValue>;
 
+export type DatabasePartResolution = {
+  status: "active" | "deleted" | "unknown";
+  part: string;
+};
+
 let envDatabaseSettingsCache: DatabaseSettings | null = null;
 
 export type PublicDatabaseSetting = {
@@ -199,6 +204,30 @@ export const C_GEToMergedDatabaseSettings = (): DatabaseSettings => {
   }
 
   return merged;
+};
+
+export const C_GEToDatabasePartResolution = (rawPart: string): DatabasePartResolution => {
+  const requestedPart = rawPart.replace(/^\/+/, "").trim();
+  const normalizedPart = requestedPart.toLowerCase();
+  const mergedSettings = C_GEToMergedDatabaseSettings();
+  const activePart = Object.keys(mergedSettings).find(
+    (part) => part.toLowerCase() === normalizedPart && Boolean(C_GEToDatabaseConnectionSetting(mergedSettings[part])),
+  );
+
+  if (activePart) {
+    return { status: "active", part: activePart };
+  }
+
+  const runtimeSettings = C_GEToRuntimeDatabaseSettingsSync();
+  const deletedPart = Object.keys(runtimeSettings).find(
+    (part) => part.toLowerCase() === normalizedPart && runtimeSettings[part] === null,
+  );
+
+  if (deletedPart) {
+    return { status: "deleted", part: deletedPart };
+  }
+
+  return { status: "unknown", part: requestedPart };
 };
 
 export const C_GETaSortedSettingParts = (parts: string[]): string[] => {

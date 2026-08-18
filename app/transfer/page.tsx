@@ -14,7 +14,6 @@ import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import HistoryModal from "@/components/HistoryModal";
 import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
 import RepeatModal from "@/components/RepeatModal";
-import { C_REGxServiceWorkerForActivePart } from "@/hooks/CDatabaseSettings";
 
 export default function Transfer() {
   const [refDoc, setRefDoc] = useState("");
@@ -50,14 +49,6 @@ export default function Transfer() {
 
   {/* เช็ค User*/ }
   useAuth();
-
-  useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      C_REGxServiceWorkerForActivePart()
-        .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
-        .catch((err) => console.log("Service Worker registration failed:", err));
-    }
-  }, []);
 
   useEffect(() => {
     // Focus ไปที่ input เมื่อ component โหลด

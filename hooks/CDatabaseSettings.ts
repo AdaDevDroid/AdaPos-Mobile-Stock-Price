@@ -10,6 +10,18 @@ export const SIDEBAR_STORAGE_KEY = "sidebarOpen";
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "/AdaCheckStockSTD";
 export const APP_VERSION = process.env.NEXT_PUBLIC_VERSION || "1.0.9";
 export const APP_BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID || APP_VERSION;
+const CACHE_VERSION = `${APP_VERSION}-${APP_BUILD_ID}`.replace(/[^A-Za-z0-9._-]/g, "_");
+const OFFLINE_ROUTE_PATHS = [
+  "/",
+  "/login",
+  "/main",
+  "/receive",
+  "/transfer",
+  "/stock",
+  "/price-check",
+  "/icons/icon-192x192.png",
+  "/icons/icon-512x512.png",
+];
 
 export const C_GETtNormalizedPathPart = (part: string): string => {
   return part.trim().replace(/^\/+/, "");
@@ -33,7 +45,7 @@ const RESERVED_PATH_PARTS = new Set([
   ...APP_ROUTE_PARTS,
 ]);
 
-const C_GETtSafePart = (part: string): string => {
+export const C_GETtSafePart = (part: string): string => {
   return C_GETtNormalizedPathPart(part).replace(/[^A-Za-z0-9._-]/g, "_") || "default";
 };
 
@@ -223,6 +235,10 @@ export const C_GETtRememberedUsernameCookieName = (part = C_GETtActiveDatabasePa
   return `rememberedUsername_${C_GETtSafePart(part)}`;
 };
 
+export const C_GETtPartSessionStorageKey = (key: string, part = C_GETtActiveDatabasePart()): string => {
+  return `adapos:${C_GETtSafePart(part)}:${key}`;
+};
+
 export const C_GETtServiceWorkerUrl = (basePath = C_GETtActiveBasePath()): string => {
   const activeBasePath = basePath.replace(/\/+$/, "");
   const params = new URLSearchParams({
@@ -263,18 +279,56 @@ const C_GETaCurrentPageAssetUrls = (): string[] => {
   });
 };
 
-const C_CACHExCurrentPageAssets = async (registration: ServiceWorkerRegistration) => {
-  const readyRegistration = registration.active ? registration : await navigator.serviceWorker.ready;
-  const worker = readyRegistration.active;
+type CacheAssetsResult = {
+  status?: string;
+  failed?: string[];
+};
+
+const C_WAIxServiceWorkerActivated = async (
+  registration: ServiceWorkerRegistration,
+  expectedScriptUrl: string,
+): Promise<ServiceWorker> => {
+  const worker = [registration.installing, registration.waiting, registration.active]
+    .find((candidate) => candidate?.scriptURL === expectedScriptUrl);
   if (!worker) {
-    return;
+    throw new Error("Unable to find the current service worker");
+  }
+  if (worker.state === "activated") {
+    return worker;
   }
 
-  await new Promise<void>((resolve) => {
+  return new Promise<ServiceWorker>((resolve, reject) => {
+    const timeoutId = window.setTimeout(
+      () => reject(new Error("Timed out while activating the service worker")),
+      20000,
+    );
+    const handleStateChange = () => {
+      if (worker.state === "activated") {
+        window.clearTimeout(timeoutId);
+        worker.removeEventListener("statechange", handleStateChange);
+        resolve(worker);
+      } else if (worker.state === "redundant") {
+        window.clearTimeout(timeoutId);
+        worker.removeEventListener("statechange", handleStateChange);
+        reject(new Error("The current service worker could not be installed"));
+      }
+    };
+    worker.addEventListener("statechange", handleStateChange);
+    handleStateChange();
+  });
+};
+
+const C_CACHExCurrentPageAssets = async (worker: ServiceWorker) => {
+
+  await new Promise<void>((resolve, reject) => {
     const channel = new MessageChannel();
-    const timeoutId = window.setTimeout(resolve, 10000);
-    channel.port1.onmessage = () => {
+    const timeoutId = window.setTimeout(() => reject(new Error("Timed out while caching page assets")), 10000);
+    channel.port1.onmessage = (event: MessageEvent<CacheAssetsResult>) => {
       window.clearTimeout(timeoutId);
+      if (event.data?.failed?.length) {
+        reject(new Error(`Unable to cache ${event.data.failed.length} required page assets`));
+        return;
+      }
       resolve();
     };
     worker.postMessage({ type: "CACHE_ASSETS", urls: C_GETaCurrentPageAssetUrls() }, [channel.port2]);
@@ -287,23 +341,96 @@ export const C_REGxServiceWorkerForActivePart = async () => {
   }
 
   const activeBasePath = C_GETtActiveBasePath();
-  const registration = await navigator.serviceWorker.register(C_GETtServiceWorkerUrl(activeBasePath), {
+  const serviceWorkerUrl = new URL(C_GETtServiceWorkerUrl(activeBasePath), window.location.origin).href;
+  const registration = await navigator.serviceWorker.register(serviceWorkerUrl, {
     scope: `${activeBasePath}/`,
     updateViaCache: "none",
   });
   await registration.update();
-  await C_CACHExCurrentPageAssets(registration);
+  const worker = await C_WAIxServiceWorkerActivated(registration, serviceWorkerUrl);
+  await C_CACHExCurrentPageAssets(worker);
   return registration;
 };
 
-export const C_GETtActivePartCachePrefixes = () => {
-  const cachePart = C_GETtActiveBasePath().replace(/[^A-Za-z0-9_-]/g, "_");
+export const C_GETtPartCachePrefixes = (part = C_GETtActiveDatabasePart()) => {
+  const cachePart = `/${C_GETtNormalizedPathPart(part)}`.replace(/[^A-Za-z0-9_-]/g, "_");
   return [`adapos-offline-${cachePart}-`, `static-resources-${cachePart}-`];
 };
 
-const C_CLRxLegacyCacheEntriesForActivePart = async (cacheName: string) => {
+export const C_GETtActivePartCachePrefixes = () => C_GETtPartCachePrefixes();
+
+export const C_GETtPartCacheNames = (part = C_GETtActiveDatabasePart()) => {
+  const [offlinePrefix, staticPrefix] = C_GETtPartCachePrefixes(part);
+  return [`${offlinePrefix}${CACHE_VERSION}`, `${staticPrefix}${CACHE_VERSION}`] as const;
+};
+
+export type PartCacheStatus = {
+  offlineCount: number;
+  offlineRequired: number;
+  staticCount: number;
+  staticRequired: number;
+  missingOffline: string[];
+  missingStatic: string[];
+  isReady: boolean;
+};
+
+const C_GETaMissingCacheUrls = async (cacheName: string, requiredUrls: string[]): Promise<string[]> => {
+  const cacheNames = await caches.keys();
+  if (!cacheNames.includes(cacheName)) {
+    return requiredUrls;
+  }
+
   const cache = await caches.open(cacheName);
-  const activePath = `${C_GETtActiveBasePath().replace(/\/+$/, "")}/`;
+  const missing: string[] = [];
+  for (const url of requiredUrls) {
+    if (!await cache.match(url, { ignoreVary: true })) {
+      missing.push(url);
+    }
+  }
+  return missing;
+};
+
+export const C_GETxActivePartCacheStatus = async (): Promise<PartCacheStatus> => {
+  if (typeof window === "undefined" || !("caches" in window)) {
+    return {
+      offlineCount: 0,
+      offlineRequired: OFFLINE_ROUTE_PATHS.length,
+      staticCount: 0,
+      staticRequired: 0,
+      missingOffline: [...OFFLINE_ROUTE_PATHS],
+      missingStatic: [],
+      isReady: false,
+    };
+  }
+
+  const activeBasePath = C_GETtActiveBasePath().replace(/\/+$/, "");
+  const offlineUrls = OFFLINE_ROUTE_PATHS.map((routePath) =>
+    new URL(`${activeBasePath}${routePath === "/" ? "/" : routePath}`, window.location.origin).href
+  );
+  const staticUrls = C_GETaCurrentPageAssetUrls();
+  const [offlineCacheName, staticCacheName] = C_GETtPartCacheNames();
+  const [missingOffline, missingStatic] = await Promise.all([
+    C_GETaMissingCacheUrls(offlineCacheName, offlineUrls),
+    C_GETaMissingCacheUrls(staticCacheName, staticUrls),
+  ]);
+  const offlineCount = offlineUrls.length - missingOffline.length;
+  const staticCount = staticUrls.length - missingStatic.length;
+
+  return {
+    offlineCount,
+    offlineRequired: offlineUrls.length,
+    staticCount,
+    staticRequired: staticUrls.length,
+    missingOffline,
+    missingStatic,
+    isReady: offlineUrls.length > 0 && staticUrls.length > 0 &&
+      missingOffline.length === 0 && missingStatic.length === 0,
+  };
+};
+
+const C_CLRxLegacyCacheEntriesForPart = async (cacheName: string, part: string) => {
+  const cache = await caches.open(cacheName);
+  const activePath = `/${C_GETtNormalizedPathPart(part).replace(/\/+$/, "")}/`;
   const requests = await cache.keys();
   await Promise.all(requests.map(async (request) => {
     const url = new URL(request.url);
@@ -313,29 +440,77 @@ const C_CLRxLegacyCacheEntriesForActivePart = async (cacheName: string) => {
   }));
 };
 
-export const C_CLRxActivePartWebAssets = async () => {
+const C_CLRxPartWebAssets = async (part: string, includeCurrentBuild: boolean) => {
   if (typeof window === "undefined") {
     return;
   }
 
   if ("caches" in window) {
-    const prefixes = C_GETtActivePartCachePrefixes();
+    const prefixes = C_GETtPartCachePrefixes(part);
+    const currentCacheNames = new Set(C_GETtPartCacheNames(part));
     const cacheNames = await caches.keys();
     await Promise.all(cacheNames.map(async (cacheName) => {
-      if (prefixes.some((prefix) => cacheName.startsWith(prefix))) {
+      if (
+        prefixes.some((prefix) => cacheName.startsWith(prefix)) &&
+        (includeCurrentBuild || !currentCacheNames.has(cacheName))
+      ) {
         await caches.delete(cacheName);
       } else if (cacheName === "static-resources" || cacheName.startsWith("workbox-precache")) {
-        await C_CLRxLegacyCacheEntriesForActivePart(cacheName);
+        await C_CLRxLegacyCacheEntriesForPart(cacheName, part);
       }
     }));
   }
 
-  if ("serviceWorker" in navigator) {
-    const activeScope = new URL(`${C_GETtActiveBasePath().replace(/\/+$/, "")}/`, window.location.origin).href;
+  if (includeCurrentBuild && "serviceWorker" in navigator) {
+    const activeScope = new URL(`/${C_GETtNormalizedPathPart(part).replace(/\/+$/, "")}/`, window.location.origin).href;
     const registrations = await navigator.serviceWorker.getRegistrations();
     await Promise.all(registrations
       .filter((registration) => registration.scope === activeScope)
       .map((registration) => registration.unregister()));
+  }
+};
+
+export const C_CLRxActivePartWebAssets = async () => {
+  await C_CLRxPartWebAssets(C_GETtActiveDatabasePart(), true);
+};
+
+export const C_CLRxPartClientState = async (part: string) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const normalizedPart = C_GETtNormalizedPathPart(part);
+  const keyPrefix = `adapos:${C_GETtSafePart(normalizedPart)}:`;
+  for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+    const key = localStorage.key(index);
+    if (key?.startsWith(keyPrefix)) {
+      localStorage.removeItem(key);
+    }
+  }
+  for (let index = sessionStorage.length - 1; index >= 0; index -= 1) {
+    const key = sessionStorage.key(index);
+    if (key?.startsWith(keyPrefix)) {
+      sessionStorage.removeItem(key);
+    }
+  }
+  await C_CLRxPartWebAssets(normalizedPart, true);
+};
+
+const C_ENSxActivePartServerReachable = async () => {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(`${C_GETtActiveBasePath().replace(/\/+$/, "")}/api/health`, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(response.status === 404 || response.status === 410
+        ? "ไม่พบการตั้งค่า Part นี้"
+        : "Server ยังไม่พร้อมสำหรับการซ่อมแซมไฟล์");
+    }
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 };
 
@@ -358,11 +533,17 @@ const C_RPRxActivePartAssets = async (reason: string, onRepaired?: () => void) =
   activeRepairPromise = (async () => {
     sessionStorage.setItem(guardKey, "running");
     try {
-      await C_CLRxActivePartWebAssets();
+      await C_ENSxActivePartServerReachable();
       await C_REGxServiceWorkerForActivePart();
+      const cacheStatus = await C_GETxActivePartCacheStatus();
+      if (!cacheStatus.isReady) {
+        throw new Error(
+          `Offline cache is incomplete (${cacheStatus.missingOffline.length + cacheStatus.missingStatic.length} missing)`
+        );
+      }
+      await C_CLRxPartWebAssets(C_GETtActiveDatabasePart(), false);
       onRepaired?.();
       sessionStorage.setItem(guardKey, "done");
-      window.location.reload();
       return true;
     } catch (error) {
       sessionStorage.removeItem(guardKey);
@@ -375,8 +556,8 @@ const C_RPRxActivePartAssets = async (reason: string, onRepaired?: () => void) =
   return activeRepairPromise;
 };
 
-export const C_RPRxActivePartAssetsOnce = async (reason = "asset") => {
-  return C_RPRxActivePartAssets(reason);
+export const C_RPRxActivePartAssetsOnce = async (reason = "asset", onRepaired?: () => void) => {
+  return C_RPRxActivePartAssets(reason, onRepaired);
 };
 
 export const C_ENSxActivePartBuild = async () => {

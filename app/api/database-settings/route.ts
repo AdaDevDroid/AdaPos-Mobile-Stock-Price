@@ -75,6 +75,17 @@ export async function POST(req: Request) {
     const mergedSettings = C_GEToMergedDatabaseSettings();
     const envSettings = C_GEToEnvDatabaseSettings();
     const existingPart = normalizedOldPart || normalizedPart;
+    const conflictingPart = Object.keys(mergedSettings).find(
+      (configuredPart) =>
+        configuredPart.toLowerCase() === normalizedPart.toLowerCase() &&
+        (!normalizedOldPart || configuredPart !== normalizedOldPart),
+    );
+    if (conflictingPart) {
+      return NextResponse.json(
+        { message: `Path part conflicts with existing part "${conflictingPart}"` },
+        { status: 409 },
+      );
+    }
     const existingSetting = C_GEToDatabaseConnectionSetting(
       settings[existingPart] ?? mergedSettings[existingPart] ?? mergedSettings[`/${existingPart}`],
     );

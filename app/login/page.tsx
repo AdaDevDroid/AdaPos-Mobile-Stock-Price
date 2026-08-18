@@ -15,16 +15,15 @@ import {
   C_GEToDatabaseHeaders,
   C_GETtActiveBasePath,
   C_GETtActiveDatabasePart,
-  C_GETtActivePartCachePrefixes,
+  C_GETtPartSessionStorageKey,
   C_GETtPartUrl,
   C_GETtRememberedUsernameCookieName,
+  C_GETxActivePartCacheStatus,
   C_GETxPartSession,
   C_RPRxActivePartAssetsOnce,
   C_SETxPartSession,
 } from "@/hooks/CDatabaseSettings";
 
-const REQUIRED_OFFLINE_CACHE_ITEMS = 9;
-const MIN_STATIC_CACHE_ITEMS = 3;
 const BRANCH_SELECTION_REQUIRED = "branch-selection-required";
 const NO_BRANCH_AVAILABLE = "no-branch-available";
 
@@ -39,41 +38,6 @@ class LoginApiError extends Error {
     this.name = "LoginApiError";
   }
 }
-
-const C_GETbOfflineCacheReady = (offlineCount: number, staticCount: number) => {
-  return offlineCount >= REQUIRED_OFFLINE_CACHE_ITEMS && staticCount >= MIN_STATIC_CACHE_ITEMS;
-};
-
-const C_GETxActivePartCacheCounts = async () => {
-  const [offlinePrefix, staticPrefix] = C_GETtActivePartCachePrefixes();
-  const activePath = `${C_GETtActiveBasePath().replace(/\/+$/, "")}/`;
-  let workboxCount = 0;
-  let staticCount = 0;
-
-  for (const cacheName of await caches.keys()) {
-    const isOfflineCache = cacheName.startsWith(offlinePrefix);
-    const isStaticCache = cacheName.startsWith(staticPrefix);
-    const isLegacyOfflineCache = cacheName.startsWith("workbox-precache");
-    const isLegacyStaticCache = cacheName === "static-resources";
-    if (!isOfflineCache && !isStaticCache && !isLegacyOfflineCache && !isLegacyStaticCache) {
-      continue;
-    }
-
-    const requests = await (await caches.open(cacheName)).keys();
-    const currentPartRequests = isLegacyOfflineCache || isLegacyStaticCache
-      ? requests.filter((request) => new URL(request.url).pathname.startsWith(activePath))
-      : requests;
-
-    if (isOfflineCache || isLegacyOfflineCache) {
-      workboxCount += currentPartRequests.length;
-    }
-    if (isStaticCache || isLegacyStaticCache) {
-      staticCount += currentPartRequests.length;
-    }
-  }
-
-  return { workboxCount, staticCount };
-};
 
 const C_GETnJwtExpiryMinutes = (token: string): number | null => {
   try {
@@ -110,20 +74,20 @@ export default function Login() {
   const tServerTokenRef = useRef("");
   const VERSION = process.env.NEXT_PUBLIC_VERSION as string;
 
-  const { workboxCount, staticCount, isReady } = usePWACacheStatus();
+  const { workboxCount, offlineRequired, staticCount, staticRequired, isReady } = usePWACacheStatus();
   const [showWrench, setShowWrench] = useState(false);
 
   const [showOfflineText, setShowOfflineText] = useState(true);
 
   useEffect(() => {
-    if (C_GETbOfflineCacheReady(workboxCount, staticCount)) {
+    if (isReady) {
       setShowOfflineText(true);
       const timer = setTimeout(() => setShowOfflineText(false), 5000);
       return () => clearTimeout(timer);
     } else {
       setShowOfflineText(true);
     }
-  }, [workboxCount, staticCount]);
+  }, [isReady]);
 
   useEffect(() => {
     if (!isReady) {
@@ -136,10 +100,12 @@ export default function Login() {
 
 
   function usePWACacheStatus() {
-    const [status, setStatus] = useState({
-      workboxCount: 0,
-      staticCount: 0,
-      isReady: false
+      const [status, setStatus] = useState({
+        workboxCount: 0,
+        offlineRequired: 9,
+        staticCount: 0,
+        staticRequired: 0,
+        isReady: false
     });
 
     useEffect(() => {
@@ -150,10 +116,14 @@ export default function Login() {
         }
 
         try {
-          const { workboxCount, staticCount } = await C_GETxActivePartCacheCounts();
-
-          const isReady = C_GETbOfflineCacheReady(workboxCount, staticCount);
-          setStatus({ workboxCount, staticCount, isReady });
+          const cacheStatus = await C_GETxActivePartCacheStatus();
+          setStatus({
+            workboxCount: cacheStatus.offlineCount,
+            offlineRequired: cacheStatus.offlineRequired,
+            staticCount: cacheStatus.staticCount,
+            staticRequired: cacheStatus.staticRequired,
+            isReady: cacheStatus.isReady,
+          });
         } catch (error) {
           console.error('❌ ตรวจสอบ cache ผิดพลาด:', error);
         }
@@ -187,7 +157,7 @@ export default function Login() {
 
 
   useEffect(() => {
-    sessionStorage.setItem("shouldReload", "true");
+    sessionStorage.setItem(C_GETtPartSessionStorageKey("shouldReload"), "true");
     const cookies = parse(document.cookie);
     const savedUsername = cookies[C_GETtRememberedUsernameCookieName()] || cookies.rememberedUsername;
     if (savedUsername) {
@@ -528,27 +498,32 @@ export default function Login() {
     }
 
     try {
-      const { workboxCount, staticCount } = await C_GETxActivePartCacheCounts();
+      const cacheStatus = await C_GETxActivePartCacheStatus();
+      const workboxCount = cacheStatus.offlineCount;
+      const staticCount = cacheStatus.staticCount;
 
       console.log(`📦 จำนวนไฟล์ offline-cache: ${workboxCount}`);
       console.log(`📦 จำนวนไฟล์ static-resources: ${staticCount}`);
 
-      if (C_GETbOfflineCacheReady(workboxCount, staticCount)) {
+      if (cacheStatus.isReady) {
         alert('✅ พร้อมใช้งานออฟไลน์แล้ว! 🎉');
       } else {
         const missing = [];
-        if (workboxCount < REQUIRED_OFFLINE_CACHE_ITEMS) {
-          missing.push(`offline-cache (${workboxCount}/${REQUIRED_OFFLINE_CACHE_ITEMS})`);
+        if (cacheStatus.missingOffline.length > 0) {
+          missing.push(`offline-cache (${workboxCount}/${cacheStatus.offlineRequired})`);
         }
-        if (staticCount < MIN_STATIC_CACHE_ITEMS) {
-          missing.push(`static-resources (${staticCount}/${MIN_STATIC_CACHE_ITEMS})`);
+        if (cacheStatus.missingStatic.length > 0) {
+          missing.push(`static-resources (${staticCount}/${cacheStatus.staticRequired})`);
         }
 
         const confirmClear = confirm(`ไฟล์สำหรับ Offline ไม่ครบ: ${missing.join(', ')}\n\nคุณต้องการซ่อมแซมไฟล์และโหลดใหม่หรือไม่?`);
 
         if (confirmClear) {
-          alert('ซ่อมแซมไฟล์เรียบร้อยแล้ว กำลังรีเฟรชเพื่อโหลดไฟล์สำหรับ Offline ใหม่!');
-          await C_RPRxActivePartAssetsOnce(`manual-${Date.now()}`);
+          const repaired = await C_RPRxActivePartAssetsOnce(`manual-${Date.now()}`);
+          if (repaired) {
+            alert('ซ่อมแซมไฟล์เรียบร้อยแล้ว กำลังรีเฟรชเพื่อโหลดไฟล์สำหรับ Offline ใหม่!');
+            window.location.reload();
+          }
         } else {
           alert('ยกเลิกการล้าง cache');
         }
@@ -556,7 +531,9 @@ export default function Login() {
 
     } catch (error) {
       console.error('เกิดข้อผิดพลาดระหว่างตรวจสอบ cache:', error);
-      alert('ตรวจสอบ cache ไม่สำเร็จ!');
+      alert(error instanceof Error
+        ? `ซ่อมแซมไฟล์ไม่สำเร็จ: ${error.message}`
+        : 'ซ่อมแซมไฟล์ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อ Server');
     }
   }
 
@@ -633,7 +610,7 @@ export default function Login() {
           <div className="flex flex-col items-center justify-center">
 
             <div className="relative flex items-center justify-center">
-              {C_GETbOfflineCacheReady(workboxCount, staticCount) ? (
+              {isReady ? (
                 <div className="group relative">
                   <FaCheckCircle className="text-green-500" size={20} />
                   <div className="absolute left-8 bottom-1 bg-white text-gray-800 shadow p-2 rounded text-xs min-w-max whitespace-nowrap opacity-0 group-hover:opacity-100 transition">
@@ -655,19 +632,19 @@ export default function Login() {
                   )}
                   <div className="absolute left-8 bottom-1 bg-white text-gray-800 shadow p-2 rounded text-xs min-w-max whitespace-nowrap opacity-0 group-hover:opacity-100 transition">
                     ⚡ Offline ไม่พร้อมใช้งาน<br />
-                    offline: {workboxCount}/{REQUIRED_OFFLINE_CACHE_ITEMS}<br />
-                    static: {staticCount}/{MIN_STATIC_CACHE_ITEMS}
+                    offline: {workboxCount}/{offlineRequired}<br />
+                    static: {staticCount}/{staticRequired}
                   </div>
                 </div>
               )}
             </div>
-            <div className={`mt-1 text-xs text-center leading-snug ${C_GETbOfflineCacheReady(workboxCount, staticCount)
+            <div className={`mt-1 text-xs text-center leading-snug ${isReady
               ? 'text-green-600'
               : showWrench
                 ? 'text-yellow-500'
                 : 'text-yellow-500'
               }`}>
-              {C_GETbOfflineCacheReady(workboxCount, staticCount) ? (
+              {isReady ? (
                 <>Offline Mode<br />พร้อมใช้งาน</>
               ) : showWrench ? (
                 <>Offline Mode<br />โหลดข้อมูลไม่สำเร็จ<br />กรุณาซ่อมแซมไฟล์</>

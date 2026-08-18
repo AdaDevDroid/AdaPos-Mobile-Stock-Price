@@ -11,7 +11,7 @@ import { C_GETtGenerateRandomID, C_INSxProducts, C_INSxStock, C_SETxFormattedDat
 import exportPurcaseInvoiceToExcel from "@/hooks/CTransferreceiptoutToExcel";
 import exportjustStockToExcel from "@/hooks/CAdjustStockToExcel";
 import exportTransferbetweenbranchToExcel from "@/hooks/CProducttransferwahouseToExcel";
-import { C_GETtPartUrl, C_REGxServiceWorkerForActivePart } from "@/hooks/CDatabaseSettings";
+import { C_GETtPartSessionStorageKey, C_GETtPartUrl } from "@/hooks/CDatabaseSettings";
 
 
 export default function MainPage() {
@@ -44,18 +44,11 @@ export default function MainPage() {
   useAuth();
 
   useEffect(() => {
-    const shouldReload = sessionStorage.getItem("shouldReload");
+    const reloadKey = C_GETtPartSessionStorageKey("shouldReload");
+    const shouldReload = sessionStorage.getItem(reloadKey);
     if (shouldReload === "true") {
-      sessionStorage.removeItem("shouldReload");
+      sessionStorage.removeItem(reloadKey);
       window.location.reload();
-    }
-  }, []);
-
-  useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      C_REGxServiceWorkerForActivePart()
-        .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
-        .catch((err) => console.log("Service Worker registration failed:", err));
     }
   }, []);
 

@@ -49,35 +49,30 @@ const putInCache = async (cacheName, request, response) => {
 
 const cacheUrls = async (cacheName, urls) => {
   const cache = await caches.open(cacheName);
-
-  await Promise.all(
+  const results = await Promise.all(
     urls.map(async (assetUrl) => {
       try {
         const response = await fetch(assetUrl, { cache: "reload" });
         if (response.ok) {
           await cache.put(assetUrl, response.clone());
+          return { url: assetUrl, cached: true };
         }
       } catch (error) {
         console.warn("Unable to cache asset:", assetUrl, error);
       }
+      return { url: assetUrl, cached: false };
     })
   );
+
+  return {
+    cached: results.filter((result) => result.cached).map((result) => result.url),
+    failed: results.filter((result) => !result.cached).map((result) => result.url),
+  };
 };
 
-const cleanupOldCaches = async () => {
+const cleanupLegacyCaches = async () => {
   const cacheNames = await caches.keys();
-  const offlinePrefix = `adapos-offline-${CACHE_PART}-`;
-  const staticPrefix = `static-resources-${CACHE_PART}-`;
   const activePath = `${BASE_PATH.replace(/\/+$/, "")}/`;
-
-  await Promise.all(
-    cacheNames
-      .filter((cacheName) =>
-        (cacheName.startsWith(offlinePrefix) && cacheName !== OFFLINE_CACHE_NAME) ||
-        (cacheName.startsWith(staticPrefix) && cacheName !== STATIC_CACHE_NAME)
-      )
-      .map((cacheName) => caches.delete(cacheName))
-  );
 
   await Promise.all(
     cacheNames
@@ -93,6 +88,30 @@ const cleanupOldCaches = async () => {
         }));
       })
   );
+};
+
+const cleanupOldPartCaches = async () => {
+  const cacheNames = await caches.keys();
+  const offlinePrefix = `adapos-offline-${CACHE_PART}-`;
+  const staticPrefix = `static-resources-${CACHE_PART}-`;
+
+  await Promise.all(
+    cacheNames
+      .filter((cacheName) =>
+        (cacheName.startsWith(offlinePrefix) && cacheName !== OFFLINE_CACHE_NAME) ||
+        (cacheName.startsWith(staticPrefix) && cacheName !== STATIC_CACHE_NAME)
+      )
+      .map((cacheName) => caches.delete(cacheName))
+  );
+};
+
+const clearCurrentPartCaches = async () => {
+  const cacheNames = await caches.keys();
+  const offlinePrefix = `adapos-offline-${CACHE_PART}-`;
+  const staticPrefix = `static-resources-${CACHE_PART}-`;
+  await Promise.all(cacheNames
+    .filter((cacheName) => cacheName.startsWith(offlinePrefix) || cacheName.startsWith(staticPrefix))
+    .map((cacheName) => caches.delete(cacheName)));
 };
 
 const isPartUrl = (url) => (
@@ -117,16 +136,20 @@ self.addEventListener("install", (event) => {
     Promise.all([
       cacheUrls(OFFLINE_CACHE_NAME, OFFLINE_URLS),
       cacheUrls(STATIC_CACHE_NAME, STATIC_URLS),
-    ]).then(() => self.skipWaiting())
+    ]).then((results) => {
+      const failed = results.flatMap((result) => result.failed);
+      if (failed.length > 0) {
+        throw new Error(`Unable to cache ${failed.length} required application assets`);
+      }
+      return self.skipWaiting();
+    })
   );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    cleanupOldCaches()
+    cleanupLegacyCaches()
       .then(() => self.clients.claim())
-      .then(() => self.clients.matchAll({ type: "window" }))
-      .then((clients) => clients.forEach((client) => client.postMessage({ status: "cache-complete", buildId })))
   );
 });
 
@@ -144,8 +167,23 @@ self.addEventListener("message", (event) => {
   });
 
   event.waitUntil(
-    cacheUrls(STATIC_CACHE_NAME, urls)
-      .then(() => event.ports[0]?.postMessage({ status: "cache-complete", buildId }))
+    Promise.all([
+      cacheUrls(OFFLINE_CACHE_NAME, OFFLINE_URLS),
+      cacheUrls(STATIC_CACHE_NAME, [...new Set([...STATIC_URLS, ...urls])]),
+    ])
+      .then(async (results) => {
+        const cached = [...new Set(results.flatMap((result) => result.cached))];
+        const failed = [...new Set(results.flatMap((result) => result.failed))];
+        if (failed.length === 0) {
+          await cleanupOldPartCaches();
+        }
+        event.ports[0]?.postMessage({
+          status: failed.length === 0 ? "cache-complete" : "cache-incomplete",
+          buildId,
+          cached,
+          failed,
+        });
+      })
   );
 });
 
@@ -175,6 +213,11 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then(async (networkResponse) => {
+          if (networkResponse.status === 404 || networkResponse.status === 410) {
+            await clearCurrentPartCaches();
+            await self.registration.unregister();
+            return networkResponse;
+          }
           await putInCache(OFFLINE_CACHE_NAME, request, networkResponse);
           return networkResponse;
         })

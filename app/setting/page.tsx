@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { FaDatabase, FaLock, FaUser } from "react-icons/fa";
 import {
+  C_CLRxPartClientState,
   C_GEToDatabaseSettings,
   C_GETtNormalizedDatabaseName,
   C_GETtNormalizedPathPart,
-  C_REMxPartStorageValue,
+  C_GETtRememberedUsernameCookieName,
   C_SEToDatabaseSettings,
-  DATABASE_NAME_STORAGE_KEY,
 } from "@/hooks/CDatabaseSettings";
+import { C_DELxPartIndexedDB } from "@/hooks/CIndexedDB";
 
 const SAFE_PART = /^[A-Za-z0-9._-]+$/;
 const SAFE_DATABASE = /^[A-Za-z0-9._-]+$/;
@@ -45,6 +46,15 @@ type DatabaseSetting = {
   hasPassword: boolean;
   connected?: boolean;
   isDefault?: boolean;
+};
+
+const C_CLRxPartBrowserState = async (part: string): Promise<boolean> => {
+  const results = await Promise.allSettled([
+    C_CLRxPartClientState(part),
+    C_DELxPartIndexedDB(part),
+  ]);
+  document.cookie = `${C_GETtRememberedUsernameCookieName(part)}=; Max-Age=0; Path=/${part}/; SameSite=Lax`;
+  return results.every((result) => result.status === "fulfilled");
 };
 
 export default function SettingPage() {
@@ -204,13 +214,17 @@ export default function SettingPage() {
       }
 
       C_SEToDatabaseSettings(normalizedPart, normalizedDatabase);
+      const renamedPart = editingPart && editingPart !== normalizedPart ? editingPart : "";
+      const clientDataCleared = renamedPart ? await C_CLRxPartBrowserState(renamedPart) : true;
       setPart(normalizedPart);
       setDatabase(normalizedDatabase);
       setServer(normalizedServer);
       setPort(normalizedPort);
       setDbUser(normalizedDbUser);
       setDbPassword("");
-      setSaved("บันทึกการตั้งค่าเรียบร้อย");
+      setSaved(clientDataCleared
+        ? "บันทึกการตั้งค่าเรียบร้อย"
+        : "บันทึกการตั้งค่าเรียบร้อย แต่ข้อมูล Offline เดิมยังเปิดใช้อยู่ในแท็บอื่น กรุณาปิดแท็บเดิม");
       setShowAddForm(false);
       setEditingPart("");
       setEditingIsDefault(false);
@@ -287,12 +301,14 @@ export default function SettingPage() {
         throw new Error(data.message || "ลบการตั้งค่าไม่สำเร็จ");
       }
 
-      C_REMxPartStorageValue(DATABASE_NAME_STORAGE_KEY, item.part);
+      const clientDataCleared = await C_CLRxPartBrowserState(item.part);
 
       setShowAddForm(false);
       setEditingPart("");
       setEditingIsDefault(false);
-      setSaved("ลบการตั้งค่าเรียบร้อย");
+      setSaved(clientDataCleared
+        ? "ลบการตั้งค่าเรียบร้อย"
+        : "ลบการตั้งค่าเรียบร้อย แต่ข้อมูล Offline เดิมยังเปิดใช้อยู่ในแท็บอื่น กรุณาปิดแท็บเดิม");
       await C_PRCxLoadSettingsList();
     } catch (err) {
       setError((err as Error).message);

@@ -1,7 +1,35 @@
 import { NextResponse } from 'next/server';
+import { C_GETtRequestDatabasePart } from '../auth/session';
+import {
+  C_GEToDatabasePartResolution,
+  C_GETtDefaultEnvPathPart,
+} from '../database-settings/config';
 
-export async function GET() {
+const C_GEToPartResponse = (request: Request) => {
+  const requestedPart = C_GETtRequestDatabasePart(request) || C_GETtDefaultEnvPathPart();
+  const resolution = C_GEToDatabasePartResolution(requestedPart);
+
+  if (resolution.status === "active") {
+    return { requestedPart, resolution, response: null };
+  }
+
+  const status = resolution.status === "deleted" ? 410 : 404;
+  return {
+    requestedPart,
+    resolution,
+    response: NextResponse.json({
+      status: "invalid-part",
+      code: resolution.status === "deleted" ? "database-part-deleted" : "database-part-not-configured",
+      part: requestedPart,
+    }, { status }),
+  };
+};
+
+export async function GET(request: Request) {
   try {
+    const partResult = C_GEToPartResponse(request);
+    if (partResult.response) return partResult.response;
+
     const currentTime = new Date().toISOString();
     
     // คำนวณเวลา restart ถัดไป
@@ -17,7 +45,7 @@ export async function GET() {
       timestamp: currentTime,
       version: process.env.NEXT_PUBLIC_VERSION || '1.0.9',
       buildId: process.env.NEXT_PUBLIC_BUILD_ID || process.env.NEXT_PUBLIC_VERSION || '1.0.9',
-      basePath: process.env.NEXT_PUBLIC_BASE_PATH || '/AdaCheckStockSTD',
+      basePath: `/${partResult.resolution.part}`,
       nextAutoRestart: nextRestart.toISOString(),
       timeUntilRestart: `${Math.floor((nextRestart.getTime() - now.getTime()) / (1000 * 60 * 60))}h ${Math.floor(((nextRestart.getTime() - now.getTime()) % (1000 * 60 * 60)) / (1000 * 60))}m`
     }, { status: 200 });
@@ -30,6 +58,7 @@ export async function GET() {
   }
 }
 
-export async function HEAD() {
-  return new NextResponse(null, { status: 200 });
+export async function HEAD(request: Request) {
+  const partResult = C_GEToPartResponse(request);
+  return new NextResponse(null, { status: partResult.response?.status || 200 });
 }
