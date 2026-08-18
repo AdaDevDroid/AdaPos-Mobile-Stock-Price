@@ -11,9 +11,19 @@ import MobileHeader from "@/components/MobileHeader";
 import {
   C_GETtActiveBasePath,
   C_GETtBasePathFromPathname,
+  C_GETtPartStorageValue,
   C_GETtRoutePathFromPathname,
+  C_ENSxActivePartBuild,
   C_REGxServiceWorkerForActivePart,
+  C_RPRxActivePartAssetsOnce,
+  C_SETxPartStorageValue,
+  SIDEBAR_STORAGE_KEY,
 } from "@/hooks/CDatabaseSettings";
+
+const C_GETbAssetLoadError = (value: unknown): boolean => {
+  const message = value instanceof Error ? `${value.name} ${value.message}` : String(value || "");
+  return /ChunkLoadError|Loading chunk .* failed|Failed to fetch dynamically imported module|Importing a module script failed/i.test(message);
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -32,25 +42,46 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     document.querySelector('link[rel="manifest"]')?.setAttribute("href", `${nextBasePath}/manifest.json`);
     document.querySelector('link[rel="icon"]')?.setAttribute("href", `${nextBasePath}/favicon.ico`);
 
-    C_REGxServiceWorkerForActivePart()
-        .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
-        .catch((err) => console.log("Service Worker registration failed:", err));
+    C_ENSxActivePartBuild()
+      .then((isReloading) => isReloading ? null : C_REGxServiceWorkerForActivePart())
+      .then((registration) => registration && console.log("Service Worker [ลงทะเบียนแล้ว]"))
+      .catch((err) => console.log("Service Worker registration failed:", err));
   }, [pathBasePath]);
 
   useEffect(() => {
-    const storedValue = localStorage.getItem("sidebarOpen");
+    const storedValue = C_GETtPartStorageValue(SIDEBAR_STORAGE_KEY);
     if (storedValue === null && window.innerWidth >= 768) {
       setIsSidebarOpen(true);
     } else {
       setIsSidebarOpen(storedValue === "true");
     }
-  }, []);
+  }, [pathBasePath]);
 
   useEffect(() => {
     if (isSidebarOpen !== null) {
-      localStorage.setItem("sidebarOpen", JSON.stringify(isSidebarOpen));
+      C_SETxPartStorageValue(SIDEBAR_STORAGE_KEY, JSON.stringify(isSidebarOpen));
     }
-  }, [isSidebarOpen]);
+  }, [isSidebarOpen, pathBasePath]);
+
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      if (C_GETbAssetLoadError(event.error || event.message)) {
+        void C_RPRxActivePartAssetsOnce("asset");
+      }
+    };
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      if (C_GETbAssetLoadError(event.reason)) {
+        void C_RPRxActivePartAssetsOnce("asset");
+      }
+    };
+
+    window.addEventListener("error", handleError);
+    window.addEventListener("unhandledrejection", handleRejection);
+    return () => {
+      window.removeEventListener("error", handleError);
+      window.removeEventListener("unhandledrejection", handleRejection);
+    };
+  }, [pathBasePath]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => !prev);

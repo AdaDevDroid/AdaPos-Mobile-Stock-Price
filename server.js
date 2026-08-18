@@ -81,6 +81,14 @@ const C_SETxNoStoreHeaders = (res) => {
   res.setHeader("Expires", "0");
 };
 
+const C_GETbNoStoreRoute = (routePath) => {
+  const normalizedPath = (routePath || "/").replace(/\/$/, "") || "/";
+  return pageRoutes.has(normalizedPath) ||
+    normalizedPath.startsWith("/api/") ||
+    normalizedPath === "/manifest.json" ||
+    normalizedPath === "/sw.js";
+};
+
 app
   .prepare()
   .then(() => {
@@ -89,21 +97,30 @@ app
       const dynamicPartRoute = C_GEToDynamicPartRoute(parsedUrl.pathname);
 
       if (parsedUrl.pathname === `${basePath}/setting` || parsedUrl.pathname === `${basePath}/setting/`) {
+        C_SETxNoStoreHeaders(res);
         res.writeHead(301, { Location: `/setting${parsedUrl.search || ""}` });
         res.end();
       } else if (parsedUrl.pathname === "/setting" || parsedUrl.pathname === "/setting/") {
+        C_SETxNoStoreHeaders(res);
         const correctedUrl = parse(`${basePath}${parsedUrl.path}`, true);
         handle(req, res, correctedUrl);
       } else if (dynamicPartRoute && dynamicPartRoute.routePath === "/setting") {
+        C_SETxNoStoreHeaders(res);
         res.writeHead(301, { Location: `/setting${parsedUrl.search || ""}` });
         res.end();
       } else if (dynamicPartRoute) {
-        C_SETxNoStoreHeaders(res);
+        if (C_GETbNoStoreRoute(dynamicPartRoute.routePath)) {
+          C_SETxNoStoreHeaders(res);
+        }
         C_SETxDatabasePartHeaders(req, dynamicPartRoute.part);
         const correctedUrl = parse(`${basePath}${dynamicPartRoute.routePath}${parsedUrl.search || ""}`, true);
         handle(req, res, correctedUrl);
       } else if (parsedUrl.pathname && parsedUrl.pathname.startsWith(basePath)) {
         // URLs ที่มี basePath
+        const baseRoutePath = parsedUrl.pathname.slice(basePath.length) || "/";
+        if (C_GETbNoStoreRoute(baseRoutePath)) {
+          C_SETxNoStoreHeaders(res);
+        }
         C_SETxDatabasePartHeaders(req, basePart);
         handle(req, res, parsedUrl);
       } else if (

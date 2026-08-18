@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { FaSignOutAlt } from "react-icons/fa";
 import { C_PRCxOpenIndexedDB, C_GETxUserData } from "@/hooks/CIndexedDB";
 import { UserInfo } from "@/models/models";
-import { C_GETtPartUrl, SESSION_PART_STORAGE_KEY } from "@/hooks/CDatabaseSettings";
+import { C_CLRxPartSession, C_GETtPartUrl, C_REMxPartStorageValue, SIDEBAR_STORAGE_KEY } from "@/hooks/CDatabaseSettings";
 
 export default function MobileHeader() {
   const [oUserInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -23,10 +23,8 @@ export default function MobileHeader() {
 
   const handleLogout = async () => {
     try {
-      localStorage.removeItem("session_token");
-      localStorage.removeItem("session_expiry");
-      localStorage.removeItem(SESSION_PART_STORAGE_KEY);
-      localStorage.removeItem("sidebarOpen");
+      C_CLRxPartSession();
+      C_REMxPartStorageValue(SIDEBAR_STORAGE_KEY);
       console.log("✅ Logout สำเร็จ");
     } catch (error) {
       console.log("❌ ไม่สามารถ Logout:", error);

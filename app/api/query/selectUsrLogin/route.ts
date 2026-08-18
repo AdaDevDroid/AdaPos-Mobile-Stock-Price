@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
+import sql from "mssql";
 import { C_CTDoConnectToDatabase } from "../../database/connect_db";
 import { CEncrypt } from "../../../../hooks/CEncrypt";
 import { C_GETtRequestDatabasePart, C_GETtSessionToken } from "../../auth/session";
@@ -20,6 +22,39 @@ interface User {
 type SqlPool = Awaited<ReturnType<typeof C_CTDoConnectToDatabase>>;
 
 const agencySchemaByPool = new WeakMap<SqlPool, Promise<boolean>>();
+const DATABASE_UNAVAILABLE_CODES = new Set([
+  "ECONNCLOSED",
+  "ECONNREFUSED",
+  "ELOGIN",
+  "ENOTOPEN",
+  "ESOCKET",
+  "ETIMEOUT",
+]);
+
+const C_GEToErrorDetails = (error: unknown) => {
+  const value = error as {
+    code?: unknown;
+    message?: unknown;
+    originalError?: { code?: unknown; message?: unknown };
+  };
+  return {
+    code: typeof value?.code === "string"
+      ? value.code
+      : typeof value?.originalError?.code === "string"
+        ? value.originalError.code
+        : "UNKNOWN",
+    message: typeof value?.message === "string"
+      ? value.message
+      : typeof value?.originalError?.message === "string"
+        ? value.originalError.message
+        : "Unknown error",
+  };
+};
+
+const C_GETbDatabaseUnavailable = (code: string, message: string) => {
+  return DATABASE_UNAVAILABLE_CODES.has(code) ||
+    /connect|connection|socket|timeout|timed out|server was not found|network-related/i.test(message);
+};
 
 const C_ISbAgencyUserSchema = async (pool: SqlPool): Promise<boolean> => {
   let schemaPromise = agencySchemaByPool.get(pool);
@@ -128,16 +163,29 @@ const C_GETtLoginQuery = (isAgencySchema: boolean): string => {
 };
 
 export async function POST(req: Request) {
+  const requestId = randomUUID();
+  const databasePart = C_GETtRequestDatabasePart(req);
   try {
-    const { username, password } = await req.json();
-    if (!username || !password) {
-      return NextResponse.json({ message: "Username and password are required" }, { status: 400 });
+    const payload = await req.json().catch(() => null) as { username?: unknown; password?: unknown } | null;
+    if (
+      !payload ||
+      typeof payload.username !== "string" ||
+      typeof payload.password !== "string" ||
+      !payload.username.trim() ||
+      !payload.password
+    ) {
+      return NextResponse.json(
+        { code: "invalid-request", message: "Username and password must be non-empty strings", requestId },
+        { status: 400 },
+      );
     }
+    const username = payload.username.trim();
+    const password = payload.password;
 
     const pool = await C_CTDoConnectToDatabase(req);
     const isAgencySchema = await C_ISbAgencyUserSchema(pool);
     const result = await pool.request()
-      .input("username", username)
+      .input("username", sql.NVarChar(255), username)
       .query(C_GETtLoginQuery(isAgencySchema));
 
     const users = (result.recordset || []).map((user: User) => ({ ...user }));
@@ -145,21 +193,38 @@ export async function POST(req: Request) {
     const matchedUsers = users.filter((user: User) => user.FTUsrLoginPwd === encryptedPassword);
 
     if (matchedUsers.length === 0) {
-      return NextResponse.json({ message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }, { status: 401 });
+      return NextResponse.json(
+        { code: "invalid-credentials", message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", requestId },
+        { status: 401 },
+      );
     }
 
     const branchUsers = matchedUsers.filter((user: User) => user.FTStaHasGroup === "1");
     if (branchUsers.length === 0) {
       return NextResponse.json(
-        { code: "no-branch-available", message: "ไม่พบข้อมูลสาขาในระบบ กรุณาติดต่อผู้ดูแล" },
+        { code: "no-branch-available", message: "ไม่พบข้อมูลสาขาในระบบ กรุณาติดต่อผู้ดูแล", requestId },
         { status: 409 },
       );
     }
 
-    const token = C_GETtSessionToken(branchUsers[0], C_GETtRequestDatabasePart(req));
-    return NextResponse.json({ message: "Query Success", user: branchUsers, token });
+    const token = C_GETtSessionToken(branchUsers[0], databasePart);
+    return NextResponse.json({ message: "Query Success", user: branchUsers, token, requestId });
   } catch (error) {
-    console.error("Login error:", error);
-    return NextResponse.json({ message: "เกิดข้อผิดพลาด" }, { status: 500 });
+    const details = C_GEToErrorDetails(error);
+    const databaseUnavailable = C_GETbDatabaseUnavailable(details.code, details.message);
+    console.error("Login error:", {
+      requestId,
+      databasePart,
+      code: details.code,
+      message: details.message,
+    });
+    return NextResponse.json(
+      {
+        code: databaseUnavailable ? "database-unavailable" : "login-server-error",
+        message: databaseUnavailable ? "ไม่สามารถเชื่อมต่อฐานข้อมูล" : "เกิดข้อผิดพลาดภายใน Server",
+        requestId,
+      },
+      { status: databaseUnavailable ? 503 : 500 },
+    );
   }
 }

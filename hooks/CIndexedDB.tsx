@@ -1,72 +1,55 @@
 import { History, Product, UserInfo, SysConfig } from "@/models/models"
-import { C_GETtActiveDatabasePart, SESSION_PART_STORAGE_KEY } from "@/hooks/CDatabaseSettings";
+import {
+  C_GETtActiveDatabasePart,
+  C_GETtConfiguredDatabasePart,
+  C_GETtNormalizedPathPart,
+  DATABASE_PART_STORAGE_KEY,
+  SESSION_PART_STORAGE_KEY,
+} from "@/hooks/CDatabaseSettings";
 
 const LEGACY_DATABASE_PART_STORAGE_KEY = "ada_legacy_db_part";
 
 export const C_PRCxOpenIndexedDB = async () => {
   const activePart = C_GETtActiveDatabasePart();
-  let legacyDatabasePart = localStorage.getItem(LEGACY_DATABASE_PART_STORAGE_KEY);
-  if (!legacyDatabasePart) {
-    legacyDatabasePart = activePart;
-    localStorage.setItem(LEGACY_DATABASE_PART_STORAGE_KEY, activePart);
+  const legacySessionPart = C_GETtNormalizedPathPart(localStorage.getItem(SESSION_PART_STORAGE_KEY) || "");
+  const legacyConfiguredPart = C_GETtNormalizedPathPart(localStorage.getItem(DATABASE_PART_STORAGE_KEY) || "");
+  let legacyDatabasePart = C_GETtNormalizedPathPart(localStorage.getItem(LEGACY_DATABASE_PART_STORAGE_KEY) || "");
+
+  // session_part มาจากข้อมูลผู้ใช้ชุดเดียวกับ AdaDB จึงใช้แก้ marker ที่เคยผูกกับ Part แรกผิดพลาด
+  if (legacySessionPart && legacyDatabasePart !== legacySessionPart) {
+    legacyDatabasePart = legacySessionPart;
+  } else if (!legacyDatabasePart) {
+    legacyDatabasePart = legacyConfiguredPart || C_GETtConfiguredDatabasePart();
+  }
+
+  if (legacyDatabasePart) {
+    localStorage.setItem(LEGACY_DATABASE_PART_STORAGE_KEY, legacyDatabasePart);
   }
 
   const safePart = activePart.replace(/[^A-Za-z0-9._-]/g, "_") || "default";
   const DB_NAME = activePart === legacyDatabasePart ? "AdaDB" : `AdaDB_${safePart}`;
   const DB_VERSION = 18;
 
-  const shouldResetDB = async (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      const request = indexedDB.open(DB_NAME);
+  const currentVersion = await new Promise<number>((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME);
 
-      request.onsuccess = () => {
-        const db = request.result;
-        const currentVersion = db.version;
-        db.close();
-        resolve(currentVersion !== DB_VERSION);
-      };
+    request.onsuccess = () => {
+      const db = request.result;
+      const version = db.version;
+      db.close();
+      resolve(version);
+    };
 
-      request.onerror = () => {
-        resolve(false); // ไม่สามารถเปิด DB ได้ — ไม่ต้องลบ
-      };
+    request.onerror = () => {
+      reject(request.error);
+    };
+  });
 
-      request.onupgradeneeded = () => {
-        // ยังไม่เคยเปิดมาก่อน ถือว่าไม่ต้องลบ
-        resolve(false);
-      };
-    });
-  };
-
-  const needReset = await shouldResetDB();
-
-  if (needReset) {
-    console.log("⚠️ ตรวจพบการเปลี่ยนแปลงเวอร์ชัน — กำลังลบ DB เดิม...");
-    await new Promise<void>((resolve, reject) => {
-      const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
-      deleteRequest.onsuccess = () => {
-        console.log("🗑️ ลบฐานข้อมูลเดิมเรียบร้อย");
-        try {
-          if (localStorage.getItem("session_token")) {
-            localStorage.removeItem("session_token");
-            localStorage.removeItem("session_expiry");
-            localStorage.removeItem(SESSION_PART_STORAGE_KEY);
-            localStorage.removeItem("sidebarOpen");
-          };
-          console.log("✅ Logout ผ่าน API สำเร็จ");
-        } catch (error) {
-          console.log("❌ ไม่สามารถ Logout:", error);
-        }
-        resolve();
-      };
-      deleteRequest.onerror = () => {
-        console.error("❌ ลบฐานข้อมูลไม่สำเร็จ", deleteRequest.error);
-        reject(deleteRequest.error);
-      };
-    });
-  }
+  // เปิดด้วย schema ที่ใหม่ที่สุดโดยไม่ลบข้อมูล Offline เดิมเมื่อเวอร์ชันเปลี่ยน
+  const targetVersion = Math.max(DB_VERSION, currentVersion);
 
   return new Promise<IDBDatabase>((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = indexedDB.open(DB_NAME, targetVersion);
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;

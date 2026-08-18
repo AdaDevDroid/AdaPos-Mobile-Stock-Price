@@ -6,7 +6,9 @@ import {
   C_GEToDatabaseSettings,
   C_GETtNormalizedDatabaseName,
   C_GETtNormalizedPathPart,
+  C_REMxPartStorageValue,
   C_SEToDatabaseSettings,
+  DATABASE_NAME_STORAGE_KEY,
 } from "@/hooks/CDatabaseSettings";
 
 const SAFE_PART = /^[A-Za-z0-9._-]+$/;
@@ -285,10 +287,7 @@ export default function SettingPage() {
         throw new Error(data.message || "ลบการตั้งค่าไม่สำเร็จ");
       }
 
-      const currentSettings = C_GEToDatabaseSettings();
-      if (currentSettings.part === item.part) {
-        C_SEToDatabaseSettings("", "");
-      }
+      C_REMxPartStorageValue(DATABASE_NAME_STORAGE_KEY, item.part);
 
       setShowAddForm(false);
       setEditingPart("");

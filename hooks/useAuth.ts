@@ -1,22 +1,18 @@
 "use client";
 
 import { useEffect } from "react";
-import { C_GETtActiveDatabasePart, C_GETtPartUrl, SESSION_PART_STORAGE_KEY } from "@/hooks/CDatabaseSettings";
+import { C_CLRxPartSession, C_GETtActiveDatabasePart, C_GETtPartUrl, C_GETxPartSession } from "@/hooks/CDatabaseSettings";
 
 export function useAuth() {
   useEffect(() => {
     const redirectToLogin = () => {
-      localStorage.removeItem("session_token");
-      localStorage.removeItem("session_expiry");
-      localStorage.removeItem(SESSION_PART_STORAGE_KEY);
+      C_CLRxPartSession();
       window.location.href = C_GETtPartUrl("/login");
     };
 
     const checkAuth = () => {
       try {
-        const cachedToken = localStorage.getItem("session_token");
-        const tokenExpiry = localStorage.getItem("session_expiry");
-        const sessionPart = localStorage.getItem(SESSION_PART_STORAGE_KEY);
+        const { token: cachedToken, expiry: tokenExpiry, part: sessionPart } = C_GETxPartSession();
 
         if (!cachedToken || !tokenExpiry || sessionPart !== C_GETtActiveDatabasePart()) {
           redirectToLogin();

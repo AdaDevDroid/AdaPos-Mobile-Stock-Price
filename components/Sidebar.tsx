@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { FaHome, FaBoxOpen, FaExchangeAlt, FaClipboardCheck, FaTags, FaBars, FaSignOutAlt } from "react-icons/fa";
 import { C_PRCxOpenIndexedDB, C_GETxUserData } from "@/hooks/CIndexedDB";
-import { C_GETtPartUrl, C_GETtRoutePathFromPathname, SESSION_PART_STORAGE_KEY } from "@/hooks/CDatabaseSettings";
+import { C_CLRxPartSession, C_GETtPartUrl, C_GETtRoutePathFromPathname, C_REMxPartStorageValue, SIDEBAR_STORAGE_KEY } from "@/hooks/CDatabaseSettings";
 
 const menuItems = [
   { name: "หน้าหลัก", icon: <FaHome />, path: "/main" },
@@ -34,10 +34,8 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
 
   const handleLogout = async () => {
     try {
-      localStorage.removeItem("session_token");
-      localStorage.removeItem("session_expiry");
-      localStorage.removeItem(SESSION_PART_STORAGE_KEY);
-      localStorage.removeItem("sidebarOpen");
+      C_CLRxPartSession();
+      C_REMxPartStorageValue(SIDEBAR_STORAGE_KEY);
       console.log("✅ Logout สำเร็จ");
     } catch (error) {
       console.log("❌ ไม่สามารถ Logout:", error);

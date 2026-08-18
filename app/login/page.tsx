@@ -11,14 +11,16 @@ import BrancheModal from "@/components/BchModal";
 import { UserInfo, BranchInfo } from "@/models/models";
 import { FaWrench, FaCheckCircle, FaSpinner } from "react-icons/fa";
 import {
+  C_CLRxPartSession,
   C_GEToDatabaseHeaders,
+  C_GETtActiveBasePath,
   C_GETtActiveDatabasePart,
-  C_GEToDatabaseSettings,
+  C_GETtActivePartCachePrefixes,
   C_GETtPartUrl,
-  C_REGxServiceWorkerForActivePart,
-  C_SEToDatabaseSettings,
-  C_SYNCxDatabasePartFromUrl,
-  SESSION_PART_STORAGE_KEY,
+  C_GETtRememberedUsernameCookieName,
+  C_GETxPartSession,
+  C_RPRxActivePartAssetsOnce,
+  C_SETxPartSession,
 } from "@/hooks/CDatabaseSettings";
 
 const REQUIRED_OFFLINE_CACHE_ITEMS = 9;
@@ -26,8 +28,51 @@ const MIN_STATIC_CACHE_ITEMS = 3;
 const BRANCH_SELECTION_REQUIRED = "branch-selection-required";
 const NO_BRANCH_AVAILABLE = "no-branch-available";
 
+class LoginApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    public readonly requestId: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "LoginApiError";
+  }
+}
+
 const C_GETbOfflineCacheReady = (offlineCount: number, staticCount: number) => {
   return offlineCount >= REQUIRED_OFFLINE_CACHE_ITEMS && staticCount >= MIN_STATIC_CACHE_ITEMS;
+};
+
+const C_GETxActivePartCacheCounts = async () => {
+  const [offlinePrefix, staticPrefix] = C_GETtActivePartCachePrefixes();
+  const activePath = `${C_GETtActiveBasePath().replace(/\/+$/, "")}/`;
+  let workboxCount = 0;
+  let staticCount = 0;
+
+  for (const cacheName of await caches.keys()) {
+    const isOfflineCache = cacheName.startsWith(offlinePrefix);
+    const isStaticCache = cacheName.startsWith(staticPrefix);
+    const isLegacyOfflineCache = cacheName.startsWith("workbox-precache");
+    const isLegacyStaticCache = cacheName === "static-resources";
+    if (!isOfflineCache && !isStaticCache && !isLegacyOfflineCache && !isLegacyStaticCache) {
+      continue;
+    }
+
+    const requests = await (await caches.open(cacheName)).keys();
+    const currentPartRequests = isLegacyOfflineCache || isLegacyStaticCache
+      ? requests.filter((request) => new URL(request.url).pathname.startsWith(activePath))
+      : requests;
+
+    if (isOfflineCache || isLegacyOfflineCache) {
+      workboxCount += currentPartRequests.length;
+    }
+    if (isStaticCache || isLegacyStaticCache) {
+      staticCount += currentPartRequests.length;
+    }
+  }
+
+  return { workboxCount, staticCount };
 };
 
 const C_GETnJwtExpiryMinutes = (token: string): number | null => {
@@ -71,51 +116,6 @@ export default function Login() {
   const [showOfflineText, setShowOfflineText] = useState(true);
 
   useEffect(() => {
-    C_SYNCxDatabasePartFromUrl();
-  }, []);
-
-  useEffect(() => {
-    const checkVersion = async () => {
-      try {
-
-        const version = process.env.NEXT_PUBLIC_VERSION as string || "0.0.0";
-        const localVersion = localStorage.getItem("app_version");
-        console.log(version, localVersion);
-        if (localVersion && localVersion !== version) {
-          console.log("🔁 เวอร์ชันใหม่ ตรวจพบ! เคลียร์ cache แล้วรีโหลด");
-
-          // เคลียร์ cache
-          if ("caches" in window) {
-
-            //alert("ตรวจพบเวอร์ชันใหม่ กำลังรีโหลดหน้าใหม่");
-            const cacheNames = await caches.keys();
-            await Promise.all(cacheNames.map((name) => caches.delete(name)));
-          }
-
-          // ล้าง localStorage/sessionStorage
-          const databaseSettings = C_GEToDatabaseSettings();
-          localStorage.clear();
-          if (databaseSettings.part || databaseSettings.database) {
-            C_SEToDatabaseSettings(databaseSettings.part, databaseSettings.database);
-          }
-          // อัปเดต version ใหม่
-          localStorage.setItem("app_version", version);
-
-          clearServiceWorker();
-          // รีโหลดหน้า
-          //window.location.reload();
-        } else {
-          localStorage.setItem("app_version", version);
-        }
-      } catch (err) {
-        console.error("❌ ตรวจ version ไม่สำเร็จ:", err);
-      }
-    };
-
-    checkVersion();
-  }, []);
-
-  useEffect(() => {
     if (C_GETbOfflineCacheReady(workboxCount, staticCount)) {
       setShowOfflineText(true);
       const timer = setTimeout(() => setShowOfflineText(false), 5000);
@@ -135,21 +135,6 @@ export default function Login() {
   }, [isReady]);
 
 
-  useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      C_REGxServiceWorkerForActivePart()
-        .then(() => console.log("Service Worker [ลงทะเบียนแล้ว]"))
-        .catch((err) => console.log("Service Worker registration failed:", err));
-
-      navigator.serviceWorker.addEventListener('message', event => {
-        if (event.data.status === 'cache-complete') {
-          alert('✅ พร้อมใช้งานออฟไลน์แล้ว');
-        }
-      });
-    }
-  }, []);
-
-
   function usePWACacheStatus() {
     const [status, setStatus] = useState({
       workboxCount: 0,
@@ -165,21 +150,7 @@ export default function Login() {
         }
 
         try {
-          const cacheNames = await caches.keys();
-          let workboxCount = 0;
-          let staticCount = 0;
-
-          for (const cacheName of cacheNames) {
-            const cache = await caches.open(cacheName);
-            const requests = await cache.keys();
-
-            if (cacheName.startsWith('adapos-offline') || cacheName.startsWith('workbox-precache')) {
-              workboxCount += requests.length;
-            }
-            if (cacheName.startsWith('static-resources')) {
-              staticCount += requests.length;
-            }
-          }
+          const { workboxCount, staticCount } = await C_GETxActivePartCacheCounts();
 
           const isReady = C_GETbOfflineCacheReady(workboxCount, staticCount);
           setStatus({ workboxCount, staticCount, isReady });
@@ -188,7 +159,7 @@ export default function Login() {
         }
       };
 
-      const interval = setInterval(checkCache, 1000);  // เช็คทุก 1 วินาที
+      const interval = setInterval(checkCache, 5000);
       checkCache(); // เรียกทันทีตอนโหลด
 
       return () => clearInterval(interval);
@@ -205,7 +176,7 @@ export default function Login() {
       const oUserData = await C_GETxUserData(db);
       console.log("oUserData:", oUserData);
       const cookies = parse(document.cookie);
-      const savedUsername = cookies.rememberedUsername;
+      const savedUsername = cookies[C_GETtRememberedUsernameCookieName()] || cookies.rememberedUsername;
       if (savedUsername) {
         setUrlImg(oUserData?.FTImgObj ?? "");
       }
@@ -217,17 +188,14 @@ export default function Login() {
 
   useEffect(() => {
     sessionStorage.setItem("shouldReload", "true");
-    // ✅ ดึง Cookie จาก Request
     const cookies = parse(document.cookie);
-    const savedUsername = cookies.rememberedUsername;
+    const savedUsername = cookies[C_GETtRememberedUsernameCookieName()] || cookies.rememberedUsername;
     if (savedUsername) {
       setUsername(savedUsername);
       setRememberMe(true);
     }
 
-    const cachedToken = localStorage.getItem("session_token");
-    const tokenExpiry = localStorage.getItem("session_expiry");
-    const sessionPart = localStorage.getItem(SESSION_PART_STORAGE_KEY);
+    const { token: cachedToken, expiry: tokenExpiry, part: sessionPart } = C_GETxPartSession();
     const expiryMinutes = Number(tokenExpiry);
 
     if (
@@ -237,9 +205,7 @@ export default function Login() {
       Math.floor(Date.now() / 1000 / 60) > expiryMinutes ||
       sessionPart !== C_GETtActiveDatabasePart()
     ) {
-      localStorage.removeItem("session_token");
-      localStorage.removeItem("session_expiry");
-      localStorage.removeItem(SESSION_PART_STORAGE_KEY);
+      C_CLRxPartSession();
       return;
     }
 
@@ -250,10 +216,7 @@ export default function Login() {
   const C_SETxToken = (token: string) => {
     const nExpToken = 24 * 60; // เพิ่มเวลาเป็น 24 ชั่วโมง (1440 นาที) สำหรับการใช้งานระยะยาว
     const tokenExpiry = C_GETnJwtExpiryMinutes(token) || Math.floor(Date.now() / 1000 / 60) + nExpToken;
-    localStorage.setItem("session_token", token);
-    localStorage.setItem("session_expiry", tokenExpiry.toString()); // เก็บเวลาในหน่วยนาที
-    localStorage.setItem(SESSION_PART_STORAGE_KEY, C_GETtActiveDatabasePart());
-    localStorage.setItem("last_activity", Date.now().toString()); // เก็บเวลาล่าสุดที่ใช้งาน
+    C_SETxPartSession(token, tokenExpiry.toString());
     console.log("✅ Token Stored with Expiry:", new Date(tokenExpiry * 60 * 1000).toLocaleString()); // แปลงกลับเป็นมิลลิวินาทีเพื่อแสดงผล
   };
 
@@ -282,7 +245,15 @@ export default function Login() {
       if (userResponse.status === 409 && userPayload?.code === NO_BRANCH_AVAILABLE) {
         return NO_BRANCH_AVAILABLE;
       }
-      return false;
+      if (userResponse.status === 401) {
+        return false;
+      }
+      throw new LoginApiError(
+        userResponse.status,
+        typeof userPayload?.code === "string" ? userPayload.code : "login-request-failed",
+        typeof userPayload?.requestId === "string" ? userPayload.requestId : "",
+        typeof userPayload?.message === "string" ? userPayload.message : "Login request failed",
+      );
     }
 
     const { user, token } = userPayload;
@@ -366,7 +337,13 @@ export default function Login() {
       if (branchResponse.status === 404) {
         return NO_BRANCH_AVAILABLE;
       }
-      throw new Error("Failed to fetch branch data");
+      const errorPayload = await branchResponse.json().catch(() => ({}));
+      throw new LoginApiError(
+        branchResponse.status,
+        typeof errorPayload?.code === "string" ? errorPayload.code : "branch-request-failed",
+        typeof errorPayload?.requestId === "string" ? errorPayload.requestId : "",
+        typeof errorPayload?.message === "string" ? errorPayload.message : "Failed to fetch branch data",
+      );
     }
     const branchData = await branchResponse.json();
     const branches = Array.isArray(branchData.bch)
@@ -448,16 +425,31 @@ export default function Login() {
       }
 
       C_SETxToken(token);
-      document.cookie = serialize("rememberedUsername", rememberMe ? tUsername : "", {
+      document.cookie = serialize(C_GETtRememberedUsernameCookieName(), rememberMe ? tUsername : "", {
         maxAge: rememberMe ? 7 * 24 * 60 * 60 : -1,
-        path: "/",
+        path: `${C_GETtActiveBasePath().replace(/\/+$/, "")}/`,
       });
 
       window.location.href = C_GETtPartUrl("/main");
 
     } catch (error) {
       console.log("⚠️ Login Error:", error);
-      setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
+      if (error instanceof LoginApiError) {
+        const reference = error.requestId ? ` (รหัสอ้างอิง: ${error.requestId})` : "";
+        if (error.status === 400) {
+          setError(`ข้อมูลเข้าสู่ระบบไม่ถูกต้อง${reference}`);
+        } else if (error.status === 503) {
+          setError(`ไม่สามารถเชื่อมต่อฐานข้อมูล กรุณาลองใหม่${reference}`);
+        } else if (error.status >= 500) {
+          setError(`Server เกิดข้อผิดพลาด กรุณาลองใหม่${reference}`);
+        } else {
+          setError(`${error.message}${reference}`);
+        }
+      } else if (error instanceof TypeError) {
+        setError("ไม่สามารถเชื่อมต่อ Server ได้ กรุณาตรวจสอบเครือข่ายแล้วลองใหม่");
+      } else {
+        setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
+      }
     } finally {
       setLoading(false);
     }
@@ -514,9 +506,9 @@ export default function Login() {
       }
 
       C_SETxToken(token);
-      document.cookie = serialize("rememberedUsername", rememberMe ? tUsername : "", {
+      document.cookie = serialize(C_GETtRememberedUsernameCookieName(), rememberMe ? tUsername : "", {
         maxAge: rememberMe ? 7 * 24 * 60 * 60 : -1,
-        path: "/",
+        path: `${C_GETtActiveBasePath().replace(/\/+$/, "")}/`,
       });
 
       setIsBranchOpen(false);
@@ -536,24 +528,7 @@ export default function Login() {
     }
 
     try {
-      const cacheNames = await caches.keys();
-      console.log('Caches ในระบบ:', cacheNames);
-
-      let workboxCount = 0;
-      let staticCount = 0;
-
-      for (const cacheName of cacheNames) {
-        const cache = await caches.open(cacheName);
-        const requests = await cache.keys();
-
-        if (cacheName.startsWith('adapos-offline') || cacheName.startsWith('workbox-precache')) {
-          workboxCount += requests.length;
-        }
-
-        if (cacheName.startsWith('static-resources')) {
-          staticCount += requests.length;
-        }
-      }
+      const { workboxCount, staticCount } = await C_GETxActivePartCacheCounts();
 
       console.log(`📦 จำนวนไฟล์ offline-cache: ${workboxCount}`);
       console.log(`📦 จำนวนไฟล์ static-resources: ${staticCount}`);
@@ -572,10 +547,8 @@ export default function Login() {
         const confirmClear = confirm(`ไฟล์สำหรับ Offline ไม่ครบ: ${missing.join(', ')}\n\nคุณต้องการซ่อมแซมไฟล์และโหลดใหม่หรือไม่?`);
 
         if (confirmClear) {
-
-          clearServiceWorker();
-
           alert('ซ่อมแซมไฟล์เรียบร้อยแล้ว กำลังรีเฟรชเพื่อโหลดไฟล์สำหรับ Offline ใหม่!');
+          await C_RPRxActivePartAssetsOnce(`manual-${Date.now()}`);
         } else {
           alert('ยกเลิกการล้าง cache');
         }
@@ -584,19 +557,6 @@ export default function Login() {
     } catch (error) {
       console.error('เกิดข้อผิดพลาดระหว่างตรวจสอบ cache:', error);
       alert('ตรวจสอบ cache ไม่สำเร็จ!');
-    }
-  }
-
-  function clearServiceWorker() {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(registrations => {
-        registrations.forEach(reg => {
-          reg.unregister().then(() => {
-            console.log('🧹 Service Worker ถูกลบเรียบร้อย!');
-            window.location.reload();
-          });
-        });
-      });
     }
   }
 
