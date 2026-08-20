@@ -72,7 +72,7 @@ export default function Login() {
   const [tCompName, setCompName] = useState("");
   const [tUrlImg, setUrlImg] = useState("");
   const tServerTokenRef = useRef("");
-  const VERSION = process.env.NEXT_PUBLIC_VERSION as string;
+  const VERSION = process.env.NEXT_PUBLIC_VERSION || "unknown";
 
   const { workboxCount, offlineRequired, staticCount, staticRequired, isReady } = usePWACacheStatus();
   const [showWrench, setShowWrench] = useState(false);

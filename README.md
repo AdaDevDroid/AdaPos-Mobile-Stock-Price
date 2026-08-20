@@ -20,6 +20,7 @@ Part/database setup guide: [docs/part-database-settings.md](docs/part-database-s
 
 Important environment variables:
 
+- The application release version is read from `version.txt`; do not store `NEXT_PUBLIC_VERSION` in `.env.local`.
 - `NEXT_PUBLIC_BASE_PATH` is used at image build time and runtime.
 - `APP_PORT` is the host port.
 - `PORT` is the container app port.

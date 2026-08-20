@@ -36,6 +36,21 @@ if not exist ".next\BUILD_ID" (
 echo Build found!
 echo.
 
+if not exist "version.txt" (
+    echo ERROR: version.txt was not found.
+    pause
+    exit /b 1
+)
+
+set /p "APP_VERSION="<"version.txt"
+if not defined APP_VERSION (
+    echo ERROR: version.txt is empty.
+    pause
+    exit /b 1
+)
+echo Version: %APP_VERSION%
+echo.
+
 set "PM2_CMD=pm2"
 where pm2 >nul 2>&1
 if errorlevel 1 (

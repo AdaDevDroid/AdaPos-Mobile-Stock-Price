@@ -43,8 +43,8 @@ export async function GET(request: Request) {
     return NextResponse.json({
       status: 'healthy',
       timestamp: currentTime,
-      version: process.env.NEXT_PUBLIC_VERSION || '1.0.9',
-      buildId: process.env.NEXT_PUBLIC_BUILD_ID || process.env.NEXT_PUBLIC_VERSION || '1.0.9',
+      version: process.env.NEXT_PUBLIC_VERSION || 'unknown',
+      buildId: process.env.NEXT_PUBLIC_BUILD_ID || process.env.NEXT_PUBLIC_VERSION || 'unknown',
       basePath: `/${partResult.resolution.part}`,
       nextAutoRestart: nextRestart.toISOString(),
       timeUntilRestart: `${Math.floor((nextRestart.getTime() - now.getTime()) / (1000 * 60 * 60))}h ${Math.floor(((nextRestart.getTime() - now.getTime()) % (1000 * 60 * 60)) / (1000 * 60))}m`

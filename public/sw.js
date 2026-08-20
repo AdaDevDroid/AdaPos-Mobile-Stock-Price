@@ -1,5 +1,5 @@
 const serviceWorkerUrl = new URL(self.location.href);
-const deployVersion = serviceWorkerUrl.searchParams.get("version") || "1.0.9";
+const deployVersion = serviceWorkerUrl.searchParams.get("version") || "unversioned";
 const buildId = serviceWorkerUrl.searchParams.get("build") || deployVersion;
 const VERSION = `${deployVersion}-${buildId}`.replace(/[^A-Za-z0-9._-]/g, "_");
 const fallbackBasePath = serviceWorkerUrl.pathname.replace(/\/sw\.js$/, "") || "/AdaCheckStockSTD";

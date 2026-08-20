@@ -22,7 +22,22 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Building Next.js application...
+if not exist "version.txt" (
+    echo ERROR: version.txt was not found.
+    echo.
+    pause
+    exit /b 1
+)
+
+set /p "APP_VERSION="<"version.txt"
+if not defined APP_VERSION (
+    echo ERROR: version.txt is empty.
+    echo.
+    pause
+    exit /b 1
+)
+
+echo Building Next.js application version %APP_VERSION%...
 call npm run build
 if errorlevel 1 (
     echo.

@@ -8,7 +8,7 @@ export const APP_BUILD_STORAGE_KEY = "app_build";
 export const SIDEBAR_STORAGE_KEY = "sidebarOpen";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "/AdaCheckStockSTD";
-export const APP_VERSION = process.env.NEXT_PUBLIC_VERSION || "1.0.9";
+export const APP_VERSION = process.env.NEXT_PUBLIC_VERSION || "unknown";
 export const APP_BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID || APP_VERSION;
 const CACHE_VERSION = `${APP_VERSION}-${APP_BUILD_ID}`.replace(/[^A-Za-z0-9._-]/g, "_");
 const OFFLINE_ROUTE_PATHS = [

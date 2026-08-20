@@ -1,9 +1,17 @@
+const fs = require("fs");
+const path = require("path");
 require("dotenv").config({ path: ".env.local" });
+
+const versionPath = path.join(__dirname, "version.txt");
+const appVersion = fs.readFileSync(versionPath, "utf8").trim();
+if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(appVersion)) {
+  throw new Error(`Invalid application version in ${versionPath}: "${appVersion}"`);
+}
+process.env.NEXT_PUBLIC_VERSION = appVersion;
+
 const { createServer } = require("http");
 const { parse } = require("url");
 const next = require("next");
-const fs = require("fs");
-const path = require("path");
 const { spawn, exec } = require("child_process");
 
 const dev = process.env.NODE_ENV !== "production";
