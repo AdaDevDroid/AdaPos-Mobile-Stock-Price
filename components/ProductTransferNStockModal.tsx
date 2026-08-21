@@ -7,6 +7,7 @@ interface TransferNStockModalProps {
   oDataProduct: Product[];
   tDate: string;
   tRefDoc: string;
+  tRefDocLabel?: string;
 }
 
 const ProductTranferNStockModal: React.FC<TransferNStockModalProps> = ({
@@ -15,6 +16,7 @@ const ProductTranferNStockModal: React.FC<TransferNStockModalProps> = ({
   oDataProduct,
   tDate,
   tRefDoc,
+  tRefDocLabel = "จุดตรวจนับ",
 }) => {
   if (!isOpen) return null;
 
@@ -32,7 +34,7 @@ const ProductTranferNStockModal: React.FC<TransferNStockModalProps> = ({
         {/* รายละเอียด */}
         <div className="flex flex-row justify-between w-full pt-4 px-4">
           <p className="text-gray-500 text-[14px]">วันที่: {tDate}</p>
-          <p className="text-gray-500 text-[14px]">จุดตรวจนับ: {tRefDoc}</p>
+          <p className="text-gray-500 text-[14px]">{tRefDocLabel}: {tRefDoc}</p>
         </div>
 
         {/* ตารางประวัติการทำรายการ */}

@@ -618,7 +618,7 @@ export default function Transfer() {
           value={refDoc}
           disabled={isDisabledRefDoc}
           onChange={setRefDoc}
-          placeholder="ระบุเลขที่อ้างอิงใบส่งของ"
+          placeholder="ระบุเลขที่อ้างอิงโอนระหว่างสาขา"
         />
 
         {/* ตัวสแกน QR Code พร้อมกรอบ */}
@@ -750,6 +750,7 @@ export default function Transfer() {
         oDataProduct={oFilteredProduct || []}
         tDate={tHistoryDate}
         tRefDoc={tHistoryRefDoc}
+        tRefDocLabel="เลขที่อ้างอิง"
       />
 
       {isLoadingScanAuto && (

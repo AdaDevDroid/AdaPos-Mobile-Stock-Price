@@ -610,7 +610,7 @@ export default function Receive() {
               value={tSearchPoText}
               onChange={setSearchText}
               disabled={isDisabledRefDoc}
-              placeholder="อ้างอิงใบ PO"
+              placeholder="อ้างอิงใบรับของ/ใบซื้อสินค้า"
             />
           </div>
           {/* ปุ่ม 3 จุด */}
