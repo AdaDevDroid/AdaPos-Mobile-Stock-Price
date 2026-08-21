@@ -8,6 +8,7 @@ interface TransferNStockModalProps {
   tDate: string;
   tRefDoc: string;
   tRefDocLabel?: string;
+  tMobileRefDoc?: string;
 }
 
 const ProductTranferNStockModal: React.FC<TransferNStockModalProps> = ({
@@ -17,6 +18,7 @@ const ProductTranferNStockModal: React.FC<TransferNStockModalProps> = ({
   tDate,
   tRefDoc,
   tRefDocLabel = "จุดตรวจนับ",
+  tMobileRefDoc,
 }) => {
   if (!isOpen) return null;
 
@@ -32,8 +34,11 @@ const ProductTranferNStockModal: React.FC<TransferNStockModalProps> = ({
         </div>
 
         {/* รายละเอียด */}
-        <div className="flex flex-row justify-between w-full pt-4 px-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 w-full pt-4 px-4">
           <p className="text-gray-500 text-[14px]">วันที่: {tDate}</p>
+          {tMobileRefDoc !== undefined && (
+            <p className="text-gray-500 text-[14px]">เลขที่อ้างอิง: {tMobileRefDoc || "-"}</p>
+          )}
           <p className="text-gray-500 text-[14px]">{tRefDocLabel}: {tRefDoc}</p>
         </div>
 

@@ -1,5 +1,6 @@
 "use client";
 import ProductReceiveModal from "@/components/ProductReceiveModal";
+import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
 import RepeatModal from "@/components/RepeatModal";
 import { C_DELxLimitData, C_GETxUserData, C_INSxDataIndexedDB, C_PRCxOpenIndexedDB } from "@/hooks/CIndexedDB";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
@@ -39,6 +40,9 @@ export default function MainPage() {
   const [oProducts, setProducts] = useState<Product[]>([]);
   const [tHistoryDate, setHistoryDate] = useState("");
   const [tHistoryRefDoc, setHistoryRefDoc] = useState("");
+  const [tHistoryMobileRefDoc, setHistoryMobileRefDoc] = useState("");
+  const [tHistoryType, setHistoryType] = useState("");
+  const [tMobileRefDoc, setMobileRefDoc] = useState("");
   const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
   // เช็ค user login
   useAuth();
@@ -132,7 +136,8 @@ export default function MainPage() {
             FTDate: item.FTDate,
             FTRefDoc: item.FTRefDoc,
             FNStatus: item.FNStatus,
-            FTRefSeq: item.FTRefSeq
+            FTRefSeq: item.FTRefSeq,
+            FTMobileRefDoc: item.FTMobileRefDoc || "",
           }));
 
           console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData); // ✅ ตรวจสอบข้อมูลที่ดึงมา
@@ -173,7 +178,8 @@ export default function MainPage() {
             FTAgnCode: item.FTAgnCode,
             FTUsrName: item.FTUsrName,
             FDCreateOn: item.FDCreateOn,
-            FTPORef: item.FTPORef || "" // Provide a default value or extract from item
+            FTPORef: item.FTPORef || "", // Provide a default value or extract from item
+            FTMobileRefDoc: item.FTMobileRefDoc || "",
           }));
 
           console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData);
@@ -215,6 +221,8 @@ export default function MainPage() {
 
     setHistoryDate(history.FTDate);
     setHistoryRefDoc(history.FTRefDoc);
+    setHistoryMobileRefDoc(history.FTMobileRefDoc || "");
+    setHistoryType(ptType);
     setFilteredProduct(oFiltered);
     setIsProductOpen(true);
   };
@@ -250,6 +258,7 @@ export default function MainPage() {
     // ตั้งค่า State ของ Products ก่อนทำงาน
     setProducts(oFiltered);
     setRefDoc(history.FTRefDoc);
+    setMobileRefDoc(ptType === "Stock" ? history.FTMobileRefDoc || oFiltered[0]?.FTMobileRefDoc || "" : "");
     setType(ptType);
     setIsRepeat(true);
   };
@@ -448,6 +457,7 @@ export default function MainPage() {
       console.log("❌ เกิดข้อผิดพลาดใน C_PRCxSaveDB", error);
     } finally {
       setRefDoc("");
+      setMobileRefDoc("");
       alert("✅ บันทึกข้อมูลสำเร็จ");
     }
   };
@@ -478,7 +488,8 @@ export default function MainPage() {
       FTDate: currentDate,
       FTRefDoc: tRefDoc,
       FNStatus: pnType,
-      FTRefSeq: tRefSeq
+      FTRefSeq: tRefSeq,
+      ...(tType === "Stock" ? { FTMobileRefDoc: tMobileRefDoc } : {}),
     };
 
     await C_INSxDataIndexedDB(oDb, tTaleName, [historyData]);
@@ -521,7 +532,8 @@ export default function MainPage() {
       FTAgnCode: oUserInfo?.FTAgnCode || "",
       FTUsrName: oUserInfo?.FTUsrName || "",
       FTPORef: oProducts.FTPORef || "",
-      FDCreateOn: C_SETxFormattedDate()
+      FDCreateOn: C_SETxFormattedDate(),
+      ...(tType === "Stock" ? { FTMobileRefDoc: oProducts.FTMobileRefDoc || tMobileRefDoc } : {}),
     }));
     await C_INSxDataIndexedDB(oDb, tTaleName, productData);
     setProducts([]);
@@ -634,7 +646,10 @@ export default function MainPage() {
                     ตรวจนับสต็อก
                   </p>
                   <p className="text-xs text-gray-500 mt-1 mb-1">
-                    เลขที่อ้างอิง <span className="font-normal">#{data.FTRefDoc}</span>
+                    เลขที่อ้างอิง <span className="font-normal">#{data.FTMobileRefDoc || "-"}</span>
+                  </p>
+                  <p className="text-xs text-gray-500 mb-1">
+                    จุดตรวจนับ <span className="font-normal">#{data.FTRefDoc || "-"}</span>
                   </p>
                 </div>
                 <p className="text-xs text-gray-400 flex items-center gap-1">
@@ -784,7 +799,10 @@ export default function MainPage() {
                     ตรวจนับสต็อก
                   </p>
                   <p className="text-xs text-gray-500 mt-1 mb-1">
-                    เลขที่อ้างอิง <span className="font-normal">#{data.FTRefDoc}</span>
+                    เลขที่อ้างอิง <span className="font-normal">#{data.FTMobileRefDoc || "-"}</span>
+                  </p>
+                  <p className="text-xs text-gray-500 mb-1">
+                    จุดตรวจนับ <span className="font-normal">#{data.FTRefDoc || "-"}</span>
                   </p>
                 </div>
                 <p className="text-xs text-gray-400 flex items-center gap-1">
@@ -828,13 +846,24 @@ export default function MainPage() {
       <div className="h-16"></div>
 
       {/* ข้อมูลประวัติสินค้า */}
-      <ProductReceiveModal
-        isOpen={isProductOpen}
-        onClose={() => setIsProductOpen(false)}
-        oDataProduct={oFilteredProduct || []}
-        tDate={tHistoryDate}
-        tRefDoc={tHistoryRefDoc}
-      />
+      {tHistoryType === "Stock" ? (
+        <ProductTranferNStockModal
+          isOpen={isProductOpen}
+          onClose={() => setIsProductOpen(false)}
+          oDataProduct={oFilteredProduct || []}
+          tDate={tHistoryDate}
+          tRefDoc={tHistoryRefDoc}
+          tMobileRefDoc={tHistoryMobileRefDoc}
+        />
+      ) : (
+        <ProductReceiveModal
+          isOpen={isProductOpen}
+          onClose={() => setIsProductOpen(false)}
+          oDataProduct={oFilteredProduct || []}
+          tDate={tHistoryDate}
+          tRefDoc={tHistoryRefDoc}
+        />
+      )}
 
       {/* Repeat */}
       <RepeatModal

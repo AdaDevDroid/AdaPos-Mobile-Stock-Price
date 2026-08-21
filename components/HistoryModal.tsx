@@ -7,9 +7,19 @@ interface HistoryModalProps {
     oDataHistory: History[];
     onView: (history: History) => void;
     onRepeat: (history: History) => void;
+    bShowMobileRefDoc?: boolean;
+    tRefDocLabel?: string;
 }
 
-const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, oDataHistory, onView, onRepeat }) => {
+const HistoryModal: React.FC<HistoryModalProps> = ({
+    isOpen,
+    onClose,
+    oDataHistory,
+    onView,
+    onRepeat,
+    bShowMobileRefDoc = false,
+    tRefDocLabel = "เลขที่อ้างอิง",
+}) => {
     if (!isOpen) return null;
 
     return (
@@ -24,12 +34,13 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, oDataHisto
                 </div>
 
                 {/* ตารางประวัติการทำรายการ */}
-                <div className="p-4">
-                    <table className="w-full border-collapse mt-4 rounded-lg overflow-hidden">
+                <div className="p-4 overflow-x-auto">
+                    <table className={`w-full border-collapse mt-4 rounded-lg overflow-hidden ${bShowMobileRefDoc ? "min-w-[720px]" : ""}`}>
                         <thead>
                             <tr className="bg-gray-100 border text-m text-[14px]">
                                 <th className="p-2">วันที่</th>
-                                <th className="p-2">เลขที่อ้างอิง</th>
+                                {bShowMobileRefDoc && <th className="p-2">เลขที่อ้างอิง</th>}
+                                <th className="p-2">{tRefDocLabel}</th>
                                 <th className="p-2">สถานะ</th>
                                 <th className="p-2">การดำเนินการ</th>
                             </tr>
@@ -38,7 +49,8 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, oDataHisto
                             {oDataHistory.map((data, index) => (
                                 <tr key={index} className="border text-center text-gray-500 text-[14px]">
                                     <td className="p-2">{data.FTDate}</td>
-                                    <td className="p-2">{data.FTRefDoc}</td>
+                                    {bShowMobileRefDoc && <td className="p-2">{data.FTMobileRefDoc || "-"}</td>}
+                                    <td className="p-2">{data.FTRefDoc || "-"}</td>
                                     <td className="p-2">
                                         <span
                                             className={`inline-flex items-center px-2 py-1 rounded-lg ${data.FNStatus !== 0

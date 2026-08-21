@@ -11,6 +11,7 @@ export interface Product {
     FTUsrName: string;
     FDCreateOn: string;
     FTPORef: string;
+    FTMobileRefDoc?: string;
 }
 
 export interface History {
@@ -18,6 +19,7 @@ export interface History {
     FTRefDoc: string;
     FNStatus: number;
     FTRefSeq: string;
+    FTMobileRefDoc?: string;
 }
 
 export interface UserInfo {

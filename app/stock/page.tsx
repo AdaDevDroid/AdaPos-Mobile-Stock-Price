@@ -28,7 +28,9 @@ export default function Stock() {
   const [bDropdownOpen, setIsOpen] = useState(false);
   const [tHistoryDate, setHistoryDate] = useState("");
   const [tHistoryRefDoc, setHistoryRefDoc] = useState("");
+  const [tHistoryMobileRefDoc, setHistoryMobileRefDoc] = useState("");
   const [tRefDoc, setRefDoc] = useState("");
+  const [tMobileRefDoc, setMobileRefDoc] = useState("");
   const [oProducts, setProducts] = useState<Product[]>([]);
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState("1");
@@ -160,7 +162,8 @@ export default function Stock() {
           FTDate: item.FTDate,
           FTRefDoc: item.FTRefDoc,
           FNStatus: item.FNStatus,
-          FTRefSeq: item.FTRefSeq
+          FTRefSeq: item.FTRefSeq,
+          FTMobileRefDoc: item.FTMobileRefDoc || "",
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData); // ✅ ตรวจสอบข้อมูลที่ดึงมา
@@ -198,6 +201,7 @@ export default function Stock() {
           FTUsrName: item.FTUsrName,
           FDCreateOn: item.FDCreateOn,
           FTPORef: item.FTPORef,
+          FTMobileRefDoc: item.FTMobileRefDoc || "",
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData);
@@ -221,7 +225,8 @@ export default function Stock() {
       FTDate: currentDate,
       FTRefDoc: tRefDoc,
       FNStatus: pnType,
-      FTRefSeq: tRefSeq
+      FTRefSeq: tRefSeq,
+      FTMobileRefDoc: tMobileRefDoc,
     };
 
     await C_INSxDataIndexedDB(oDb, "TCNTHistoryStock", [historyData]);
@@ -245,6 +250,7 @@ export default function Stock() {
       FTUsrName: oUserInfo?.FTUsrName || "",
       FDCreateOn: C_SETxFormattedDate(),
       FTPORef: "",
+      FTMobileRefDoc: oProducts.FTMobileRefDoc || "",
     }));
 
     await C_INSxDataIndexedDB(oDb, "TCNTProductStock", productData);
@@ -295,7 +301,8 @@ export default function Stock() {
           FTAgnCode: oUserInfo?.FTAgnCode || "",
           FTUsrName: oUserInfo?.FTUsrName || "",
           FDCreateOn: C_SETxFormattedDate(),
-          FTPORef: ""    // หรือ tSearchPoText ตาม context
+          FTPORef: "",    // หรือ tSearchPoText ตาม context
+          FTMobileRefDoc: tMobileRefDoc,
         };
 
         // เพิ่มใน IndexedDB
@@ -348,6 +355,7 @@ export default function Stock() {
     const oFiltered = oProductHistoryList?.filter((product) => product.FTRefSeq === history.FTRefSeq);
     setHistoryDate(history.FTDate);
     setHistoryRefDoc(history.FTRefDoc);
+    setHistoryMobileRefDoc(history.FTMobileRefDoc || "");
     setFilteredProduct(oFiltered || []);
     setIsProductOpen(true);
   };
@@ -385,6 +393,7 @@ export default function Stock() {
     } finally {
       setIsDisabledRefDoc(false);
       setRefDoc("");
+      setMobileRefDoc("");
       if (isNetworkOnline) {
         alert("✅ บันทึกข้อมูลสำเร็จ");
       }
@@ -459,6 +468,7 @@ export default function Stock() {
     // ตั้งค่า State ของ Products ก่อนทำงาน
     setProducts(oFiltered);
     setRefDoc(history.FTRefDoc);
+    setMobileRefDoc(history.FTMobileRefDoc || "");
     setIsRepeat(true);
   };
 
@@ -504,6 +514,7 @@ export default function Stock() {
       await C_DELoDataTmp(oDb, "TCNTProductStockTmp");
       setProducts([]);
       setRefDoc("");
+      setMobileRefDoc("");
       setIsDisabledRefDoc(false);
     } else {
       console.log("❌ Database is not initialized");
@@ -537,6 +548,7 @@ export default function Stock() {
           FTUsrName: item.FTUsrName,
           FDCreateOn: item.FDCreateOn,
           FTPORef: item.FTPORef,
+          FTMobileRefDoc: item.FTMobileRefDoc || "",
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก TCNTProductStockTmp:", mappedData);
@@ -544,6 +556,7 @@ export default function Stock() {
           setIsDisabledRefDoc(true);
           setProducts(mappedData);
           setRefDoc(mappedData[0].FTRefDoc);
+          setMobileRefDoc(mappedData[0].FTMobileRefDoc || "");
         }
 
       }
@@ -593,6 +606,16 @@ export default function Stock() {
       </div>
       {/* กรอกข้อมูล */}
       <div className="space-y-2 pt-4">
+
+        <InputWithLabel
+          type="text"
+          label={"เลขที่อ้างอิง"}
+          icon={<FaRegCalendar />}
+          value={tMobileRefDoc}
+          onChange={setMobileRefDoc}
+          disabled={isDisabledRefDoc}
+          placeholder="ระบุเลขที่อ้างอิง"
+        />
 
         <InputWithLabel
           type="text"
@@ -719,7 +742,10 @@ export default function Stock() {
         onClose={() => setIsHistoryOpen(false)}
         oDataHistory={historyList}
         onView={C_SETxViewHistoryProduct}
-        onRepeat={C_SETxViewRepeat} />
+        onRepeat={C_SETxViewRepeat}
+        bShowMobileRefDoc
+        tRefDocLabel="จุดตรวจนับ"
+      />
 
       {/* ข้อมูลประวัติสินค้า */}
       <ProductTranferNStockModal
@@ -728,6 +754,7 @@ export default function Stock() {
         oDataProduct={oFilteredProduct || []}
         tDate={tHistoryDate}
         tRefDoc={tHistoryRefDoc}
+        tMobileRefDoc={tHistoryMobileRefDoc}
       />
 
       {isLoadingScanAuto && (

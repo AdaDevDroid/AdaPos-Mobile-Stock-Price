@@ -45,11 +45,17 @@ export const C_INSxProducts = async (oProducts: Product[], oUserInfo: UserInfo):
 
 export const C_INSxStock = async (oProducts: Product[], oUserInfo: UserInfo): Promise<boolean> => {
   try {
+    const storeBackProducts = oProducts.map((product) => {
+      const storeBackProduct = { ...product };
+      delete storeBackProduct.FTMobileRefDoc;
+      return storeBackProduct;
+    });
+
     const response = await fetch(C_GETtPartUrl("/api/query/insertDataAdjStk"), {
       method: "POST",
       headers: { "Content-Type": "application/json", ...C_GEToDatabaseHeaders() },
       body: JSON.stringify({
-        products: oProducts,
+        products: storeBackProducts,
         userInfo: oUserInfo
       })
     });
