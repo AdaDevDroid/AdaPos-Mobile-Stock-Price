@@ -621,7 +621,7 @@ export default function Transfer() {
             value={refDocType}
             disabled={isDisabledRefDoc}
             onChange={(event) => setRefDocType(event.target.value as RefDocType)}
-            className="w-full rounded-md border border-gray-200 bg-white px-4 py-3 text-[16px] text-gray-700 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+            className="min-h-[52px] w-full rounded-md border border-gray-200 bg-white px-4 py-2.5 text-[16px] leading-7 text-gray-700 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
           >
             <option value="1">ใบจ่ายโอน</option>
             <option value="2">ใบขอโอน</option>
