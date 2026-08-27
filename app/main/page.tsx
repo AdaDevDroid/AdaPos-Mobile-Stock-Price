@@ -40,7 +40,6 @@ export default function MainPage() {
   const [oProducts, setProducts] = useState<Product[]>([]);
   const [tHistoryDate, setHistoryDate] = useState("");
   const [tHistoryRefDoc, setHistoryRefDoc] = useState("");
-  const [tHistoryMobileRefDoc, setHistoryMobileRefDoc] = useState("");
   const [tHistoryType, setHistoryType] = useState("");
   const [tMobileRefDoc, setMobileRefDoc] = useState("");
   const [oFilteredProduct, setFilteredProduct] = useState<Product[]>([]);
@@ -221,7 +220,6 @@ export default function MainPage() {
 
     setHistoryDate(history.FTDate);
     setHistoryRefDoc(history.FTRefDoc);
-    setHistoryMobileRefDoc(history.FTMobileRefDoc || "");
     setHistoryType(ptType);
     setFilteredProduct(oFiltered);
     setIsProductOpen(true);
@@ -645,9 +643,6 @@ export default function MainPage() {
                   <p className="whitespace-nowrap overflow-hidden text-ellipsis text-sm font-semibold text-gray-800">
                     ตรวจนับสต็อก
                   </p>
-                  <p className="text-xs text-gray-500 mt-1 mb-1">
-                    เลขที่อ้างอิง <span className="font-normal">#{data.FTMobileRefDoc || "-"}</span>
-                  </p>
                   <p className="text-xs text-gray-500 mb-1">
                     จุดตรวจนับ <span className="font-normal">#{data.FTRefDoc || "-"}</span>
                   </p>
@@ -798,9 +793,6 @@ export default function MainPage() {
                   <p className="text-sm font-semibold text-gray-800">
                     ตรวจนับสต็อก
                   </p>
-                  <p className="text-xs text-gray-500 mt-1 mb-1">
-                    เลขที่อ้างอิง <span className="font-normal">#{data.FTMobileRefDoc || "-"}</span>
-                  </p>
                   <p className="text-xs text-gray-500 mb-1">
                     จุดตรวจนับ <span className="font-normal">#{data.FTRefDoc || "-"}</span>
                   </p>
@@ -853,7 +845,6 @@ export default function MainPage() {
           oDataProduct={oFilteredProduct || []}
           tDate={tHistoryDate}
           tRefDoc={tHistoryRefDoc}
-          tMobileRefDoc={tHistoryMobileRefDoc}
         />
       ) : (
         <ProductReceiveModal

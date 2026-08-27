@@ -7,7 +7,6 @@ interface HistoryModalProps {
     oDataHistory: History[];
     onView: (history: History) => void;
     onRepeat: (history: History) => void;
-    bShowMobileRefDoc?: boolean;
     tRefDocLabel?: string;
 }
 
@@ -17,7 +16,6 @@ const HistoryModal: React.FC<HistoryModalProps> = ({
     oDataHistory,
     onView,
     onRepeat,
-    bShowMobileRefDoc = false,
     tRefDocLabel = "เลขที่อ้างอิง",
 }) => {
     if (!isOpen) return null;
@@ -35,11 +33,10 @@ const HistoryModal: React.FC<HistoryModalProps> = ({
 
                 {/* ตารางประวัติการทำรายการ */}
                 <div className="p-4 overflow-x-auto">
-                    <table className={`w-full border-collapse mt-4 rounded-lg overflow-hidden ${bShowMobileRefDoc ? "min-w-[720px]" : ""}`}>
+                    <table className="w-full border-collapse mt-4 rounded-lg overflow-hidden">
                         <thead>
                             <tr className="bg-gray-100 border text-m text-[14px]">
                                 <th className="p-2">วันที่</th>
-                                {bShowMobileRefDoc && <th className="p-2">เลขที่อ้างอิง</th>}
                                 <th className="p-2">{tRefDocLabel}</th>
                                 <th className="p-2">สถานะ</th>
                                 <th className="p-2">การดำเนินการ</th>
@@ -49,7 +46,6 @@ const HistoryModal: React.FC<HistoryModalProps> = ({
                             {oDataHistory.map((data, index) => (
                                 <tr key={index} className="border text-center text-gray-500 text-[14px]">
                                     <td className="p-2">{data.FTDate}</td>
-                                    {bShowMobileRefDoc && <td className="p-2">{data.FTMobileRefDoc || "-"}</td>}
                                     <td className="p-2">{data.FTRefDoc || "-"}</td>
                                     <td className="p-2">
                                         <span

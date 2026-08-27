@@ -28,7 +28,6 @@ export default function Stock() {
   const [bDropdownOpen, setIsOpen] = useState(false);
   const [tHistoryDate, setHistoryDate] = useState("");
   const [tHistoryRefDoc, setHistoryRefDoc] = useState("");
-  const [tHistoryMobileRefDoc, setHistoryMobileRefDoc] = useState("");
   const [tRefDoc, setRefDoc] = useState("");
   const [tMobileRefDoc, setMobileRefDoc] = useState("");
   const [oProducts, setProducts] = useState<Product[]>([]);
@@ -355,7 +354,6 @@ export default function Stock() {
     const oFiltered = oProductHistoryList?.filter((product) => product.FTRefSeq === history.FTRefSeq);
     setHistoryDate(history.FTDate);
     setHistoryRefDoc(history.FTRefDoc);
-    setHistoryMobileRefDoc(history.FTMobileRefDoc || "");
     setFilteredProduct(oFiltered || []);
     setIsProductOpen(true);
   };
@@ -609,16 +607,6 @@ export default function Stock() {
 
         <InputWithLabel
           type="text"
-          label={"เลขที่อ้างอิง"}
-          icon={<FaRegCalendar />}
-          value={tMobileRefDoc}
-          onChange={setMobileRefDoc}
-          disabled={isDisabledRefDoc}
-          placeholder="ระบุเลขที่อ้างอิง"
-        />
-
-        <InputWithLabel
-          type="text"
           label={"ระบุจุดตรวจนับ"}
           icon={<FaRegCalendar />}
           value={tRefDoc}
@@ -743,7 +731,6 @@ export default function Stock() {
         oDataHistory={historyList}
         onView={C_SETxViewHistoryProduct}
         onRepeat={C_SETxViewRepeat}
-        bShowMobileRefDoc
         tRefDocLabel="จุดตรวจนับ"
       />
 
@@ -754,7 +741,6 @@ export default function Stock() {
         oDataProduct={oFilteredProduct || []}
         tDate={tHistoryDate}
         tRefDoc={tHistoryRefDoc}
-        tMobileRefDoc={tHistoryMobileRefDoc}
       />
 
       {isLoadingScanAuto && (

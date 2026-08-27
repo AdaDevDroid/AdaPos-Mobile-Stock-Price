@@ -343,7 +343,7 @@ export default function Receive() {
           setIsDisabledRefDoc(true);
           setProducts(mappedData);
           setRefDoc(mappedData[0].FTRefDoc);
-          setSearchText(mappedData[0].FTPORef);
+          setSearchText(mappedData[0].FTPORef || "");
         }
       }
     };
@@ -554,6 +554,7 @@ export default function Receive() {
     // ตั้งค่า State ของ Products ก่อนทำงาน
     setProducts(oFiltered);
     setRefDoc(history.FTRefDoc);
+    setSearchText(oFiltered[0]?.FTPORef || "");
     setIsRepeat(true);
   };
   const C_PRCxRepeatSelect = async (option: string) => {
@@ -601,19 +602,8 @@ export default function Receive() {
             <FaEllipsisV />
           </button>
         </div>
-        {/* ค้นหา PO และปุ่ม 3 จุด (สำหรับ desktop) */}
-        <div className="w-full md:w-80 md:ml-auto pt-2 relative flex flex-row items-center gap-2">
-          <div className="w-full">
-            <InputWithLabel
-              type="text"
-              label={""}
-              value={tSearchPoText}
-              onChange={setSearchText}
-              disabled={isDisabledRefDoc}
-              placeholder="อ้างอิงใบรับของ/ใบซื้อสินค้า"
-            />
-          </div>
-          {/* ปุ่ม 3 จุด */}
+        {/* ปุ่ม 3 จุด (สำหรับ desktop) */}
+        <div className="md:ml-auto pt-2 relative flex items-center">
           <button
             className="hidden md:block p-2 rounded-md text-gray-500 hover:text-gray-700 text-[18px]"
             onClick={() => setIsOpen(!bDropdownOpen)}
@@ -655,7 +645,7 @@ export default function Receive() {
           value={tRefDoc}
           onChange={setRefDoc}
           disabled={isDisabledRefDoc}
-          placeholder="ระบุเลขที่อ้างอิงใบส่งของ"
+          placeholder="ระบุเลขที่อ้างอิง"
         />
 
         {/* ตัวสแกน QR Code พร้อมกรอบ */}

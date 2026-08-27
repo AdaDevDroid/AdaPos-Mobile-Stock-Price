@@ -432,7 +432,7 @@ export default function Transfer() {
           setIsDisabledRefDoc(true);
           setProducts(mappedData);
           setRefDoc(mappedData[0].FTRefDoc);
-          setSearchText(mappedData[0].FTPORef);
+          setSearchText(mappedData[0].FTPORef || "");
         }
 
       }
@@ -510,6 +510,7 @@ export default function Transfer() {
     setIsRepeat(true);
     setProducts(oFiltered);
     setRefDoc(history.FTRefDoc);
+    setSearchText(oFiltered[0]?.FTPORef || "");
 
   };
   const C_PRCxRepeatSelect = async (option: string) => {
@@ -564,19 +565,8 @@ export default function Transfer() {
             <FaEllipsisV />
           </button>
         </div>
-        {/* ค้นหา PO และปุ่ม 3 จุด (สำหรับ desktop) */}
-        <div className="w-full md:w-80 md:ml-auto pt-2 relative flex flex-row items-center gap-2">
-          <div className="w-full">
-            <InputWithLabel
-              type="text"
-              label={""}
-              value={searchText}
-              onChange={setSearchText}
-              disabled={isDisabledRefDoc}
-              placeholder="อ้างอิงใบขอโอน"
-            />
-          </div>
-          {/* ปุ่ม 3 จุด */}
+        {/* ปุ่ม 3 จุด (สำหรับ desktop) */}
+        <div className="md:ml-auto pt-2 relative flex items-center">
           <button
             className="hidden md:block p-2 rounded-md text-gray-500 hover:text-gray-700 text-[18px]"
             onClick={() => setIsOpen(!isOpen)}
@@ -618,7 +608,7 @@ export default function Transfer() {
           value={refDoc}
           disabled={isDisabledRefDoc}
           onChange={setRefDoc}
-          placeholder="ระบุเลขที่อ้างอิงโอนระหว่างสาขา"
+          placeholder="ระบุเลขที่อ้างอิง"
         />
 
         {/* ตัวสแกน QR Code พร้อมกรอบ */}
