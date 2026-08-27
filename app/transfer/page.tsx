@@ -612,16 +612,6 @@ export default function Transfer() {
       {/* กรอกข้อมูล */}
       <div className="space-y-4 pt-2">
 
-        <InputWithLabel
-          type="text"
-          label={"เลขที่อ้างอิง"}
-          icon={<FaRegCalendar />}
-          value={refDoc}
-          disabled={isDisabledRefDoc}
-          onChange={setRefDoc}
-          placeholder="ระบุเลขที่อ้างอิง"
-        />
-
         <div>
           <label htmlFor="transfer-ref-doc-type" className="block mb-1 text-gray-700 text-[14px]">
             ประเภทเอกสารอ้างอิง
@@ -638,6 +628,16 @@ export default function Transfer() {
             <option value="0">ไม่ระบุประเภท</option>
           </select>
         </div>
+
+        <InputWithLabel
+          type="text"
+          label={"เลขที่อ้างอิง"}
+          icon={<FaRegCalendar />}
+          value={refDoc}
+          disabled={isDisabledRefDoc}
+          onChange={setRefDoc}
+          placeholder="ระบุเลขที่อ้างอิง"
+        />
 
         {/* ตัวสแกน QR Code พร้อมกรอบ */}
         <div
