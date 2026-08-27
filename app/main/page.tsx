@@ -178,6 +178,7 @@ export default function MainPage() {
             FTUsrName: item.FTUsrName,
             FDCreateOn: item.FDCreateOn,
             FTPORef: item.FTPORef || "", // Provide a default value or extract from item
+            FTXthDocType: item.FTXthDocType,
             FTMobileRefDoc: item.FTMobileRefDoc || "",
           }));
 
@@ -531,6 +532,7 @@ export default function MainPage() {
       FTUsrName: oUserInfo?.FTUsrName || "",
       FTPORef: oProducts.FTPORef || "",
       FDCreateOn: C_SETxFormattedDate(),
+      ...(tType === "Transfer" ? { FTXthDocType: oProducts.FTXthDocType ?? "0" } : {}),
       ...(tType === "Stock" ? { FTMobileRefDoc: oProducts.FTMobileRefDoc || tMobileRefDoc } : {}),
     }));
     await C_INSxDataIndexedDB(oDb, tTaleName, productData);

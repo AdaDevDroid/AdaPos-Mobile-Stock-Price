@@ -11,6 +11,7 @@ export interface Product {
     FTUsrName: string;
     FDCreateOn: string;
     FTPORef: string;
+    FTXthDocType?: "0" | "1" | "2";
     FTMobileRefDoc?: string;
 }
 

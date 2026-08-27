@@ -53,16 +53,21 @@ export async function POST(req: NextRequest) {
                 const product = batch[index];
                 const {
                     FTBarcode, FCCost, FNQuantity, FTRefDoc,
-                    FTXthDocKey, FTBchCode, FTAgnCode, FDCreateOn, FTPORef
+                    FTXthDocKey, FTXthDocType, FTBchCode, FTAgnCode, FDCreateOn, FTPORef
                 } = product;
+                const tDocType = FTXthDocType === "0" || FTXthDocType === "1" || FTXthDocType === "2"
+                    ? FTXthDocType
+                    : null;
 
                 const FNId = batchStart + index + 1;
                 const idx = batchStart + index;
 
                 values.push(`(@FTBchCode${idx}, @FTXthDocSeq, @FTXthDocNo${idx}, @FNXtdSeqNo${idx}, 
-                    @FTXthDocKey${idx}, NULL, @FTXtdBarCode${idx}, @FCXtdQty${idx}, @FCXtdQtyAll${idx}, 
+                    @FTXthDocKey${idx}, @FTXthDocType${idx}, @FTXtdBarCode${idx}, @FCXtdQty${idx}, @FCXtdQtyAll${idx},
                     @FCXtdCostIn${idx}, @FDLastUpdOn${idx}, @FDCreateOn${idx}, @FTLastUpdBy${idx}, 
                     @FTCreateBy${idx}, @FTAgnCode${idx}, @FTPORef${idx})`);
+
+                request.input(`FTXthDocType${idx}`, mssql.NVarChar(1), tDocType);
 
                 parameters.push(
                     { name: `FTBchCode${idx}`, value: FTBchCode },

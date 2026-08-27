@@ -15,8 +15,11 @@ import HistoryModal from "@/components/HistoryModal";
 import ProductTranferNStockModal from "@/components/ProductTransferNStockModal";
 import RepeatModal from "@/components/RepeatModal";
 
+type RefDocType = "0" | "1" | "2";
+
 export default function Transfer() {
   const [refDoc, setRefDoc] = useState("");
+  const [refDocType, setRefDocType] = useState<RefDocType>("1");
   const [isDisabledRefDoc, setIsDisabledRefDoc] = useState(false);
   const [oProducts, setProducts] = useState<Product[]>([]);
   const [barcode, setBarcode] = useState("");
@@ -194,7 +197,8 @@ export default function Transfer() {
           FTAgnCode: item.FTAgnCode,
           FTUsrName: item.FTUsrName,
           FDCreateOn: item.FDCreateOn,
-          FTPORef: item.FTPORef
+          FTPORef: item.FTPORef,
+          FTXthDocType: item.FTXthDocType ?? "0"
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData);
@@ -252,7 +256,8 @@ export default function Transfer() {
       FTAgnCode: oUserInfo?.FTAgnCode || "",
       FTUsrName: oUserInfo?.FTUsrName || "",
       FDCreateOn: C_SETxFormattedDate(),
-      FTPORef: searchText || ""                     // ใช้ searchText แทน
+      FTPORef: searchText || "",                    // ใช้ searchText แทน
+      FTXthDocType: refDocType
     };
 
     // เพิ่มใน IndexedDB
@@ -333,7 +338,8 @@ export default function Transfer() {
       FTAgnCode: oUserInfo?.FTAgnCode || "",
       FTUsrName: oUserInfo?.FTUsrName || "",
       FDCreateOn: C_SETxFormattedDate(),
-      FTPORef: searchText
+      FTPORef: searchText,
+      FTXthDocType: oProducts.FTXthDocType ?? "0"
     }));
 
     await C_INSxDataIndexedDB(oDb, "TCNTProductTransfer", productData);
@@ -372,6 +378,7 @@ export default function Transfer() {
     } finally {
       setIsDisabledRefDoc(false);
       setRefDoc("");
+      setRefDocType("1");
       setSearchText("");
       if (isNetworkOnline) {
         alert("✅ บันทึกข้อมูลสำเร็จ");
@@ -424,7 +431,8 @@ export default function Transfer() {
           FTAgnCode: item.FTAgnCode,
           FTUsrName: item.FTUsrName,
           FDCreateOn: item.FDCreateOn,
-          FTPORef: item.FTPORef
+          FTPORef: item.FTPORef,
+          FTXthDocType: item.FTXthDocType ?? "0"
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก TCNTProductTransferTmp:", mappedData);
@@ -432,6 +440,7 @@ export default function Transfer() {
           setIsDisabledRefDoc(true);
           setProducts(mappedData);
           setRefDoc(mappedData[0].FTRefDoc);
+          setRefDocType(mappedData[0].FTXthDocType ?? "0");
           setSearchText(mappedData[0].FTPORef || "");
         }
 
@@ -510,6 +519,7 @@ export default function Transfer() {
     setIsRepeat(true);
     setProducts(oFiltered);
     setRefDoc(history.FTRefDoc);
+    setRefDocType(oFiltered[0]?.FTXthDocType ?? "0");
     setSearchText(oFiltered[0]?.FTPORef || "");
 
   };
@@ -537,6 +547,7 @@ export default function Transfer() {
       await C_DELoDataTmp(oDb, "TCNTProductTransferTmp");
       setProducts([]);
       setRefDoc("");
+      setRefDocType("1");
       setSearchText("");
       setIsDisabledRefDoc(false);
     } else {
@@ -610,6 +621,23 @@ export default function Transfer() {
           onChange={setRefDoc}
           placeholder="ระบุเลขที่อ้างอิง"
         />
+
+        <div>
+          <label htmlFor="transfer-ref-doc-type" className="block mb-1 text-gray-700 text-[14px]">
+            ประเภทเอกสารอ้างอิง
+          </label>
+          <select
+            id="transfer-ref-doc-type"
+            value={refDocType}
+            disabled={isDisabledRefDoc}
+            onChange={(event) => setRefDocType(event.target.value as RefDocType)}
+            className="w-full rounded-md border border-gray-200 bg-white px-4 py-3 text-[16px] text-gray-700 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+          >
+            <option value="1">ใบจ่ายโอน</option>
+            <option value="2">ใบขอโอน</option>
+            <option value="0">ไม่ระบุประเภท</option>
+          </select>
+        </div>
 
         {/* ตัวสแกน QR Code พร้อมกรอบ */}
         <div
