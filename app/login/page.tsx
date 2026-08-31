@@ -534,7 +534,10 @@ export default function Login() {
     }
   }
 
-  useAppUpdateGuard(Boolean((usernameEdited && tUsername) || password || bLoading || isLoading || isBranchOpen));
+  useAppUpdateGuard(
+    Boolean((usernameEdited && tUsername) || password || bLoading || isLoading || isBranchOpen),
+    bLoading || isLoading || isBranchOpen
+  );
 
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-gray-100">

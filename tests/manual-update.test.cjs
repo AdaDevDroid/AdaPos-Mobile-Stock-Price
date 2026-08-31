@@ -15,7 +15,7 @@ function updater(options = {}) {
   const calls = [];
   const exports = {};
   const window = new EventTarget();
-  window.location = { pathname: '/Part/transfer' };
+  window.location = { pathname: options.pathname || '/Part/transfer', reload: () => calls.push('reload') };
   const document = new EventTarget();
   document.visibilityState = 'visible';
   document.getElementById = () => null;
@@ -24,8 +24,15 @@ function updater(options = {}) {
   const registration = { active, waiting, update: async () => {} };
   const navigator = { onLine: options.online !== false, serviceWorker: new EventTarget() };
   navigator.serviceWorker.register = async () => registration;
+  const message = (type, buildId = 'C') => {
+    let reply;
+    const event = new Event('message');
+    Object.assign(event, { source: waiting || active, data: { type, buildId }, ports: [{ postMessage: data => { reply = data; } }] });
+    navigator.serviceWorker.dispatchEvent(event);
+    return reply;
+  };
   const helpers = {
-    C_CANxApplyUpdate: () => false,
+    C_CANxApplyUpdate: options.canApply || (() => false),
     C_GETxServerRelease: async () => {
       calls.push('release');
       await options.hold;
@@ -40,13 +47,24 @@ function updater(options = {}) {
         return { ready: true };
       }
       if (type === 'CLIENT_READY') return { cleaned: options.cleaned !== false };
-      if (type === 'APPLY_UPDATE') return { blocked: true };
+      if (type === 'APPLY_UPDATE') {
+        if (!options.handshake) return { blocked: true };
+        const ready = message('PREPARE_UPDATE').ready;
+        if (!ready || options.otherTabBlocked) {
+          message('CANCEL_UPDATE');
+          return { blocked: true };
+        }
+        if (options.failApply) throw new Error('Activation failed');
+        if (!options.deferReload) message('RELOAD_UPDATE');
+        return { applied: true };
+      }
       throw new Error(`Unexpected message: ${type}`);
     },
   };
   active.postMessage = message => calls.push(`background:${message.type}`);
   vm.runInNewContext(source, {
     exports, window, document, navigator, Event, CustomEvent,
+    sessionStorage: { getItem: () => null, setItem() {} },
     process: { env: { NODE_ENV: 'production' } },
     setTimeout, clearTimeout, setInterval: () => 1, clearInterval() {}, console: { warn() {} },
     require: name => {
@@ -67,7 +85,11 @@ function updater(options = {}) {
   });
   exports.default({ basePath: '/Part', disabled: false });
   const dispose = effects[0]();
-  return { calls, states, dispose, manual: () => window.dispatchEvent(new CustomEvent('ada-app-repair', { detail: { manual: true } })) };
+  return {
+    calls, states, dispose, message,
+    confirm: () => { assert.equal(typeof states[4], 'function'); calls.push('confirm'); states[4](); },
+    manual: () => window.dispatchEvent(new CustomEvent('ada-app-repair', { detail: { manual: true } })),
+  };
 }
 
 const settle = async () => { for (let i = 0; i < 10; i++) await new Promise(resolve => setImmediate(resolve)); };
@@ -161,4 +183,104 @@ test('manual request during background check is queued instead of silently dropp
   assert.equal(app.calls.filter(type => type === 'REPAIR').length, 1);
   assert.match(app.states[0], /ล้าง Cache เก่าเรียบร้อย/);
   app.dispose();
+});
+
+test('filled Login remains protected from automatic updates but confirmed manual update reloads', async t => {
+  const app = updater({ newBuild: true, pathname: '/Part/login', canApply: manual => manual === true, handshake: true });
+  t.after(app.dispose);
+  await settle();
+  assert.equal(app.calls.includes('APPLY_UPDATE'), false);
+  assert.equal(app.message('PREPARE_UPDATE').ready, false);
+  app.manual();
+  await settle();
+  assert.equal(app.calls.includes('APPLY_UPDATE'), false);
+  app.confirm();
+  await settle();
+  assert.ok(app.calls.includes('confirm'));
+  assert.ok(app.calls.includes('reload'));
+});
+
+test('clicking the ready notice is also an explicit manual update', async t => {
+  const app = updater({ newBuild: true, pathname: '/Part/login', canApply: manual => manual === true, handshake: true });
+  t.after(app.dispose);
+  await settle();
+  app.states[3]();
+  await settle();
+  app.confirm();
+  await settle();
+  assert.ok(app.calls.includes('confirm'));
+  assert.ok(app.calls.includes('reload'));
+});
+
+test('waiting for Login confirmation keeps the page and does not consent to another tab update', async t => {
+  const app = updater({ newBuild: true, canApply: manual => manual === true, handshake: true });
+  t.after(app.dispose);
+  await settle();
+  app.manual();
+  await settle();
+  assert.equal(typeof app.states[4], 'function');
+  assert.equal(app.calls.includes('APPLY_UPDATE'), false);
+  assert.equal(app.calls.includes('reload'), false);
+  assert.equal(app.message('PREPARE_UPDATE').ready, false);
+});
+
+test('manual update never bypasses busy authentication or another dirty page', async t => {
+  const app = updater({ newBuild: true, canApply: () => false, handshake: true });
+  t.after(app.dispose);
+  await settle();
+  app.manual();
+  await settle();
+  assert.equal(app.calls.includes('confirm'), false);
+  assert.equal(app.calls.includes('reload'), false);
+  assert.match(app.states[0], /มีงานค้างหรือแท็บที่ยังไม่พร้อม/);
+});
+
+for (const failure of ['otherTabBlocked', 'failApply']) {
+  test(`Login consent is cleared after ${failure} and cannot leak to another update`, async t => {
+    const app = updater({ newBuild: true, canApply: manual => manual === true, handshake: true, [failure]: true });
+    t.after(app.dispose);
+    await settle();
+    app.manual();
+    await settle();
+    app.confirm();
+    await settle();
+    assert.ok(app.calls.includes('confirm'));
+    assert.equal(app.calls.includes('reload'), false);
+    assert.equal(app.states[2], false);
+    assert.equal(app.message('PREPARE_UPDATE').ready, false);
+  });
+}
+
+test('manual consent is scoped to the requested build and readiness is checked again before reload', async t => {
+  let busy = false;
+  const app = updater({ newBuild: true, canApply: manual => manual === true && !busy, handshake: true, deferReload: true });
+  t.after(app.dispose);
+  await settle();
+  app.manual();
+  await settle();
+  app.confirm();
+  await settle();
+  assert.equal(app.states[2], true);
+  assert.equal(app.message('PREPARE_UPDATE', 'D').ready, false);
+  busy = true;
+  app.message('RELOAD_UPDATE');
+  assert.equal(app.calls.includes('reload'), false);
+  app.message('CANCEL_UPDATE');
+  busy = false;
+  assert.equal(app.message('PREPARE_UPDATE').ready, false);
+});
+
+test('starting authentication while confirmation is open still blocks the confirmed update', async t => {
+  let busy = false;
+  const app = updater({ newBuild: true, canApply: manual => manual === true && !busy, handshake: true });
+  t.after(app.dispose);
+  await settle();
+  app.manual();
+  await settle();
+  busy = true;
+  app.confirm();
+  await settle();
+  assert.equal(app.calls.includes('reload'), false);
+  assert.equal(app.states[4], null);
+  assert.equal(app.message('PREPARE_UPDATE').ready, false);
 });

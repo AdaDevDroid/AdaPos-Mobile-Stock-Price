@@ -10,6 +10,7 @@ export default function AppUpdate({ basePath, disabled }: { basePath: string; di
   const [busy, setBusy] = useState(false);
   const [locked, setLocked] = useState(false);
   const [retry, setRetry] = useState<(() => void) | null>(null);
+  const [confirmUpdate, setConfirmUpdate] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     if (disabled || process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
@@ -17,11 +18,13 @@ export default function AppUpdate({ basePath, disabled }: { basePath: string; di
     let checking = false;
     let manualPending = false;
     let target = "";
+    let manualBuild = "";
     let lockTimer: ReturnType<typeof setTimeout>;
     let autoAttempted = "";
     let registration: ServiceWorkerRegistration | undefined;
     const unlock = () => {
       target = "";
+      manualBuild = "";
       clearTimeout(lockTimer);
       document.getElementById("app-content")?.removeAttribute("inert");
       if (!disposed) setLocked(false);
@@ -31,7 +34,7 @@ export default function AppUpdate({ basePath, disabled }: { basePath: string; di
       const data = event.data;
       if (data?.type === "GET_CLIENT_BUILD") event.ports[0]?.postMessage({ buildId: APP_BUILD_ID });
       if (data?.type === "PREPARE_UPDATE") {
-        const ready = C_CANxApplyUpdate();
+        const ready = C_CANxApplyUpdate(manualBuild !== "" && manualBuild === data.buildId);
         if (ready) {
           target = data.buildId;
           document.getElementById("app-content")?.setAttribute("inert", "");
@@ -42,7 +45,7 @@ export default function AppUpdate({ basePath, disabled }: { basePath: string; di
         event.ports[0]?.postMessage({ ready, buildId: APP_BUILD_ID });
       }
       if (data?.type === "CANCEL_UPDATE" && data.buildId === target) unlock();
-      if (data?.type === "RELOAD_UPDATE" && target === data.buildId && C_CANxApplyUpdate()) {
+      if (data?.type === "RELOAD_UPDATE" && target === data.buildId && C_CANxApplyUpdate(manualBuild !== "" && manualBuild === data.buildId)) {
         const key = `adapos:${basePath}:reloaded:${target}`;
         if (!sessionStorage.getItem(key)) {
           sessionStorage.setItem(key, "1");
@@ -53,11 +56,27 @@ export default function AppUpdate({ basePath, disabled }: { basePath: string; di
         }
       }
     };
-    const apply = async (worker: ServiceWorker, release: AppRelease) => {
+    const apply = async (worker: ServiceWorker, release: AppRelease, manual = false, confirmed = false) => {
+      if (disposed) return;
+      manualBuild = "";
+      if (manual && !C_CANxApplyUpdate() && C_CANxApplyUpdate(true)) {
+        if (!confirmed) {
+          setConfirmUpdate(() => () => {
+            setConfirmUpdate(null);
+            void apply(worker, release, true, true);
+          });
+          return;
+        }
+        // Consent belongs only to this tab and this release, not other open tabs.
+        manualBuild = release.buildId;
+      }
       setBusy(true);
       try {
         const result = await C_MSGxWorker(worker, "APPLY_UPDATE", 12000);
-        if (result.blocked) setNotice("มีงานค้างหรือแท็บที่ยังไม่พร้อม กรุณาบันทึกงานหรือปิดแท็บอื่นก่อนอัปเดต");
+        if (result.blocked) {
+          unlock();
+          setNotice("มีงานค้างหรือแท็บที่ยังไม่พร้อม กรุณาบันทึกงานหรือปิดแท็บอื่นก่อนอัปเดต");
+        }
         else if (!result.applied) throw new Error("Update was not applied");
       } catch (error) {
         console.warn("Application update deferred:", error);
@@ -111,10 +130,10 @@ export default function AppUpdate({ basePath, disabled }: { basePath: string; di
           setRetry(result.cleaned ? null : () => () => { void check(true, true); });
         } else if (release.buildId !== APP_BUILD_ID || worker === registration.waiting || repair) {
           setNotice(`พร้อมอัปเดต ${release.version}`);
-          setRetry(() => () => { void apply(worker, release); });
+          setRetry(() => () => { void apply(worker, release, true); });
           if (manual || (autoAttempted !== release.buildId && window.location.pathname.endsWith("/login") && C_CANxApplyUpdate())) {
             autoAttempted = release.buildId;
-            await apply(worker, release);
+            await apply(worker, release, manual);
           }
         } else {
           setNotice("");
@@ -125,7 +144,7 @@ export default function AppUpdate({ basePath, disabled }: { basePath: string; di
         console.warn("Application update check failed:", error);
         if (!disposed && (repair || navigator.onLine)) {
           setNotice("เตรียมไฟล์อัปเดตไม่สำเร็จ ยังใช้รุ่นเดิมได้");
-          setRetry(() => () => { void check(true, manual); });
+          setRetry(() => () => { void check(true, true); });
         }
       } finally {
         checking = false;
@@ -166,9 +185,20 @@ export default function AppUpdate({ basePath, disabled }: { basePath: string; di
   }, [basePath, disabled]);
 
   return <>
-    {notice && <div role="status" className="fixed bottom-24 right-3 z-[100] flex max-w-[calc(100%-1.5rem)] items-center gap-3 rounded-md border border-gray-300 bg-white p-3 text-sm text-gray-800 shadow-md md:bottom-16 md:max-w-md">
-      <span>{notice}</span>
-      {(busy || retry) && <button type="button" title="อัปเดตแอป" aria-label="อัปเดตแอป" disabled={busy || locked} onClick={() => retry?.()}
+    {(notice || confirmUpdate) && <div role={confirmUpdate ? "dialog" : "status"} aria-label={confirmUpdate ? "ยืนยันอัปเดตหน้าเข้าสู่ระบบ" : undefined}
+      onKeyDown={event => { if (event.key === "Escape") setConfirmUpdate(null); }}
+      className="fixed bottom-24 right-3 z-[100] flex max-w-[calc(100%-1.5rem)] items-center gap-3 rounded-md border border-gray-300 bg-white p-3 text-sm text-gray-800 shadow-md md:bottom-16 md:max-w-md">
+      {confirmUpdate ? <div>
+        <p>ข้อมูลที่กรอกในหน้าเข้าสู่ระบบจะต้องกรอกใหม่ โดยไม่ลบงาน Offline หรือข้อมูลเข้าสู่ระบบที่บันทึกไว้</p>
+        <div className="mt-3 flex flex-wrap justify-end gap-2">
+          <button type="button" autoFocus onClick={() => setConfirmUpdate(null)} className="rounded border border-gray-300 px-3 py-2">ยกเลิก</button>
+          <button type="button" disabled={busy || locked} onClick={confirmUpdate}
+            className="flex items-center gap-2 rounded bg-blue-600 px-3 py-2 text-white disabled:opacity-40">
+            <RefreshCw size={16} aria-hidden="true" />ยืนยันอัปเดต
+          </button>
+        </div>
+      </div> : <span>{notice}</span>}
+      {!confirmUpdate && (busy || retry) && <button type="button" title="อัปเดตแอป" aria-label="อัปเดตแอป" disabled={busy || locked} onClick={() => retry?.()}
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-gray-300 text-blue-700 disabled:opacity-40">
         <RefreshCw size={20} className={busy ? "animate-spin" : ""} />
       </button>}

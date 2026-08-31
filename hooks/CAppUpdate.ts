@@ -3,20 +3,20 @@
 import { useLayoutEffect, useRef } from "react";
 import { C_GETtActiveBasePath } from "./CDatabaseSettings";
 
-const guards = new Map<object, { blocked: boolean; pathname: string }>();
+const guards = new Map<object, { blocked: boolean; manualBlocked: boolean; pathname: string }>();
 
-export function useAppUpdateGuard(blocked: boolean) {
+export function useAppUpdateGuard(blocked: boolean, manualBlocked = blocked) {
   const key = useRef({});
   useLayoutEffect(() => {
     const id = key.current;
-    guards.set(id, { blocked, pathname: window.location.pathname });
+    guards.set(id, { blocked, manualBlocked, pathname: window.location.pathname });
     return () => { guards.delete(id); };
-  }, [blocked]);
+  }, [blocked, manualBlocked]);
 }
 
-export function C_CANxApplyUpdate() {
+export function C_CANxApplyUpdate(manual = false) {
   const current = [...guards.values()].filter(guard => guard.pathname === window.location.pathname);
-  return current.length > 0 && current.every(guard => !guard.blocked);
+  return current.length > 0 && current.every(guard => !(manual ? guard.manualBlocked : guard.blocked));
 }
 
 export function C_REQxAppRepair(manual = false) {

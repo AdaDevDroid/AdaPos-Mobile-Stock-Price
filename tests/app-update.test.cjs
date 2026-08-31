@@ -309,6 +309,47 @@ test('page guard denies missing, dirty or unmounted pages and allows an idle mou
   assert.equal(exports.C_CANxApplyUpdate(), false);
 });
 
+test('manual consent only relaxes explicitly allowed guards, never missing pages or other dirty guards', () => {
+  const { exports, window, cleanups } = clientHelpers();
+  assert.equal(exports.C_CANxApplyUpdate(true), false);
+  exports.useAppUpdateGuard(true, false);
+  assert.equal(exports.C_CANxApplyUpdate(), false);
+  assert.equal(exports.C_CANxApplyUpdate(true), true);
+  exports.useAppUpdateGuard(true);
+  assert.equal(exports.C_CANxApplyUpdate(true), false);
+  cleanups.pop()();
+  assert.equal(exports.C_CANxApplyUpdate(true), true);
+  window.location.pathname = '/Part/receive';
+  assert.equal(exports.C_CANxApplyUpdate(true), false);
+});
+
+test('Login permits confirmed manual updates with credentials, but blocks authentication and branch selection', () => {
+  const file = ts.createSourceFile('login.tsx', fs.readFileSync(path.join(__dirname, '../app/login/page.tsx'), 'utf8'),
+    ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let guard;
+  const visit = node => {
+    if (ts.isCallExpression(node) && node.expression.getText(file) === 'useAppUpdateGuard') guard = node.getText(file);
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  assert.ok(guard);
+  const check = changes => {
+    let result;
+    vm.runInNewContext(guard, {
+      usernameEdited: true, tUsername: 'test-user', password: 'test-password',
+      bLoading: false, isLoading: false, isBranchOpen: false, ...changes,
+      useAppUpdateGuard: (blocked, manualBlocked = blocked) => { result = { blocked, manualBlocked }; },
+    });
+    return result;
+  };
+  assert.deepEqual(check(), { blocked: true, manualBlocked: false });
+  assert.deepEqual(check({ usernameEdited: false }), { blocked: true, manualBlocked: false });
+  for (const state of ['bLoading', 'isLoading', 'isBranchOpen']) {
+    assert.deepEqual(check({ [state]: true }), { blocked: true, manualBlocked: true });
+  }
+  assert.deepEqual(check({ usernameEdited: false, password: '' }), { blocked: false, manualBlocked: false });
+});
+
 test('updater does not clear IndexedDB, credentials or pending records', () => {
   for (const file of ['public/sw.js', 'hooks/CAppUpdate.ts', 'components/AppUpdate.tsx', 'components/NetworkStatus.tsx']) {
     const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');

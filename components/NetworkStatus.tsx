@@ -49,7 +49,7 @@ export default function NetworkStatus({ updatesDisabled = false }: { updatesDisa
         {confirming ? <div className="p-2 text-sm leading-6">
           <h2 className="font-semibold">อัปเดตและล้าง Cache เก่า?</h2>
           <p className="mt-2">ดาวน์โหลดและตรวจสอบไฟล์ใหม่ก่อนล้าง Cache ไฟล์แอปเก่าเฉพาะ Part นี้</p>
-          <p className="mt-2">ไม่ลบงาน Offline รายการที่ยังไม่ส่ง หรือข้อมูลเข้าสู่ระบบ</p>
+          <p className="mt-2">ไม่ลบงาน Offline รายการที่ยังไม่ส่ง หรือข้อมูลเข้าสู่ระบบที่บันทึกไว้</p>
           <div className="mt-4 flex flex-wrap justify-end gap-2">
             <button type="button" onClick={() => { setOpen(false); trigger.current?.focus(); }}
               className="rounded border border-gray-300 px-3 py-2 hover:bg-gray-100">ยกเลิก</button>
