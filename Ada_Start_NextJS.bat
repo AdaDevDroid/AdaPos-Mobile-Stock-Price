@@ -34,6 +34,12 @@ if not exist ".next\BUILD_ID" (
     exit /b 1
 )
 echo Build found!
+node -e "require('./scripts/app-release.cjs').readRelease(process.cwd())"
+if errorlevel 1 (
+    echo Build metadata is missing or outdated. Please run Ada_Build_NextJS.bat first.
+    pause
+    exit /b 1
+)
 echo.
 
 if not exist "version.txt" (

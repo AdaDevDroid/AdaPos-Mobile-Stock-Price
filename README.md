@@ -45,6 +45,60 @@ server-only compose file so the server does not build:
 docker compose -f docker-compose.server.yml --env-file .env.local up -d
 ```
 
+## Offline Application Updates
+
+Build with `npm run build` (not `next build` alone). The postbuild step writes
+`.next/ada-release.json` with the version, build ID and checksums for all shipped
+static assets. Deploy the complete build, `public`, `server.js` and
+`scripts/app-release.cjs` together, then start with `npm start`. The Windows
+build/start scripts and Docker image use the same release metadata. Production
+startup rejects a build whose metadata does not match `version.txt` or `BUILD_ID`.
+Never edit `version.txt` in place to represent an upgrade without rebuilding.
+
+`/<Part>/api/app-release`, `/<Part>/sw.js`, HTML and API responses must bypass
+proxy/CDN caching. Preserve the `X-Ada-Build-Id` response header on HTML.
+Publish builds atomically and give each release a new build ID, even when the
+displayed version stays unchanged. Do not overwrite a live `.next` directory.
+
+The app checks for a release on startup, reconnect, focus and every minute while
+visible. It prepares every offline page and static asset before offering an
+update. A blank/remembered-name login page can update automatically. Other pages
+offer an update button. Every open tab in that Part must be idle; unsaved fields,
+scanning and in-flight operations defer the reload. Unknown/legacy tabs also
+defer the update: close them after finishing their work, then reopen the app.
+This one-time migration does not require deleting cookies or IndexedDB.
+
+Failed downloads leave the active build available offline. Old caches are removed
+only after all tabs report the new build. Pending records, sessions and other
+Parts are not cleared. The fallback covers shipped application assets, not
+external product images or data that has never been downloaded. PWA updates are
+enabled in production builds on HTTPS (or localhost), not `npm run dev`.
+
+The bottom-right network icon opens a manual update menu. Confirming downloads
+and verifies the current release before removing old app caches for this Part.
+If already on the latest build, repair and cleanup do not reload the page.
+New builds still wait for all tabs to be ready. This action never clears offline
+records, login data or another Part's caches; it is disabled while offline.
+
+Verification:
+
+```bash
+npm test
+npm run typecheck
+npm run lint
+npm run build
+node tests/update-fixture.cjs
+```
+
+The optional fixture serves the real compiled UI and worker at
+`http://127.0.0.1:3191/control`, with synthetic builds A/B/C and no backend access.
+Open two application tabs, seed a pending test record, leave a typed field in
+one tab and publish B. Confirm the update waits, then clear the field and apply.
+Inspect that B is active and the pending record remains. Publish incomplete C,
+disable the fixture network and reload an idle tab: B must still work. Restore
+the network and C assets, retry, and inspect that C becomes active. Stop the
+fixture after testing; never expose it on a production host.
+
 ## Getting Started
 
 First, run the development server:

@@ -1,249 +1,208 @@
-const serviceWorkerUrl = new URL(self.location.href);
-const deployVersion = serviceWorkerUrl.searchParams.get("version") || "unversioned";
-const buildId = serviceWorkerUrl.searchParams.get("build") || deployVersion;
-const VERSION = `${deployVersion}-${buildId}`.replace(/[^A-Za-z0-9._-]/g, "_");
-const fallbackBasePath = serviceWorkerUrl.pathname.replace(/\/sw\.js$/, "") || "/AdaCheckStockSTD";
-const basePathParam = serviceWorkerUrl.searchParams.get("basePath") || fallbackBasePath;
-const assetBasePathParam = serviceWorkerUrl.searchParams.get("assetBasePath") || basePathParam;
-const BASE_PATH = `/${basePathParam.replace(/^\/+|\/+$/g, "")}`;
-const ASSET_BASE_PATH = `/${assetBasePathParam.replace(/^\/+|\/+$/g, "")}`;
-const CACHE_PART = BASE_PATH.replace(/[^A-Za-z0-9_-]/g, "_");
-const OFFLINE_CACHE_NAME = `adapos-offline-${CACHE_PART}-${VERSION}`;
-const STATIC_CACHE_NAME = `static-resources-${CACHE_PART}-${VERSION}`;
+// server.js stamps the immutable release into both stable and legacy SW URLs.
+const release = self.__ADA_RELEASE__;
+if (!release?.buildId || !release.assets?.length) throw new Error("Missing build manifest");
+const { basePath: BASE_PATH, buildId, version } = release;
+const CACHE_PART = BASE_PATH.replace(/[^A-Za-z0-9._-]/g, "_");
+const VERSION = `${version}-${buildId}`.replace(/[^A-Za-z0-9._-]/g, "_");
+const OFFLINE_PREFIX = `adapos-offline-${CACHE_PART}-`;
+const STATIC_PREFIX = `static-resources-${CACHE_PART}-`;
+const OFFLINE_CACHE_NAME = `${OFFLINE_PREFIX}${VERSION}`;
+const STATIC_CACHE_NAME = `${STATIC_PREFIX}${VERSION}`;
+const MARKER = `${BASE_PATH}/__app-cache-manifest`;
+const assetMap = new Map(release.assets.map(asset => [asset.url, asset]));
 
-const OFFLINE_URLS = [
-  `${BASE_PATH}/`,
-  `${BASE_PATH}/login`,
-  `${BASE_PATH}/main`,
-  `${BASE_PATH}/receive`,
-  `${BASE_PATH}/transfer`,
-  `${BASE_PATH}/stock`,
-  `${BASE_PATH}/price-check`,
-  `${BASE_PATH}/icons/icon-192x192.png`,
-  `${BASE_PATH}/icons/icon-512x512.png`,
-];
-
-const STATIC_URLS = [...new Set([
-  `${BASE_PATH}/favicon.ico`,
-  `${BASE_PATH}/manifest.json`,
-  `${BASE_PATH}/icons/logoAda.png`,
-  `${BASE_PATH}/icons/logoAdaLogin.png`,
-  `${BASE_PATH}/icons/icon-192x192.png`,
-  `${BASE_PATH}/icons/icon-512x512.png`,
-  `${ASSET_BASE_PATH}/favicon.ico`,
-  `${ASSET_BASE_PATH}/manifest.json`,
-  `${ASSET_BASE_PATH}/icons/logoAda.png`,
-  `${ASSET_BASE_PATH}/icons/logoAdaLogin.png`,
-  `${ASSET_BASE_PATH}/icons/icon-192x192.png`,
-  `${ASSET_BASE_PATH}/icons/icon-512x512.png`,
-])];
-
-const putInCache = async (cacheName, request, response) => {
-  if (!response.ok) {
-    return;
-  }
-
-  const cache = await caches.open(cacheName);
-  await cache.put(request, response.clone());
-};
-
-const cacheUrls = async (cacheName, urls) => {
-  const cache = await caches.open(cacheName);
-  const results = await Promise.all(
-    urls.map(async (assetUrl) => {
-      try {
-        const response = await fetch(assetUrl, { cache: "reload" });
-        if (response.ok) {
-          await cache.put(assetUrl, response.clone());
-          return { url: assetUrl, cached: true };
-        }
-      } catch (error) {
-        console.warn("Unable to cache asset:", assetUrl, error);
-      }
-      return { url: assetUrl, cached: false };
-    })
-  );
-
-  return {
-    cached: results.filter((result) => result.cached).map((result) => result.url),
-    failed: results.filter((result) => !result.cached).map((result) => result.url),
-  };
-};
-
-const cleanupLegacyCaches = async () => {
-  const cacheNames = await caches.keys();
-  const activePath = `${BASE_PATH.replace(/\/+$/, "")}/`;
-
-  await Promise.all(
-    cacheNames
-      .filter((cacheName) => cacheName === "static-resources" || cacheName.startsWith("workbox-precache"))
-      .map(async (cacheName) => {
-        const cache = await caches.open(cacheName);
-        const requests = await cache.keys();
-        await Promise.all(requests.map(async (request) => {
-          const url = new URL(request.url);
-          if (url.origin === self.location.origin && url.pathname.startsWith(activePath)) {
-            await cache.delete(request);
-          }
-        }));
-      })
-  );
-};
-
-const cleanupOldPartCaches = async () => {
-  const cacheNames = await caches.keys();
-  const offlinePrefix = `adapos-offline-${CACHE_PART}-`;
-  const staticPrefix = `static-resources-${CACHE_PART}-`;
-
-  await Promise.all(
-    cacheNames
-      .filter((cacheName) =>
-        (cacheName.startsWith(offlinePrefix) && cacheName !== OFFLINE_CACHE_NAME) ||
-        (cacheName.startsWith(staticPrefix) && cacheName !== STATIC_CACHE_NAME)
-      )
-      .map((cacheName) => caches.delete(cacheName))
-  );
-};
-
-const clearCurrentPartCaches = async () => {
-  const cacheNames = await caches.keys();
-  const offlinePrefix = `adapos-offline-${CACHE_PART}-`;
-  const staticPrefix = `static-resources-${CACHE_PART}-`;
-  await Promise.all(cacheNames
-    .filter((cacheName) => cacheName.startsWith(offlinePrefix) || cacheName.startsWith(staticPrefix))
-    .map((cacheName) => caches.delete(cacheName)));
-};
-
-const isPartUrl = (url) => (
-  url.origin === self.location.origin &&
-  (url.pathname === BASE_PATH || url.pathname.startsWith(`${BASE_PATH}/`))
-);
-
-const isCacheableAssetUrl = (url) => (
-  url.origin === self.location.origin && (
-    url.pathname.startsWith(`${ASSET_BASE_PATH}/_next/`) ||
-    url.pathname.startsWith(`${BASE_PATH}/icons/`) ||
-    url.pathname.startsWith(`${ASSET_BASE_PATH}/icons/`) ||
-    url.pathname === `${BASE_PATH}/manifest.json` ||
-    url.pathname === `${BASE_PATH}/favicon.ico` ||
-    url.pathname === `${ASSET_BASE_PATH}/manifest.json` ||
-    url.pathname === `${ASSET_BASE_PATH}/favicon.ico`
-  )
-);
-
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    Promise.all([
-      cacheUrls(OFFLINE_CACHE_NAME, OFFLINE_URLS),
-      cacheUrls(STATIC_CACHE_NAME, STATIC_URLS),
-    ]).then((results) => {
-      const failed = results.flatMap((result) => result.failed);
-      if (failed.length > 0) {
-        throw new Error(`Unable to cache ${failed.length} required application assets`);
-      }
-      return self.skipWaiting();
-    })
-  );
-});
-
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    cleanupLegacyCaches()
-      .then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener("message", (event) => {
-  if (event.data?.type !== "CACHE_ASSETS" || !Array.isArray(event.data.urls)) {
-    return;
-  }
-
-  const urls = event.data.urls.filter((value) => {
-    try {
-      return isCacheableAssetUrl(new URL(value, self.location.origin));
-    } catch {
-      return false;
-    }
+const scopedClients = async () => (await self.clients.matchAll({ type: "window", includeUncontrolled: true }))
+  .filter(client => {
+    const url = new URL(client.url);
+    return url.origin === self.location.origin && url.pathname.startsWith(`${BASE_PATH}/`);
   });
 
-  event.waitUntil(
-    Promise.all([
-      cacheUrls(OFFLINE_CACHE_NAME, OFFLINE_URLS),
-      cacheUrls(STATIC_CACHE_NAME, [...new Set([...STATIC_URLS, ...urls])]),
-    ])
-      .then(async (results) => {
-        const cached = [...new Set(results.flatMap((result) => result.cached))];
-        const failed = [...new Set(results.flatMap((result) => result.failed))];
-        if (failed.length === 0) {
-          await cleanupOldPartCaches();
-        }
-        event.ports[0]?.postMessage({
-          status: failed.length === 0 ? "cache-complete" : "cache-incomplete",
-          buildId,
-          cached,
-          failed,
-        });
-      })
-  );
+const ask = (client, type) => new Promise(resolve => {
+  const channel = new MessageChannel();
+  const finish = value => { clearTimeout(timer); channel.port1.close(); resolve(value); };
+  const timer = setTimeout(() => finish(null), 3000);
+  channel.port1.onmessage = event => finish(event.data);
+  client.postMessage({ type, buildId }, [channel.port2]);
 });
 
-self.addEventListener("fetch", (event) => {
+const status = async () => {
+  const pageCache = await caches.open(OFFLINE_CACHE_NAME);
+  const staticCache = await caches.open(STATIC_CACHE_NAME);
+  const marker = await pageCache.match(MARKER);
+  const missing = [];
+  for (const url of release.pages) if (!await pageCache.match(url)) missing.push(url);
+  for (const asset of release.assets) if (!await staticCache.match(asset.url)) missing.push(asset.url);
+  return { buildId, version, ready: !!marker && missing.length === 0, failed: missing };
+};
+
+let preparation;
+const prepare = () => {
+  if (preparation) return preparation;
+  preparation = (async () => {
+    const pageCache = await caches.open(OFFLINE_CACHE_NAME);
+    const staticCache = await caches.open(STATIC_CACHE_NAME);
+    const jobs = [
+      ...release.pages.map(url => ({ url, cache: pageCache })),
+      ...release.assets.map(asset => ({ ...asset, cache: staticCache })),
+    ];
+    const failures = [];
+    // Bound parallel downloads; an incomplete release never replaces the active cache.
+    await Promise.all(Array.from({ length: 4 }, async () => {
+      for (let job; (job = jobs.shift());) {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 15000);
+          try {
+            const response = await fetch(job.url, { cache: "no-store", signal: controller.signal });
+            if (!response.ok || (!job.sha256 && response.headers.get("X-Ada-Build-Id") !== buildId)) {
+              throw new Error("Unavailable or mixed deployment");
+            }
+            if (job.sha256) {
+              const digest = await crypto.subtle.digest("SHA-256", await response.clone().arrayBuffer());
+              const hash = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
+              if (hash !== job.sha256) throw new Error("Asset checksum mismatch");
+            }
+            await job.cache.put(job.url, response);
+          } finally { clearTimeout(timer); }
+        } catch { failures.push(job.url); }
+      }
+    }));
+    if (failures.length) throw new Error(`Incomplete release: ${failures.join(", ")}`);
+    await pageCache.put(MARKER, new Response(JSON.stringify(release), {
+      headers: { "Content-Type": "application/json" },
+    }));
+    return status();
+  })().finally(() => { preparation = null; });
+  return preparation;
+};
+
+const partCacheNames = async () => {
+  const names = await caches.keys();
+  const owned = [];
+  for (const name of names.filter(name => name.startsWith(OFFLINE_PREFIX))) {
+    const cache = await caches.open(name);
+    const entries = await cache.keys();
+    const marker = await cache.match(MARKER);
+    const metadata = marker ? await marker.json() : null;
+    const matches = metadata ? metadata.basePath === BASE_PATH : entries.length > 0 && entries.every(entry => {
+      const url = new URL(entry.url);
+      return url.origin === self.location.origin && url.pathname.startsWith(`${BASE_PATH}/`);
+    });
+    if (matches) owned.push(name, `${STATIC_PREFIX}${name.slice(OFFLINE_PREFIX.length)}`);
+  }
+  return owned;
+};
+
+const cleanup = async () => {
+  if (!(await status()).ready) return { buildId, cleaned: false };
+  const clients = await scopedClients();
+  const replies = await Promise.all(clients.map(client => ask(client, "GET_CLIENT_BUILD")));
+  if (!clients.length || replies.some(reply => reply?.buildId !== buildId)) return { buildId, cleaned: false };
+  // Old/unknown clients keep their assets until they have actually loaded this build.
+  const latest = await scopedClients();
+  if (latest.some(client => !clients.some(previous => previous.id === client.id))) return { buildId, cleaned: false };
+  for (const name of await partCacheNames()) {
+    if (name !== OFFLINE_CACHE_NAME && name !== STATIC_CACHE_NAME) await caches.delete(name);
+  }
+  return { buildId, cleaned: true };
+};
+
+let applying = false;
+const applyUpdate = async () => {
+  if (applying) return { blocked: true, buildId };
+  applying = true;
+  const clients = await scopedClients();
+  try {
+    if (!(await status()).ready) throw new Error("Release cache is incomplete");
+    const replies = await Promise.all(clients.map(client => ask(client, "PREPARE_UPDATE")));
+    const latest = await scopedClients();
+    if (!clients.length || replies.some(reply => reply?.ready !== true) ||
+        latest.some(client => !clients.some(previous => previous.id === client.id))) {
+      clients.forEach(client => client.postMessage({ type: "CANCEL_UPDATE", buildId }));
+      return { blocked: true, buildId };
+    }
+    if (self.registration.active?.scriptURL === self.location.href && !self.registration.waiting) {
+      clients.forEach(client => client.postMessage({ type: "RELOAD_UPDATE", buildId }));
+    } else {
+      await self.skipWaiting();
+    }
+    return { applied: true, buildId };
+  } catch (error) {
+    clients.forEach(client => client.postMessage({ type: "CANCEL_UPDATE", buildId }));
+    throw error;
+  } finally { applying = false; }
+};
+
+self.addEventListener("install", event => event.waitUntil(prepare()));
+self.addEventListener("activate", event => event.waitUntil((async () => {
+  await self.clients.claim();
+  (await scopedClients()).forEach(client => client.postMessage({ type: "RELOAD_UPDATE", buildId }));
+})()));
+self.addEventListener("message", event => {
+  const action = async () => {
+    switch (event.data?.type) {
+      case "GET_STATUS": return status();
+      case "REPAIR": return prepare();
+      case "CACHE_ASSETS": {
+        const result = (await status()).ready ? await status() : await prepare();
+        return { ...result, status: "cache-complete" };
+      }
+      case "APPLY_UPDATE": return applyUpdate();
+      case "CLIENT_READY": return cleanup();
+      default: return null;
+    }
+  };
+  event.waitUntil(action().then(result => event.ports[0]?.postMessage(result))
+    .catch(error => event.ports[0]?.postMessage({ buildId, error: error.message })));
+});
+
+self.addEventListener("fetch", event => {
   const { request } = event;
-  if (request.method !== "GET") {
-    return;
-  }
-
   const url = new URL(request.url);
-  const partRequest = isPartUrl(url);
-  const assetRequest = isCacheableAssetUrl(url);
-  if (!partRequest && !assetRequest) {
+  if (request.method !== "GET" || url.origin !== self.location.origin ||
+      url.pathname.includes("/api/") || url.pathname.endsWith("/sw.js")) return;
+  if (url.pathname === `${release.assetBasePath}/_next/image` && url.searchParams.has("url")) {
+    const source = new URL(url.searchParams.get("url"), self.location.origin);
+    if (source.origin === self.location.origin && assetMap.has(source.pathname)) {
+      event.respondWith((async () => {
+        const cache = await caches.open(STATIC_CACHE_NAME);
+        return await cache.match(source.pathname) || fetch(request);
+      })());
+    }
     return;
   }
-
-  const shouldCache =
-    ["document", "script", "style", "image", "font"].includes(request.destination) ||
-    url.pathname.endsWith("/manifest.json") ||
-    url.pathname.endsWith("/favicon.ico");
-
-  if (!shouldCache) {
-    return;
+  if ((request.mode === "navigate" || request.destination === "document") && url.pathname.startsWith(`${BASE_PATH}/`)) {
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(request);
+        if ([404, 410].includes(response.status) && response.headers.get("X-Ada-Part-Status")) {
+          for (const name of await partCacheNames()) await caches.delete(name);
+          await self.registration.unregister();
+        }
+        if (response.ok && response.headers.get("X-Ada-Build-Id") !== buildId) {
+          const current = await (await caches.open(OFFLINE_CACHE_NAME)).match(url.pathname, { ignoreVary: true });
+          if (current) return current;
+        }
+        return response;
+      }
+      catch {
+        const cache = await caches.open(OFFLINE_CACHE_NAME);
+        return await cache.match(url.pathname, { ignoreVary: true }) ||
+          await cache.match(`${BASE_PATH}/login`, { ignoreVary: true }) || Response.error();
+      }
+    })());
+  } else if (assetMap.has(url.pathname) || url.pathname.startsWith(`${release.assetBasePath}/_next/static/`)) {
+    event.respondWith((async () => {
+      const cache = await caches.open(STATIC_CACHE_NAME);
+      const current = await cache.match(url.pathname, { ignoreVary: true });
+      if (current) return current;
+      // Lazy chunks requested by an older open tab must still resolve after activation.
+      for (const name of await partCacheNames()) {
+        if (!name.startsWith(STATIC_PREFIX)) continue;
+        const previous = await (await caches.open(name)).match(url.pathname, { ignoreVary: true });
+        if (previous) return previous;
+      }
+      return fetch(request);
+    })());
   }
-
-  if (request.destination === "document" && partRequest) {
-    event.respondWith(
-      fetch(request)
-        .then(async (networkResponse) => {
-          if (networkResponse.status === 404 || networkResponse.status === 410) {
-            await clearCurrentPartCaches();
-            await self.registration.unregister();
-            return networkResponse;
-          }
-          await putInCache(OFFLINE_CACHE_NAME, request, networkResponse);
-          return networkResponse;
-        })
-        .catch(async () => {
-          const cache = await caches.open(OFFLINE_CACHE_NAME);
-          return (await cache.match(request, { ignoreVary: true })) ||
-            (await cache.match(`${BASE_PATH}/login`, { ignoreVary: true })) ||
-            Response.error();
-        })
-    );
-    return;
-  }
-
-  const cacheName = STATIC_CACHE_NAME;
-
-  event.respondWith(
-    caches.open(cacheName).then(async (cache) => {
-      const cachedResponse = await cache.match(request, { ignoreVary: true });
-      const fetchAndCache = fetch(request)
-        .then(async (networkResponse) => {
-          await putInCache(cacheName, request, networkResponse);
-          return networkResponse;
-        })
-        .catch(() => cachedResponse || Response.error());
-
-      return cachedResponse || fetchAndCache;
-    })
-  );
 });

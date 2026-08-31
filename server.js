@@ -9,6 +9,11 @@ if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(appVersion)) {
 }
 process.env.NEXT_PUBLIC_VERSION = appVersion;
 
+const { readRelease, serveRelease } = require("./scripts/app-release.cjs");
+const release = process.env.NODE_ENV === "production" ? readRelease(__dirname) : null;
+if (release) process.env.NEXT_PUBLIC_BUILD_ID = release.buildId;
+const workerSource = fs.readFileSync(path.join(__dirname, "public/sw.js"), "utf8");
+
 const { createServer } = require("http");
 const { parse } = require("url");
 const next = require("next");
@@ -173,6 +178,7 @@ const C_GETbNoStoreRoute = (routePath) => {
 
 const C_SNDxInvalidPart = (res, routePath, resolution) => {
   const statusCode = resolution.status === "deleted" ? 410 : 404;
+  res.setHeader("X-Ada-Part-Status", resolution.status);
   C_SETxNoStoreHeaders(res);
   res.statusCode = statusCode;
 
@@ -194,6 +200,7 @@ app
   .prepare()
   .then(() => {
     const server = createServer((req, res) => {
+      if (release) res.setHeader("X-Ada-Build-Id", release.buildId);
       const parsedUrl = parse(req.url, true);
       const dynamicPartRoute = C_GEToDynamicPartRoute(parsedUrl.pathname);
 
@@ -227,6 +234,7 @@ app
           C_SETxNoStoreHeaders(res);
         }
         C_SETxDatabasePartHeaders(req, dynamicPartRoute.part);
+        if (serveRelease(req, res, dynamicPartRoute.routePath, dynamicPartRoute.part, release, workerSource)) return;
         const correctedUrl = parse(`${basePath}${dynamicPartRoute.routePath}${parsedUrl.search || ""}`, true);
         handle(req, res, correctedUrl);
       } else if (
@@ -239,6 +247,7 @@ app
           C_SETxNoStoreHeaders(res);
         }
         C_SETxDatabasePartHeaders(req, basePart);
+        if (serveRelease(req, res, baseRoutePath, basePart, release, workerSource)) return;
         handle(req, res, parsedUrl);
       } else if (
         parsedUrl.pathname &&

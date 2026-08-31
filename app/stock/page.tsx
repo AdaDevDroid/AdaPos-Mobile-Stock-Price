@@ -6,6 +6,7 @@ import InputWithLabelAndButton from "@/components/InputWithLabelAndButton";
 import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
+import { useAppUpdateGuard } from "@/hooks/CAppUpdate";
 import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory } from "react-icons/fa";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CAdjustStockToExcel';
@@ -564,6 +565,9 @@ export default function Stock() {
       console.log("❌ ไม่สามารถดึงข้อมูลจาก TCNTProductStockTmp ได้");
     };
   };
+  useAppUpdateGuard(Boolean(tRefDoc || tMobileRefDoc || barcode || quantity !== "1" || oProducts.length ||
+    isLoading || isLoadingScanAuto || isAddScan || bScanning || isHistoryOpen || isProductOpen || isRepeat));
+
   return (
     <div className="p-4 ms-1  bg-white" onClick={C_SETxCloseDropdown}>
       <div className="flex flex-col md:flex-row items-start md:items-center pb-2">

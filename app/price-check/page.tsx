@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
+import { useAppUpdateGuard } from "@/hooks/CAppUpdate";
 import { Search, Tag, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
 import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
@@ -123,6 +124,8 @@ const PricePromotionCheck = () => {
       }, 500);
     }
   );
+
+  useAppUpdateGuard(Boolean(searchQuery || productData || loading || bScanning));
 
   return (
     <div className="p-4 ms-1  bg-white" >

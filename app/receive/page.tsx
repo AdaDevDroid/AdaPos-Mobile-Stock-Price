@@ -4,6 +4,7 @@ import InputWithLabelAndButton from "@/components/InputWithLabelAndButton";
 import { CCameraScanner } from "@/hooks/CCameraScanner";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
+import { useAppUpdateGuard } from "@/hooks/CAppUpdate";
 import { FaPlus, FaTrash, FaRegCalendar, FaEllipsisV, FaFileAlt, FaDownload, FaHistory } from "react-icons/fa";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import exportToExcel from '@/hooks/CTransferreceiptoutToExcel';
@@ -587,6 +588,9 @@ export default function Receive() {
 
   };
 
+
+  useAppUpdateGuard(Boolean(tRefDoc || tBarcode || tCost || tQty !== "1" || oProducts.length || oPendingBarcode ||
+    isLoading || isLoadingScanAuto || isAddScan || bScanning || isHistoryOpen || isProductOpen || isRepeat));
 
   return (
     <div className="p-4 ms-1  bg-white" onClick={C_SETxCloseDropdown}>

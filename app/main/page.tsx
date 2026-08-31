@@ -7,6 +7,7 @@ import { useNetworkStatus } from "@/hooks/NetworkStatusContext";
 import { useAuth } from "@/hooks/useAuth";
 import { History, Product, UserInfo } from "@/models/models";
 import { useEffect, useState } from "react";
+import { useAppUpdateGuard } from "@/hooks/CAppUpdate";
 import { FaCheckCircle, FaExclamationCircle, FaSyncAlt, FaRegCalendar, FaExclamationTriangle, FaAngleRight } from "react-icons/fa";
 import { C_GETtGenerateRandomID, C_INSxProducts, C_INSxStock, C_SETxFormattedDate } from "@/hooks/CSP";
 import exportPurcaseInvoiceToExcel from "@/hooks/CTransferreceiptoutToExcel";
@@ -538,6 +539,8 @@ export default function MainPage() {
     await C_INSxDataIndexedDB(oDb, tTaleName, productData);
     setProducts([]);
   };
+
+  useAppUpdateGuard(isLoading || isProductOpen || isRepeat);
 
   return (
     <div className="flex flex-col ">

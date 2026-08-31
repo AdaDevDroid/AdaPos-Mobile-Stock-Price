@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useAppUpdateGuard, C_REQxAppRepair } from "@/hooks/CAppUpdate";
 import { useRouter } from "next/navigation";
 import { FaUser, FaLock } from "react-icons/fa";
 import { C_PRCxOpenIndexedDB, C_INSxUserToDB, C_INSoSysConfigToDB, C_DELoSysConfigData, C_GETxUserData } from "@/hooks/CIndexedDB";
@@ -20,7 +21,6 @@ import {
   C_GETtRememberedUsernameCookieName,
   C_GETxActivePartCacheStatus,
   C_GETxPartSession,
-  C_RPRxActivePartAssetsOnce,
   C_SETxPartSession,
 } from "@/hooks/CDatabaseSettings";
 
@@ -59,6 +59,7 @@ const C_GETnJwtExpiryMinutes = (token: string): number | null => {
 export default function Login() {
   const router = useRouter();
   const [tUsername, setUsername] = useState("");
+  const [usernameEdited, setUsernameEdited] = useState(false);
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [tError, setError] = useState("");
@@ -519,11 +520,7 @@ export default function Login() {
         const confirmClear = confirm(`ไฟล์สำหรับ Offline ไม่ครบ: ${missing.join(', ')}\n\nคุณต้องการซ่อมแซมไฟล์และโหลดใหม่หรือไม่?`);
 
         if (confirmClear) {
-          const repaired = await C_RPRxActivePartAssetsOnce(`manual-${Date.now()}`);
-          if (repaired) {
-            alert('ซ่อมแซมไฟล์เรียบร้อยแล้ว กำลังรีเฟรชเพื่อโหลดไฟล์สำหรับ Offline ใหม่!');
-            window.location.reload();
-          }
+          C_REQxAppRepair();
         } else {
           alert('ยกเลิกการล้าง cache');
         }
@@ -536,6 +533,8 @@ export default function Login() {
         : 'ซ่อมแซมไฟล์ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อ Server');
     }
   }
+
+  useAppUpdateGuard(Boolean((usernameEdited && tUsername) || password || bLoading || isLoading || isBranchOpen));
 
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-gray-100">
@@ -564,7 +563,7 @@ export default function Login() {
               type="text"
               placeholder="ระบุชื่อผู้ใช้งาน"
               value={tUsername}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => { setUsernameEdited(true); setUsername(e.target.value); }}
               className="w-full pl-10 pr-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-400"
               required
             />

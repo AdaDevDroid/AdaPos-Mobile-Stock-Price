@@ -240,120 +240,11 @@ export const C_GETtPartSessionStorageKey = (key: string, part = C_GETtActiveData
 };
 
 export const C_GETtServiceWorkerUrl = (basePath = C_GETtActiveBasePath()): string => {
-  const activeBasePath = basePath.replace(/\/+$/, "");
-  const params = new URLSearchParams({
-    basePath: activeBasePath,
-    assetBasePath: BASE_PATH.replace(/\/+$/, ""),
-    version: APP_VERSION,
-    build: APP_BUILD_ID,
-  });
-
-  return `${activeBasePath}/sw.js?${params.toString()}`;
-};
-
-const C_GETaCurrentPageAssetUrls = (): string[] => {
-  const activeBasePath = C_GETtActiveBasePath().replace(/\/+$/, "");
-  const assetBasePath = BASE_PATH.replace(/\/+$/, "");
-  const urls = new Set<string>();
-
-  document.querySelectorAll<HTMLElement>("script[src], link[href], img[src]").forEach((element) => {
-    const value = element.getAttribute("src") || element.getAttribute("href");
-    if (value) {
-      urls.add(new URL(value, window.location.origin).href);
-    }
-  });
-
-  performance.getEntriesByType("resource").forEach((entry) => urls.add(entry.name));
-
-  return [...urls].filter((value) => {
-    const url = new URL(value, window.location.origin);
-    return url.origin === window.location.origin && (
-      url.pathname.startsWith(`${assetBasePath}/_next/`) ||
-      url.pathname.startsWith(`${activeBasePath}/icons/`) ||
-      url.pathname.startsWith(`${assetBasePath}/icons/`) ||
-      url.pathname === `${activeBasePath}/manifest.json` ||
-      url.pathname === `${activeBasePath}/favicon.ico` ||
-      url.pathname === `${assetBasePath}/manifest.json` ||
-      url.pathname === `${assetBasePath}/favicon.ico`
-    );
-  });
-};
-
-type CacheAssetsResult = {
-  status?: string;
-  failed?: string[];
-};
-
-const C_WAIxServiceWorkerActivated = async (
-  registration: ServiceWorkerRegistration,
-  expectedScriptUrl: string,
-): Promise<ServiceWorker> => {
-  const worker = [registration.installing, registration.waiting, registration.active]
-    .find((candidate) => candidate?.scriptURL === expectedScriptUrl);
-  if (!worker) {
-    throw new Error("Unable to find the current service worker");
-  }
-  if (worker.state === "activated") {
-    return worker;
-  }
-
-  return new Promise<ServiceWorker>((resolve, reject) => {
-    const timeoutId = window.setTimeout(
-      () => reject(new Error("Timed out while activating the service worker")),
-      20000,
-    );
-    const handleStateChange = () => {
-      if (worker.state === "activated") {
-        window.clearTimeout(timeoutId);
-        worker.removeEventListener("statechange", handleStateChange);
-        resolve(worker);
-      } else if (worker.state === "redundant") {
-        window.clearTimeout(timeoutId);
-        worker.removeEventListener("statechange", handleStateChange);
-        reject(new Error("The current service worker could not be installed"));
-      }
-    };
-    worker.addEventListener("statechange", handleStateChange);
-    handleStateChange();
-  });
-};
-
-const C_CACHExCurrentPageAssets = async (worker: ServiceWorker) => {
-
-  await new Promise<void>((resolve, reject) => {
-    const channel = new MessageChannel();
-    const timeoutId = window.setTimeout(() => reject(new Error("Timed out while caching page assets")), 10000);
-    channel.port1.onmessage = (event: MessageEvent<CacheAssetsResult>) => {
-      window.clearTimeout(timeoutId);
-      if (event.data?.failed?.length) {
-        reject(new Error(`Unable to cache ${event.data.failed.length} required page assets`));
-        return;
-      }
-      resolve();
-    };
-    worker.postMessage({ type: "CACHE_ASSETS", urls: C_GETaCurrentPageAssetUrls() }, [channel.port2]);
-  });
-};
-
-export const C_REGxServiceWorkerForActivePart = async () => {
-  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
-    return null;
-  }
-
-  const activeBasePath = C_GETtActiveBasePath();
-  const serviceWorkerUrl = new URL(C_GETtServiceWorkerUrl(activeBasePath), window.location.origin).href;
-  const registration = await navigator.serviceWorker.register(serviceWorkerUrl, {
-    scope: `${activeBasePath}/`,
-    updateViaCache: "none",
-  });
-  await registration.update();
-  const worker = await C_WAIxServiceWorkerActivated(registration, serviceWorkerUrl);
-  await C_CACHExCurrentPageAssets(worker);
-  return registration;
+  return `${basePath.replace(/\/+$/, "")}/sw.js`;
 };
 
 export const C_GETtPartCachePrefixes = (part = C_GETtActiveDatabasePart()) => {
-  const cachePart = `/${C_GETtNormalizedPathPart(part)}`.replace(/[^A-Za-z0-9_-]/g, "_");
+  const cachePart = `/${C_GETtNormalizedPathPart(part)}`.replace(/[^A-Za-z0-9._-]/g, "_");
   return [`adapos-offline-${cachePart}-`, `static-resources-${cachePart}-`];
 };
 
@@ -407,8 +298,12 @@ export const C_GETxActivePartCacheStatus = async (): Promise<PartCacheStatus> =>
   const offlineUrls = OFFLINE_ROUTE_PATHS.map((routePath) =>
     new URL(`${activeBasePath}${routePath === "/" ? "/" : routePath}`, window.location.origin).href
   );
-  const staticUrls = C_GETaCurrentPageAssetUrls();
   const [offlineCacheName, staticCacheName] = C_GETtPartCacheNames();
+  const cache = await caches.open(offlineCacheName);
+  const marker = await cache.match(`${activeBasePath}/__app-cache-manifest`);
+  const release = marker ? await marker.json() : null;
+  const staticUrls: string[] = release?.buildId === APP_BUILD_ID
+    ? release.assets.map((asset: { url: string }) => asset.url) : [];
   const [missingOffline, missingStatic] = await Promise.all([
     C_GETaMissingCacheUrls(offlineCacheName, offlineUrls),
     C_GETaMissingCacheUrls(staticCacheName, staticUrls),
@@ -494,90 +389,6 @@ export const C_CLRxPartClientState = async (part: string) => {
     }
   }
   await C_CLRxPartWebAssets(normalizedPart, true);
-};
-
-const C_ENSxActivePartServerReachable = async () => {
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 8000);
-  try {
-    const response = await fetch(`${C_GETtActiveBasePath().replace(/\/+$/, "")}/api/health`, {
-      cache: "no-store",
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      throw new Error(response.status === 404 || response.status === 410
-        ? "ไม่พบการตั้งค่า Part นี้"
-        : "Server ยังไม่พร้อมสำหรับการซ่อมแซมไฟล์");
-    }
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
-};
-
-let activeRepairPromise: Promise<boolean> | null = null;
-
-const C_RPRxActivePartAssets = async (reason: string, onRepaired?: () => void) => {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  const guardKey = C_GETtPartStorageKey(`repair:${APP_BUILD_ID}:${reason}`);
-  if (sessionStorage.getItem(guardKey) === "done") {
-    return false;
-  }
-
-  if (activeRepairPromise) {
-    return activeRepairPromise;
-  }
-
-  activeRepairPromise = (async () => {
-    sessionStorage.setItem(guardKey, "running");
-    try {
-      await C_ENSxActivePartServerReachable();
-      await C_REGxServiceWorkerForActivePart();
-      const cacheStatus = await C_GETxActivePartCacheStatus();
-      if (!cacheStatus.isReady) {
-        throw new Error(
-          `Offline cache is incomplete (${cacheStatus.missingOffline.length + cacheStatus.missingStatic.length} missing)`
-        );
-      }
-      await C_CLRxPartWebAssets(C_GETtActiveDatabasePart(), false);
-      onRepaired?.();
-      sessionStorage.setItem(guardKey, "done");
-      return true;
-    } catch (error) {
-      sessionStorage.removeItem(guardKey);
-      throw error;
-    } finally {
-      activeRepairPromise = null;
-    }
-  })();
-
-  return activeRepairPromise;
-};
-
-export const C_RPRxActivePartAssetsOnce = async (reason = "asset", onRepaired?: () => void) => {
-  return C_RPRxActivePartAssets(reason, onRepaired);
-};
-
-export const C_ENSxActivePartBuild = async () => {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  C_MIGxLegacyStorageForActivePart();
-  const storedBuild = C_GETtPartStorageValue(APP_BUILD_STORAGE_KEY);
-  if (!storedBuild) {
-    C_SETxPartStorageValue(APP_BUILD_STORAGE_KEY, APP_BUILD_ID);
-    return false;
-  }
-  if (storedBuild === APP_BUILD_ID) {
-    return false;
-  }
-
-  return C_RPRxActivePartAssets("build", () => {
-    C_SETxPartStorageValue(APP_BUILD_STORAGE_KEY, APP_BUILD_ID);
-  });
 };
 
 export const C_GETtPartUrl = (path: string): string => {
