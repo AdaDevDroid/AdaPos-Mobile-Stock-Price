@@ -162,7 +162,8 @@ export default function Transfer() {
           FTDate: item.FTDate,
           FTRefDoc: item.FTRefDoc,
           FNStatus: item.FNStatus,
-          FTRefSeq: item.FTRefSeq
+          FTRefSeq: item.FTRefSeq,
+          FTXthDocType: item.FTXthDocType
         }));
 
         console.log("🔹 ข้อมูลที่ได้จาก IndexedDB:", mappedData); // ✅ ตรวจสอบข้อมูลที่ดึงมา
@@ -316,7 +317,8 @@ export default function Transfer() {
       FTDate: currentDate,
       FTRefDoc: refDoc,
       FNStatus: pnType,
-      FTRefSeq: tRefSeq
+      FTRefSeq: tRefSeq,
+      FTXthDocType: refDocType
     };
 
     await C_INSxDataIndexedDB(oDb, "TCNTHistoryTransfer", [historyData]);
@@ -761,9 +763,13 @@ export default function Transfer() {
       <HistoryModal
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
-        oDataHistory={historyList}
+        oDataHistory={historyList.map((history) => ({
+          ...history,
+          FTXthDocType: history.FTXthDocType ?? oProductHistoryList?.find((product) => product.FTRefSeq === history.FTRefSeq)?.FTXthDocType ?? "0"
+        }))}
         onView={C_SETxViewHistoryProduct}
-        onRepeat={C_SETxViewRepeat} />
+        onRepeat={C_SETxViewRepeat}
+        showRefDocType />
 
       {/* ข้อมูลประวัติสินค้า */}
       <ProductTranferNStockModal

@@ -20,6 +20,7 @@ export interface History {
     FTRefDoc: string;
     FNStatus: number;
     FTRefSeq: string;
+    FTXthDocType?: "0" | "1" | "2";
     FTMobileRefDoc?: string;
 }
 
